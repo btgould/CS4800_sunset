@@ -1,0 +1,16 @@
+{
+	"tasks": [
+		{
+			"name": "build",
+			"cmd": "make",
+			"cwd": "${config_dir}",
+			"tags": ["build"]
+		},
+		{
+			"name": "run",
+			"cmd": "make test",
+			"cwd": "${config_dir}",
+			"tags": ["run"]
+		}
+	]
+}
