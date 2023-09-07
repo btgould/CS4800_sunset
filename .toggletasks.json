@@ -1,16 +1,34 @@
 {
 	"tasks": [
 		{
-			"name": "build",
-			"cmd": "make",
+			"name": "cmake",
+			"cmd": "cmake -H. -Bbuild",
+			"cwd": "${config_dir}",
+			"tags": ["build"]
+		},
+		{
+			"name": "make",
+			"cmd": "cmake --build build -- -j8",
 			"cwd": "${config_dir}",
 			"tags": ["build"]
 		},
 		{
 			"name": "run",
-			"cmd": "make test",
+			"cmd": "./bin/sunset",
 			"cwd": "${config_dir}",
 			"tags": ["run"]
+		},
+		{
+			"name": "clean",
+			"cmd": "cmake --build build -- clean",
+			"cwd": "${config_dir}",
+			"tags": ["clean"]
+		},
+		{
+			"name": "clean cmake",
+			"cmd": "rm -r build",
+			"cwd": "${config_dir}",
+			"tags": ["clean"]
 		}
 	]
 }
