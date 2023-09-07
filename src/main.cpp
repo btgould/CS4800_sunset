@@ -1,15 +1,13 @@
-#include <charconv>
-#include <cstdint>
-#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <iostream>
 #include <vector>
 #include <string>
 #include <string.h>
 #include <stdexcept>
 #include <cstdlib>
+
+#include "util/log.hpp"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -17,6 +15,8 @@ const uint32_t HEIGHT = 600;
 class HelloTriangleApplication {
   public:
 	void run() {
+		Log::Init(spdlog::level::trace);
+
 		initWindow();
 		initVulkan();
 		mainLoop();
@@ -59,9 +59,9 @@ class HelloTriangleApplication {
 		createInfo.enabledExtensionCount = glfwExtensionCount;
 		createInfo.ppEnabledExtensionNames = glfwExtensions;
 
-		/* for (uint32_t i = 0; i < glfwExtensionCount; i++) {
-		    std::cout << "Required extension: " << glfwExtensions[i] << std::endl;
-		} */
+		for (uint32_t i = 0; i < glfwExtensionCount; i++) {
+			LOG_TRACE("Required extension: {0}", glfwExtensions[i]);
+		}
 
 		// get list of extensions supported by vulkan instillation
 		uint32_t supportedExtensionCount = 0;
@@ -70,11 +70,10 @@ class HelloTriangleApplication {
 		vkEnumerateInstanceExtensionProperties(nullptr, &supportedExtensionCount,
 		                                       supportedExtensions.data());
 
-		/* std::cout << "available extensions:\n";
-
+		LOG_TRACE("Available Extensions: ");
 		for (const auto& extension : supportedExtensions) {
-		    std::cout << '\t' << extension.extensionName << '\n';
-		} */
+			LOG_TRACE("\t{0}", extension.extensionName);
+		}
 
 		// check that required extensions are all supported
 		for (uint32_t i = 0; i < glfwExtensionCount; i++) {
@@ -117,7 +116,7 @@ int main() {
 	try {
 		app.run();
 	} catch (const std::exception& e) {
-		std::cerr << e.what() << std::endl;
+		LOG_ERROR("{}", e.what());
 		return EXIT_FAILURE;
 	}
 
