@@ -1,17 +1,33 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 
 project(CS4800_Sunset)
 
-set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
+# Global CMake config
+set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+set (CMAKE_CXX_STANDARD 17)
 
-include_directories("${PROJECT_SOURCE_DIR}/src")
-include_directories("${PROJECT_SOURCE_DIR}/vendor/spdlog")
+# Config for dependencies that need to be build
 add_subdirectory(vendor/spdlog)
 
+# Config for main executable
 set(MAIN_SRCS src/main.cpp src/util/log.cpp)
 
-link_libraries(glfw vulkan dl pthread X11 Xxf86vm Xrandr Xi)
 add_executable(sunset ${MAIN_SRCS})
+# set_property(TARGET sunset PROPERTY CXX_STANDARD 17)
+
+target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/vendor/spdlog")
+
+target_link_libraries(sunset glfw vulkan dl pthread X11 Xxf86vm Xrandr Xi)
 target_link_libraries(sunset spdlog)
+
+if(${CMAKE_BUILD_TYPE} STREQUAL Release)
+	target_compile_definitions(sunset PRIVATE SUNSET_DIST)
+elseif(${CMAKE_BUILD_TYPE} STREQUAL RelWithDebugInfo)
+	target_compile_definitions(sunset PRIVATE SUNSET_RELEASE)
+else()
+	target_compile_definitions(sunset PRIVATE SUNSET_DEBUG)
+endif()
+

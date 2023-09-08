@@ -2,19 +2,31 @@
 	"tasks": [
 		{
 			"name": "cmake",
-			"cmd": "cmake -H. -Bbuild",
+			"cmd": "cmake -DCMAKE_BUILD_TYPE=Debug . -Bbuild/Debug; cmake -DCMAKE_BUILD_TYPE=RelWithDebugInfo . -Bbuild/RelWithDebugInfo; cmake -DCMAKE_BUILD_TYPE=Release . -Bbuild/Release",
 			"cwd": "${config_dir}",
 			"tags": ["build"]
 		},
 		{
-			"name": "make",
-			"cmd": "cmake --build build -- -j8",
+			"name": "make Debug",
+			"cmd": "cmake --build build/Debug -- -j8",
+			"cwd": "${config_dir}",
+			"tags": ["build", "debug"]
+		},
+		{
+			"name": "make Release",
+			"cmd": "cmake --build build/Rel -- -j8",
+			"cwd": "${config_dir}",
+			"tags": ["build", "debug"]
+		},
+		{
+			"name": "make Dist",
+			"cmd": "cmake --build build/Dist -- -j8",
 			"cwd": "${config_dir}",
 			"tags": ["build"]
 		},
 		{
 			"name": "generate compile database",
-			"cmd": "compiledb -- make -C build",
+			"cmd": "compiledb -- make -C build/Debug",
 			"cwd": "${config_dir}",
 			"tags": ["build"]
 		},
@@ -26,10 +38,9 @@
 		},
 		{
 			"name": "clean",
-			"cmd": "cmake --build build -- clean",
+			"cmd": "for config in build/*; do cmake --build $config -- clean; done",
 			"cwd": "${config_dir}",
-			"tags": ["clean"],
-			"close_on_exit": true
+			"tags": ["clean"]
 		},
 		{
 			"name": "clean cmake",
