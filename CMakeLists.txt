@@ -12,10 +12,8 @@ set (CMAKE_CXX_STANDARD 17)
 add_subdirectory(vendor/spdlog)
 
 # Config for main executable
-set(MAIN_SRCS src/main.cpp src/util/log.cpp)
-
-add_executable(sunset ${MAIN_SRCS})
-# set_property(TARGET sunset PROPERTY CXX_STANDARD 17)
+file(GLOB_RECURSE SOURCE_FILES RELATIVE ${CMAKE_SOURCE_DIR} CONFIGURE_DEPENDS src/*.cpp) 
+add_executable(sunset ${SOURCE_FILES})
 
 target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/vendor/spdlog")

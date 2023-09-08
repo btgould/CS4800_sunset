@@ -7,6 +7,7 @@
 #include <cstdlib>
 
 #include "util/log.hpp"
+#include "engine.hpp"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -58,66 +59,6 @@ std::vector<const char*> getRequiredExtensions() {
 	return extensions;
 }
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL
-debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-              VkDebugUtilsMessageTypeFlagsEXT messageType,
-              const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-
-	const char* descString;
-	switch (messageType) {
-	case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
-		descString = "Validation info: ";
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
-		descString = "Validation issue: ";
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
-		descString = "Performance issue: ";
-		break;
-	}
-
-	switch (messageSeverity) {
-	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-		LOG_TRACE("{0} {1}", descString, pCallbackData->pMessage);
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-		LOG_INFO("{0} {1}", descString, pCallbackData->pMessage);
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-		LOG_WARN("{0} {1}", descString, pCallbackData->pMessage);
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-		LOG_ERROR("{0} {1}", descString, pCallbackData->pMessage);
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
-		break;
-	}
-
-	return VK_FALSE;
-}
-
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
-                                      const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-                                      const VkAllocationCallbacks* pAllocator,
-                                      VkDebugUtilsMessengerEXT* pDebugMessenger) {
-	auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-		instance, "vkCreateDebugUtilsMessengerEXT");
-	if (func != nullptr) {
-		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-	} else {
-		return VK_ERROR_EXTENSION_NOT_PRESENT;
-	}
-}
-
-void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
-                                   const VkAllocationCallbacks* pAllocator) {
-	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-		instance, "vkDestroyDebugUtilsMessengerEXT");
-	if (func != nullptr) {
-		func(instance, debugMessenger, pAllocator);
-	}
-}
-
 class HelloTriangleApplication {
   public:
 	void run() {
@@ -154,8 +95,8 @@ class HelloTriangleApplication {
 		VkDebugUtilsMessengerCreateInfoEXT createInfo {};
 		populateDebugMessengerCreateInfo(createInfo);
 
-		if (CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger) !=
-		    VK_SUCCESS) {
+		if (VkEngine::CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr,
+		                                           &m_debugMessenger) != VK_SUCCESS) {
 			throw std::runtime_error("failed to set up debug messenger!");
 		}
 	}
@@ -169,7 +110,7 @@ class HelloTriangleApplication {
 		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
 		                         VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 		                         VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-		createInfo.pfnUserCallback = debugCallback;
+		createInfo.pfnUserCallback = VkEngine::debugCallback;
 	}
 
 	void createInstance() {
@@ -263,7 +204,7 @@ class HelloTriangleApplication {
 	void cleanup() {
 
 		if (enableValidationLayers) {
-			DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+			VkEngine::DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
 		}
 
 		vkDestroyInstance(m_instance, nullptr);
