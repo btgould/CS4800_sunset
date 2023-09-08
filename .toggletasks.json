@@ -32,9 +32,9 @@
 		},
 		{
 			"name": "run",
-			"cmd": "./bin/sunset",
+			"cmd": "./bin/Debug/sunset",
 			"cwd": "${config_dir}",
-			"tags": ["run"]
+			"tags": ["run", "debug"]
 		},
 		{
 			"name": "clean",
