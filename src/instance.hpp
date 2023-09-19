@@ -1,12 +1,22 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-class VulkanEngine {
+class VulkanInstance {
   public:
-	VulkanEngine();
-	~VulkanEngine();
+	VulkanInstance();
+	~VulkanInstance();
+	void cleanup(); // TODO: This structure sucks
 
-  public:
+  private:
+	void init();
+	void createInstance();
+	void setupDebugMessenger();
+	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+
+  private:
+	VkInstance m_instance;
+	VkDebugUtilsMessengerEXT m_debugMessenger;
+
 	static VKAPI_ATTR VkBool32 VKAPI_CALL
 	debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	              VkDebugUtilsMessageTypeFlagsEXT messageType,
