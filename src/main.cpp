@@ -1,3 +1,4 @@
+#include "spdlog/common.h"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -180,7 +181,7 @@ int main() {
 	try {
 		app.run();
 	} catch (const std::exception& e) {
-		LOG_ERROR("{}", e.what());
+		LOG_ERROR("{0}", e.what());
 		return EXIT_FAILURE;
 	}
 

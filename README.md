@@ -26,6 +26,12 @@ GLSLC: (shader compiler)
 -   Fedora: `sudo dnf install glslc`
 -   Arch: `sudo pacman -S shaderc`
 
+Xxf68vm: (TBH I'm not sure what this is)
+
+-   Ubuntu / Debian: `sudo apt install libxxf86vm-dev libxi-dev`
+-   Fedora: `sudo dnf install libXi-devel libXxf86vm-devel`
+-   Arch: `sudo pacman -S libxi libxxf86vm`
+
 ## Building
 
 This project builds using CMake.

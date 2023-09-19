@@ -14,13 +14,13 @@
 		},
 		{
 			"name": "make Release",
-			"cmd": "cmake --build build/Rel -- -j8",
+			"cmd": "cmake --build build/RelWithDebugInfo -- -j8",
 			"cwd": "${config_dir}",
 			"tags": ["build", "debug"]
 		},
 		{
 			"name": "make Dist",
-			"cmd": "cmake --build build/Dist -- -j8",
+			"cmd": "cmake --build build/Release -- -j8",
 			"cwd": "${config_dir}",
 			"tags": ["build"]
 		},
