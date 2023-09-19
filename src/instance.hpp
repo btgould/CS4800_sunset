@@ -1,5 +1,19 @@
-#include <vector>
 #include <vulkan/vulkan.h>
+
+#include <vector>
+#include <optional>
+
+/* List of indices of queue families supporting a particular queue type, for some physical device.
+ * All members are std::optional values. If they have a value, then it will be the index of a queue
+ * family supporting that type of queue. Otherwise, no queue family for this devices supports that
+ * type of queue.
+ */
+struct QueueFamilyIndices {
+	std::optional<uint32_t> graphicsFamily;
+
+	/* Checks if every queue type is supported by some queue family. */
+	bool isComplete() { return graphicsFamily.has_value(); }
+};
 
 class VulkanInstance {
   public:
@@ -10,13 +24,10 @@ class VulkanInstance {
   private:
 	void init();
 	void createInstance();
+	static bool checkValidationLayerSupport();
+	static std::vector<const char*> getRequiredExtensions();
 	void setupDebugMessenger();
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-
-  private:
-	VkInstance m_instance;
-	VkDebugUtilsMessengerEXT m_debugMessenger;
-
 	static VKAPI_ATTR VkBool32 VKAPI_CALL
 	debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	              VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -27,11 +38,12 @@ class VulkanInstance {
 	static void DestroyDebugUtilsMessengerEXT(VkInstance instance,
 	                                          VkDebugUtilsMessengerEXT debugMessenger,
 	                                          const VkAllocationCallbacks* pAllocator);
-
-	static bool checkValidationLayerSupport();
-	static std::vector<const char*> getRequiredExtensions();
+	void pickPhysicalDevice();
 
   private:
+	VkInstance m_instance;
+	VkPhysicalDevice m_physicalDevice;
+	VkDebugUtilsMessengerEXT m_debugMessenger;
 	static const std::vector<const char*> requiredValidationLayers;
 #ifdef SUNSET_DEBUG
 	static const bool enableValidationLayers = true;
