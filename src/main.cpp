@@ -19,46 +19,6 @@ const bool enableValidationLayers = true;
 const bool enableValidationLayers = false;
 #endif
 
-bool checkValidationLayerSupport() {
-	uint32_t layerCount;
-	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-	std::vector<VkLayerProperties> availableLayers(layerCount);
-	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-	for (const char* layerName : requiredValidationLayers) {
-		bool layerFound = false;
-
-		for (const auto& layerProperties : availableLayers) {
-			if (strcmp(layerName, layerProperties.layerName) == 0) {
-				layerFound = true;
-				break;
-			}
-		}
-
-		if (!layerFound) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
-std::vector<const char*> getRequiredExtensions() {
-	// TODO: what are graphics extensions here? do they belong to GPU?
-	uint32_t glfwExtensionCount = 0;
-	const char** glfwExtensions;
-	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-	if (enableValidationLayers) {
-		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-	}
-
-	return extensions;
-}
-
 class HelloTriangleApplication {
   public:
 	void run() {
@@ -95,8 +55,8 @@ class HelloTriangleApplication {
 		VkDebugUtilsMessengerCreateInfoEXT createInfo {};
 		populateDebugMessengerCreateInfo(createInfo);
 
-		if (VkEngine::CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr,
-		                                           &m_debugMessenger) != VK_SUCCESS) {
+		if (VulkanEngine::CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr,
+		                                               &m_debugMessenger) != VK_SUCCESS) {
 			throw std::runtime_error("failed to set up debug messenger!");
 		}
 	}
@@ -110,12 +70,12 @@ class HelloTriangleApplication {
 		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
 		                         VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 		                         VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-		createInfo.pfnUserCallback = VkEngine::debugCallback;
+		createInfo.pfnUserCallback = VulkanEngine::debugCallback;
 	}
 
 	void createInstance() {
 		// Ensure required validation layers are available
-		if (enableValidationLayers && !checkValidationLayerSupport()) {
+		if (enableValidationLayers && !VulkanEngine::checkValidationLayerSupport()) {
 			throw std::runtime_error("validation layers requested, but not available!");
 		}
 
@@ -138,7 +98,7 @@ class HelloTriangleApplication {
 		}
 
 		// get list of graphics extensions required to use glfw
-		auto extensions = getRequiredExtensions();
+		auto extensions = VulkanEngine::getRequiredExtensions();
 
 		createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 		createInfo.ppEnabledExtensionNames = extensions.data();
@@ -204,7 +164,7 @@ class HelloTriangleApplication {
 	void cleanup() {
 
 		if (enableValidationLayers) {
-			VkEngine::DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+			VulkanEngine::DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
 		}
 
 		vkDestroyInstance(m_instance, nullptr);

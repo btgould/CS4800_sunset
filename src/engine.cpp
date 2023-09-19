@@ -2,10 +2,14 @@
 
 #include <cstring>
 #include <GLFW/glfw3.h>
+#include <vector>
 
 #include "util/log.hpp"
 
-bool VkEngine::checkValidationLayerSupport() {
+const std::vector<const char*> VulkanEngine::requiredValidationLayers = {
+	"VK_LAYER_KHRONOS_validation"};
+
+bool VulkanEngine::checkValidationLayerSupport() {
 	uint32_t layerCount;
 	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -30,7 +34,7 @@ bool VkEngine::checkValidationLayerSupport() {
 	return true;
 }
 
-std::vector<const char*> VkEngine::getRequiredExtensions() {
+std::vector<const char*> VulkanEngine::getRequiredExtensions() {
 	// TODO: what are graphics extensions here? do they belong to GPU?
 	uint32_t glfwExtensionCount = 0;
 	const char** glfwExtensions;
@@ -45,10 +49,10 @@ std::vector<const char*> VkEngine::getRequiredExtensions() {
 	return extensions;
 }
 
-VkBool32 VkEngine::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                 VkDebugUtilsMessageTypeFlagsEXT messageType,
-                                 const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                 void* pUserData) {
+VkBool32 VulkanEngine::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                     VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                     void* pUserData) {
 	const char* descString;
 	switch (messageType) {
 	case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
@@ -82,7 +86,7 @@ VkBool32 VkEngine::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageS
 	return VK_FALSE;
 }
 
-VkResult VkEngine::CreateDebugUtilsMessengerEXT(
+VkResult VulkanEngine::CreateDebugUtilsMessengerEXT(
 	VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
 	const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
 
@@ -95,9 +99,9 @@ VkResult VkEngine::CreateDebugUtilsMessengerEXT(
 	}
 }
 
-void VkEngine::DestroyDebugUtilsMessengerEXT(VkInstance instance,
-                                             VkDebugUtilsMessengerEXT debugMessenger,
-                                             const VkAllocationCallbacks* pAllocator) {
+void VulkanEngine::DestroyDebugUtilsMessengerEXT(VkInstance instance,
+                                                 VkDebugUtilsMessengerEXT debugMessenger,
+                                                 const VkAllocationCallbacks* pAllocator) {
 
 	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
 		instance, "vkDestroyDebugUtilsMessengerEXT");

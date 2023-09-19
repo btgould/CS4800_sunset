@@ -1,10 +1,10 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-class VkEngine {
+class VulkanEngine {
   public:
-	VkEngine();
-	~VkEngine();
+	VulkanEngine();
+	~VulkanEngine();
 
   public:
 	static VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -18,14 +18,14 @@ class VkEngine {
 	                                          VkDebugUtilsMessengerEXT debugMessenger,
 	                                          const VkAllocationCallbacks* pAllocator);
 
-  private:
-	const std::vector<const char*> requiredValidationLayers = {"VK_LAYER_KHRONOS_validation"};
-#ifdef SUNSET_DEBUG
-	const bool enableValidationLayers = true;
-#else
-	const bool enableValidationLayers = false;
-#endif
+	static bool checkValidationLayerSupport();
+	static std::vector<const char*> getRequiredExtensions();
 
-	bool checkValidationLayerSupport();
-	std::vector<const char*> getRequiredExtensions();
+  private:
+	static const std::vector<const char*> requiredValidationLayers;
+#ifdef SUNSET_DEBUG
+	static const bool enableValidationLayers = true;
+#else
+	static const bool enableValidationLayers = false;
+#endif
 };
