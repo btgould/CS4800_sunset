@@ -9,7 +9,9 @@ class GLFWWindow {
 	GLFWWindow(std::string name, uint32_t width = 800, uint32_t height = 600);
 	~GLFWWindow();
 
-	inline bool shouldClose() {return glfwWindowShouldClose(m_window);}
+	inline bool shouldClose() { return glfwWindowShouldClose(m_window); }
+
+	void createSurface(VkInstance instance, VkSurfaceKHR* surface);
 
   private:
 	GLFWwindow* m_window;

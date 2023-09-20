@@ -10,7 +10,7 @@
 
 class HelloTriangleApplication {
   public:
-	HelloTriangleApplication() : m_window(GLFWWindow("Vulkan")), m_instance() {}
+	HelloTriangleApplication() : m_window(GLFWWindow("Vulkan")), m_instance(m_window) {}
 
 	void run() {
 		while (!m_window.shouldClose()) {

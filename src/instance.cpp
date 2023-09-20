@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <type_traits>
 #include <vector>
+#include <set>
 
 #include "util/log.hpp"
 
@@ -11,9 +12,10 @@
 // Helper functions
 // ================================================================================
 
-const std::vector<const char*> requiredValidationLayers = {"VK_LAYER_KHRONOS_validation"};
+const std::vector<const char*> VulkanInstance::requiredValidationLayers = {
+	"VK_LAYER_KHRONOS_validation"};
 
-bool checkValidationLayerSupport() {
+bool VulkanInstance::checkValidationLayerSupport() {
 	uint32_t layerCount;
 	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -38,7 +40,7 @@ bool checkValidationLayerSupport() {
 	return true;
 }
 
-std::vector<const char*> getRequiredExtensions() {
+std::vector<const char*> VulkanInstance::getRequiredExtensions() {
 	// TODO: what are graphics extensions here? do they belong to GPU?
 	uint32_t glfwExtensionCount = 0;
 	const char** glfwExtensions;
@@ -53,10 +55,9 @@ std::vector<const char*> getRequiredExtensions() {
 	return extensions;
 }
 
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
-                                      const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-                                      const VkAllocationCallbacks* pAllocator,
-                                      VkDebugUtilsMessengerEXT* pDebugMessenger) {
+VkResult VulkanInstance::CreateDebugUtilsMessengerEXT(
+	VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+	const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
 
 	auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
 		instance, "vkCreateDebugUtilsMessengerEXT");
@@ -67,9 +68,10 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
 	}
 }
 
-VkBool32 debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                       VkDebugUtilsMessageTypeFlagsEXT messageType,
-                       const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+VkBool32 VulkanInstance::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                       VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                       const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                       void* pUserData) {
 	const char* descString;
 	switch (messageType) {
 	case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
@@ -103,7 +105,8 @@ VkBool32 debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	return VK_FALSE;
 }
 
-void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+void VulkanInstance::populateDebugMessengerCreateInfo(
+	VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
 	createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 	createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
@@ -115,8 +118,9 @@ void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create
 	createInfo.pfnUserCallback = debugCallback;
 }
 
-void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
-                                   const VkAllocationCallbacks* pAllocator) {
+void VulkanInstance::DestroyDebugUtilsMessengerEXT(VkInstance instance,
+                                                   VkDebugUtilsMessengerEXT debugMessenger,
+                                                   const VkAllocationCallbacks* pAllocator) {
 	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
 		instance, "vkDestroyDebugUtilsMessengerEXT");
 	if (func != nullptr) {
@@ -124,7 +128,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 	}
 }
 
-QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
+QueueFamilyIndices VulkanInstance::findQueueFamilies(VkPhysicalDevice device) {
 	QueueFamilyIndices indices;
 
 	// Query queue types supported by physical device
@@ -141,6 +145,12 @@ QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
 			indices.graphicsFamily = i;
 		}
 
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_surface, &presentSupport);
+		if (presentSupport) {
+			indices.presentFamily = i;
+		}
+
 		if (indices.isComplete()) {
 			break;
 		}
@@ -151,7 +161,7 @@ QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
 	return indices;
 }
 
-bool isDeviceSuitable(VkPhysicalDevice device) {
+bool VulkanInstance::isDeviceSuitable(VkPhysicalDevice device) {
 	// Query device features / properties
 	// VkPhysicalDeviceProperties deviceProperties;
 	// VkPhysicalDeviceFeatures deviceFeatures;
@@ -169,7 +179,7 @@ bool isDeviceSuitable(VkPhysicalDevice device) {
 // VulkanInstance Implementations
 // ================================================================================
 
-VulkanInstance::VulkanInstance() {
+VulkanInstance::VulkanInstance(GLFWWindow& window) : m_window(window) {
 	init();
 }
 
@@ -179,13 +189,16 @@ VulkanInstance::~VulkanInstance() {
 		DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
 	}
 
+	vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
 }
 
 void VulkanInstance::init() {
 	createInstance();
 	setupDebugMessenger();
+	createSurface();
 	pickPhysicalDevice();
+	createLogicalDevice();
 }
 
 void VulkanInstance::createInstance() {
@@ -282,6 +295,10 @@ void VulkanInstance::setupDebugMessenger() {
 	}
 }
 
+void VulkanInstance::createSurface() {
+	m_window.createSurface(m_instance, &m_surface);
+}
+
 void VulkanInstance::pickPhysicalDevice() {
 	m_physicalDevice = VK_NULL_HANDLE;
 
@@ -311,20 +328,26 @@ void VulkanInstance::createLogicalDevice() {
 	float queuePriority = 1.0f;
 	QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
 
-	// Create graphics queue
-	VkDeviceQueueCreateInfo queueCreateInfo {};
-	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
-	queueCreateInfo.queueCount = 1;
-	queueCreateInfo.pQueuePriorities = &queuePriority;
+	// Create graphics queues
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(),
+	                                          indices.presentFamily.value()};
 
+	for (uint32_t queueFamily : uniqueQueueFamilies) {
+		VkDeviceQueueCreateInfo queueCreateInfo {};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(queueCreateInfo);
+	}
 	// Create logical device
 	VkPhysicalDeviceFeatures deviceFeatures {};
 
 	VkDeviceCreateInfo deviceCreateInfo {};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
-	deviceCreateInfo.queueCreateInfoCount = 1;
+	deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+	deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
 	deviceCreateInfo.enabledExtensionCount = 0;
@@ -342,6 +365,8 @@ void VulkanInstance::createLogicalDevice() {
 	}
 
 	// Save handle to graphics queue
-	// We can use 0 here currently because we only need a graphics queue
+	// We use 0 since we just want any queue from the family supporting these actions
+	// Therefore, we take the first one.
 	vkGetDeviceQueue(m_logicalDevice, indices.graphicsFamily.value(), 0, &m_graphicsQueue);
+	vkGetDeviceQueue(m_logicalDevice, indices.presentFamily.value(), 0, &m_presentQueue);
 }
