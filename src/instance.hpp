@@ -1,4 +1,5 @@
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include <vector>
 #include <optional>
@@ -39,10 +40,15 @@ class VulkanInstance {
 	                                          VkDebugUtilsMessengerEXT debugMessenger,
 	                                          const VkAllocationCallbacks* pAllocator);
 	void pickPhysicalDevice();
+	void createLogicalDevice();
 
   private:
 	VkInstance m_instance;
 	VkPhysicalDevice m_physicalDevice;
+	VkDevice m_logicalDevice;
+
+	VkQueue m_graphicsQueue; // implicitly destroyed with logicalDevice
+
 	VkDebugUtilsMessengerEXT m_debugMessenger;
 	static const std::vector<const char*> requiredValidationLayers;
 #ifdef SUNSET_DEBUG
