@@ -20,7 +20,6 @@ class VulkanInstance {
   public:
 	VulkanInstance();
 	~VulkanInstance();
-	void cleanup(); // TODO: This structure sucks
 
   private:
 	void init();

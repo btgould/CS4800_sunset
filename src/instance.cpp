@@ -173,21 +173,19 @@ VulkanInstance::VulkanInstance() {
 	init();
 }
 
-VulkanInstance::~VulkanInstance() {}
-
-void VulkanInstance::init() {
-	createInstance();
-	setupDebugMessenger();
-	pickPhysicalDevice();
-}
-
-void VulkanInstance::cleanup() {
+VulkanInstance::~VulkanInstance() {
 	vkDestroyDevice(m_logicalDevice, nullptr);
 	if (enableValidationLayers) {
 		DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
 	}
 
 	vkDestroyInstance(m_instance, nullptr);
+}
+
+void VulkanInstance::init() {
+	createInstance();
+	setupDebugMessenger();
+	pickPhysicalDevice();
 }
 
 void VulkanInstance::createInstance() {
