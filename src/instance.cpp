@@ -7,8 +7,167 @@
 
 #include "util/log.hpp"
 
-const std::vector<const char*> VulkanInstance::requiredValidationLayers = {
-	"VK_LAYER_KHRONOS_validation"};
+// ================================================================================
+// Helper functions
+// ================================================================================
+
+const std::vector<const char*> requiredValidationLayers = {"VK_LAYER_KHRONOS_validation"};
+
+bool checkValidationLayerSupport() {
+	uint32_t layerCount;
+	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+	std::vector<VkLayerProperties> availableLayers(layerCount);
+	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+	for (const char* layerName : requiredValidationLayers) {
+		bool layerFound = false;
+
+		for (const auto& layerProperties : availableLayers) {
+			if (strcmp(layerName, layerProperties.layerName) == 0) {
+				layerFound = true;
+				break;
+			}
+		}
+
+		if (!layerFound) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+std::vector<const char*> getRequiredExtensions() {
+	// TODO: what are graphics extensions here? do they belong to GPU?
+	uint32_t glfwExtensionCount = 0;
+	const char** glfwExtensions;
+	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
+	if (enableValidationLayers) {
+		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	}
+
+	return extensions;
+}
+
+VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
+                                      const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+                                      const VkAllocationCallbacks* pAllocator,
+                                      VkDebugUtilsMessengerEXT* pDebugMessenger) {
+
+	auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+		instance, "vkCreateDebugUtilsMessengerEXT");
+	if (func != nullptr) {
+		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+	} else {
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
+	}
+}
+
+VkBool32 debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                       VkDebugUtilsMessageTypeFlagsEXT messageType,
+                       const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+	const char* descString;
+	switch (messageType) {
+	case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
+		descString = "Validation info: ";
+		break;
+	case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
+		descString = "Validation issue: ";
+		break;
+	case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
+		descString = "Performance issue: ";
+		break;
+	}
+
+	switch (messageSeverity) {
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+		LOG_TRACE("{0} {1}", descString, pCallbackData->pMessage);
+		break;
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+		LOG_INFO("{0} {1}", descString, pCallbackData->pMessage);
+		break;
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+		LOG_WARN("{0} {1}", descString, pCallbackData->pMessage);
+		break;
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+		LOG_ERROR("{0} {1}", descString, pCallbackData->pMessage);
+		break;
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
+		break;
+	}
+
+	return VK_FALSE;
+}
+
+void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+	createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+	                             VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+	                             VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+	                         VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+	                         VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	createInfo.pfnUserCallback = debugCallback;
+}
+
+void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
+                                   const VkAllocationCallbacks* pAllocator) {
+	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+		instance, "vkDestroyDebugUtilsMessengerEXT");
+	if (func != nullptr) {
+		func(instance, debugMessenger, pAllocator);
+	}
+}
+
+QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
+	QueueFamilyIndices indices;
+
+	// Query queue types supported by physical device
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+	// Look for a queue family that supports a graphics queue, save the idx of this family
+	int i = 0;
+	for (const auto& queueFamily : queueFamilies) {
+		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			indices.graphicsFamily = i;
+		}
+
+		if (indices.isComplete()) {
+			break;
+		}
+
+		i++;
+	}
+
+	return indices;
+}
+
+bool isDeviceSuitable(VkPhysicalDevice device) {
+	// Query device features / properties
+	// VkPhysicalDeviceProperties deviceProperties;
+	// VkPhysicalDeviceFeatures deviceFeatures;
+	// vkGetPhysicalDeviceProperties(device, &deviceProperties);
+	// vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+	// return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+	// deviceFeatures.geometryShader;
+	QueueFamilyIndices indices = findQueueFamilies(device);
+
+	return indices.isComplete();
+}
+
+// ================================================================================
+// VulkanInstance Implementations
+// ================================================================================
 
 VulkanInstance::VulkanInstance() {
 	init();
@@ -112,46 +271,6 @@ void VulkanInstance::createInstance() {
 	}
 }
 
-bool VulkanInstance::checkValidationLayerSupport() {
-	uint32_t layerCount;
-	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-	std::vector<VkLayerProperties> availableLayers(layerCount);
-	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-	for (const char* layerName : requiredValidationLayers) {
-		bool layerFound = false;
-
-		for (const auto& layerProperties : availableLayers) {
-			if (strcmp(layerName, layerProperties.layerName) == 0) {
-				layerFound = true;
-				break;
-			}
-		}
-
-		if (!layerFound) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
-std::vector<const char*> VulkanInstance::getRequiredExtensions() {
-	// TODO: what are graphics extensions here? do they belong to GPU?
-	uint32_t glfwExtensionCount = 0;
-	const char** glfwExtensions;
-	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-	if (enableValidationLayers) {
-		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-	}
-
-	return extensions;
-}
-
 void VulkanInstance::setupDebugMessenger() {
 	if (!enableValidationLayers)
 		return;
@@ -163,120 +282,6 @@ void VulkanInstance::setupDebugMessenger() {
 	    VK_SUCCESS) {
 		throw std::runtime_error("failed to set up debug messenger!");
 	}
-}
-
-VkResult VulkanInstance::CreateDebugUtilsMessengerEXT(
-	VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-	const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
-
-	auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-		instance, "vkCreateDebugUtilsMessengerEXT");
-	if (func != nullptr) {
-		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-	} else {
-		return VK_ERROR_EXTENSION_NOT_PRESENT;
-	}
-}
-
-void VulkanInstance::populateDebugMessengerCreateInfo(
-	VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
-	createInfo = {};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-	                             VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-	                             VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-	                         VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-	                         VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	createInfo.pfnUserCallback = debugCallback;
-}
-
-VkBool32 VulkanInstance::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                       VkDebugUtilsMessageTypeFlagsEXT messageType,
-                                       const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                       void* pUserData) {
-	const char* descString;
-	switch (messageType) {
-	case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
-		descString = "Validation info: ";
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
-		descString = "Validation issue: ";
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
-		descString = "Performance issue: ";
-		break;
-	}
-
-	switch (messageSeverity) {
-	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-		LOG_TRACE("{0} {1}", descString, pCallbackData->pMessage);
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-		LOG_INFO("{0} {1}", descString, pCallbackData->pMessage);
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-		LOG_WARN("{0} {1}", descString, pCallbackData->pMessage);
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-		LOG_ERROR("{0} {1}", descString, pCallbackData->pMessage);
-		break;
-	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
-		break;
-	}
-
-	return VK_FALSE;
-}
-
-void VulkanInstance::DestroyDebugUtilsMessengerEXT(VkInstance instance,
-                                                   VkDebugUtilsMessengerEXT debugMessenger,
-                                                   const VkAllocationCallbacks* pAllocator) {
-	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-		instance, "vkDestroyDebugUtilsMessengerEXT");
-	if (func != nullptr) {
-		func(instance, debugMessenger, pAllocator);
-	}
-}
-
-QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
-	QueueFamilyIndices indices;
-
-	// Query queue types supported by physical device
-	uint32_t queueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-	// Look for a queue family that supports a graphics queue, save the idx of this family
-	int i = 0;
-	for (const auto& queueFamily : queueFamilies) {
-		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			indices.graphicsFamily = i;
-		}
-
-		if (indices.isComplete()) {
-			break;
-		}
-
-		i++;
-	}
-
-	return indices;
-}
-
-bool isDeviceSuitable(VkPhysicalDevice device) {
-	// Query device features / properties
-	// VkPhysicalDeviceProperties deviceProperties;
-	// VkPhysicalDeviceFeatures deviceFeatures;
-	// vkGetPhysicalDeviceProperties(device, &deviceProperties);
-	// vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-
-	// return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-	// deviceFeatures.geometryShader;
-	QueueFamilyIndices indices = findQueueFamilies(device);
-
-	return indices.isComplete();
 }
 
 void VulkanInstance::pickPhysicalDevice() {

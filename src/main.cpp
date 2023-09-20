@@ -50,7 +50,7 @@ class HelloTriangleApplication {
 };
 
 int main() {
-	Log::Init(spdlog::level::info);
+	Log::Init(spdlog::level::trace);
 	HelloTriangleApplication app;
 
 	try {

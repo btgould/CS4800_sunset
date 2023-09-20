@@ -26,3 +26,11 @@ class Log {
 	#define LOG_ERROR(...)
 	#define LOG_CRITICAL(...)
 #endif // !SUNSET_DIST
+
+
+#ifdef SUNSET_DEBUG
+static const bool enableValidationLayers = true;
+#else
+static const bool enableValidationLayers = false;
+#endif
+
