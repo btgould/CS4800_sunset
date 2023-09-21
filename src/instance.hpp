@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
@@ -63,7 +64,7 @@ class VulkanInstance {
 	VkSurfaceKHR m_surface;
 
 	VkQueue m_graphicsQueue; // implicitly destroyed with logicalDevice
-	VkQueue m_presentQueue; 
+	VkQueue m_presentQueue;
 
 	VkDebugUtilsMessengerEXT m_debugMessenger;
 };
