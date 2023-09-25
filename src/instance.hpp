@@ -20,6 +20,12 @@ struct QueueFamilyIndices {
 	bool isComplete() { return graphicsFamily.has_value() && presentFamily.has_value(); }
 };
 
+struct SwapChainSupportDetails {
+	VkSurfaceCapabilitiesKHR capabilities;
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> presentModes;
+};
+
 class VulkanInstance {
   public:
 	VulkanInstance(GLFWWindow& window);
@@ -31,11 +37,17 @@ class VulkanInstance {
 	void setupDebugMessenger();
 	void createSurface();
 	void pickPhysicalDevice();
+
+	/**
+	 * @brief Creates and initializes a logical device
+	 *
+	 * Creates queue families for each type of operation we need to support, a logical device with
+	 * these queues enabled, and saves handles to a queue of each type from the created families.
+	 */
 	void createLogicalDevice();
+	void createSwapChain();
 
   private: // validation / debug
-	static const std::vector<const char*> requiredValidationLayers;
-
 	bool checkValidationLayerSupport();
 	std::vector<const char*> getRequiredExtensions();
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
@@ -50,9 +62,28 @@ class VulkanInstance {
 	                              const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 	                              void* pUserData);
 
+	static const std::vector<const char*> requiredValidationLayers;
+
   private: // device selection
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 	bool isDeviceSuitable(VkPhysicalDevice device);
+	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+	VkSurfaceFormatKHR
+	chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+	VkPresentModeKHR
+	chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+	/**
+	 * @brief Calculates the extent of the surfaces to render to (in pixels)
+	 *
+	 * This cannot just use screen coordinates directly, since it has to account for monitor DPI
+	 *
+	 * @param capabilities Capabilities of the render surface
+	 * @return Extent (in pixels) of the render region
+	 */
+	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+
+	const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
   private:
 	GLFWWindow m_window;
@@ -60,8 +91,12 @@ class VulkanInstance {
 	VkInstance m_instance;
 	VkPhysicalDevice m_physicalDevice;
 	VkDevice m_logicalDevice;
-
 	VkSurfaceKHR m_surface;
+
+	VkSwapchainKHR m_swapChain;
+	std::vector<VkImage> m_swapChainImages;
+	VkFormat m_swapChainImageFormat;
+	VkExtent2D m_swapChainExtent;
 
 	VkQueue m_graphicsQueue; // implicitly destroyed with logicalDevice
 	VkQueue m_presentQueue;

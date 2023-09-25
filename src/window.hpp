@@ -12,6 +12,12 @@ class GLFWWindow {
 	inline bool shouldClose() { return glfwWindowShouldClose(m_window); }
 
 	void createSurface(VkInstance instance, VkSurfaceKHR* surface);
+	/**
+	 * @brief Gets the size of the framebuffer in pixels
+	 *
+	 * @return Extent describing window size in pixels
+	 */
+	VkExtent2D getFramebufferSize();
 
   private:
 	GLFWwindow* m_window;
