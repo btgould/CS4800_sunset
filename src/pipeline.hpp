@@ -30,9 +30,12 @@ class VulkanPipeline {
 	VulkanPipeline(const VulkanPipeline&) = delete;
 	VulkanPipeline& operator=(const VulkanPipeline&) = delete;
 
-  private:
+  private: // core interface
 	void createRenderPass();
 	void createGraphicsPipeline();
+	void createFramebuffers();
+
+  private: // helper
 	static std::vector<char> readFile(const std::string& filename);
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	PipelineConfigInfo defaultPipelineConfigInfo();
@@ -43,4 +46,5 @@ class VulkanPipeline {
 	VkRenderPass m_renderPass;
 	VkPipelineLayout m_pipelineLayout;
 	VkPipeline m_pipeline;
+	std::vector<VkFramebuffer> swapChainFramebuffers;
 };

@@ -36,9 +36,12 @@ class VulkanInstance {
 	VulkanInstance(const VulkanInstance&) = delete;
 	VulkanInstance& operator=(const VulkanInstance&) = delete;
 
-	inline VkDevice& getLogicalDevice() { return m_logicalDevice; }
-	inline VkExtent2D& getSwapChainExtent() { return m_swapChainExtent; }
-	inline VkFormat& getSwapChainFormat() { return m_swapChainImageFormat; }
+	inline const VkDevice& getLogicalDevice() const { return m_logicalDevice; }
+	inline const VkExtent2D& getSwapChainExtent() const { return m_swapChainExtent; }
+	inline const VkFormat& getSwapChainFormat() const { return m_swapChainImageFormat; }
+	inline const std::vector<VkImageView> getSwapChainImageViews() const {
+		return m_swapChainImageViews;
+	}
 
   private: // core interface
 	void init();

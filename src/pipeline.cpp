@@ -1,9 +1,11 @@
 #include "pipeline.hpp"
+
 #include <vulkan/vulkan_core.h>
 
 VulkanPipeline::VulkanPipeline(VulkanInstance& instance) : m_instance(instance) {
 	createRenderPass();
 	createGraphicsPipeline();
+	createFramebuffers();
 }
 
 void VulkanPipeline::createRenderPass() {
@@ -131,7 +133,35 @@ void VulkanPipeline::createGraphicsPipeline() {
 	vkDestroyShaderModule(m_instance.getLogicalDevice(), vertShaderModule, nullptr);
 }
 
+void VulkanPipeline::createFramebuffers() {
+	auto scImageViews = m_instance.getSwapChainImageViews();
+
+	swapChainFramebuffers.resize(scImageViews.size());
+
+	for (uint32_t i = 0; i < scImageViews.size(); i++) {
+		VkImageView attachments[] = {scImageViews[i]};
+
+		VkFramebufferCreateInfo framebufferInfo {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = m_renderPass;
+		framebufferInfo.attachmentCount = 1;
+		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.width = m_instance.getSwapChainExtent().width;
+		framebufferInfo.height = m_instance.getSwapChainExtent().height;
+		framebufferInfo.layers = 1;
+
+		if (vkCreateFramebuffer(m_instance.getLogicalDevice(), &framebufferInfo, nullptr,
+		                        &swapChainFramebuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
+	}
+}
+
 VulkanPipeline::~VulkanPipeline() {
+	for (auto framebuffer : swapChainFramebuffers) {
+		vkDestroyFramebuffer(m_instance.getLogicalDevice(), framebuffer, nullptr);
+	}
+
 	vkDestroyPipeline(m_instance.getLogicalDevice(), m_pipeline, nullptr);
 	vkDestroyPipelineLayout(m_instance.getLogicalDevice(), m_pipelineLayout, nullptr);
 	vkDestroyRenderPass(m_instance.getLogicalDevice(), m_renderPass, nullptr);
