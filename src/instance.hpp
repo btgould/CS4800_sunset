@@ -68,6 +68,10 @@ class VulkanInstance {
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 	bool isDeviceSuitable(VkPhysicalDevice device);
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+
+	const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
+  private: // swap chain creation
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 	VkSurfaceFormatKHR
 	chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
@@ -82,8 +86,7 @@ class VulkanInstance {
 	 * @return Extent (in pixels) of the render region
 	 */
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-
-	const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+	void createImageViews();
 
   private:
 	GLFWWindow m_window;
@@ -97,6 +100,7 @@ class VulkanInstance {
 	std::vector<VkImage> m_swapChainImages;
 	VkFormat m_swapChainImageFormat;
 	VkExtent2D m_swapChainExtent;
+	std::vector<VkImageView> m_swapChainImageViews;
 
 	VkQueue m_graphicsQueue; // implicitly destroyed with logicalDevice
 	VkQueue m_presentQueue;

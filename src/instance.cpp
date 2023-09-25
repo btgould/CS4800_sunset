@@ -200,6 +200,10 @@ bool VulkanInstance::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 	return requiredExtensions.empty();
 }
 
+// ================================================================================
+// Swap chain creation
+// ================================================================================
+
 SwapChainSupportDetails VulkanInstance::querySwapChainSupport(VkPhysicalDevice device) {
 	SwapChainSupportDetails details;
 
@@ -272,6 +276,36 @@ VkExtent2D VulkanInstance::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capa
 	}
 }
 
+void VulkanInstance::createImageViews() {
+	m_swapChainImageViews.resize(m_swapChainImages.size());
+
+	for (size_t i = 0; i < m_swapChainImages.size(); i++) {
+		VkImageViewCreateInfo createInfo {};
+		createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		createInfo.image = m_swapChainImages[i];
+		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		createInfo.format = m_swapChainImageFormat;
+
+		// We want to use RGBA components, in that order
+		createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+		// We want a color image with no mipmapping
+		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		createInfo.subresourceRange.baseMipLevel = 0;
+		createInfo.subresourceRange.levelCount = 1;
+		createInfo.subresourceRange.baseArrayLayer = 0;
+		createInfo.subresourceRange.layerCount = 1; // this is used for stereographic stuff
+
+		if (vkCreateImageView(m_logicalDevice, &createInfo, nullptr, &m_swapChainImageViews[i]) !=
+		    VK_SUCCESS) {
+			throw std::runtime_error("failed to create image views!");
+		}
+	}
+}
+
 // ================================================================================
 // Core Interface
 // ================================================================================
@@ -281,6 +315,10 @@ VulkanInstance::VulkanInstance(GLFWWindow& window) : m_window(window) {
 }
 
 VulkanInstance::~VulkanInstance() {
+	for (auto imageView : m_swapChainImageViews) {
+		vkDestroyImageView(m_logicalDevice, imageView, nullptr);
+	}
+
 	vkDestroySwapchainKHR(m_logicalDevice, m_swapChain, nullptr);
 	vkDestroyDevice(m_logicalDevice, nullptr);
 	if (enableValidationLayers) {
@@ -298,6 +336,7 @@ void VulkanInstance::init() {
 	pickPhysicalDevice();
 	createLogicalDevice();
 	createSwapChain();
+	createImageViews();
 }
 
 void VulkanInstance::createInstance() {
