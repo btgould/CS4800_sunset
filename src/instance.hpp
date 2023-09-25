@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
@@ -30,6 +32,9 @@ class VulkanInstance {
   public:
 	VulkanInstance(GLFWWindow& window);
 	~VulkanInstance();
+
+	inline VkDevice& getLogicalDevice() { return m_logicalDevice; }
+	inline VkExtent2D& getSwapChainExtent() { return m_swapChainExtent; }
 
   private: // core interface
 	void init();

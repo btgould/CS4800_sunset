@@ -20,6 +20,7 @@ void GLFWWindow::createSurface(VkInstance instance, VkSurfaceKHR* surface) {
 		throw std::runtime_error("failed to create window surface!");
 	}
 }
+
 VkExtent2D GLFWWindow::getFramebufferSize() {
 	int width, height;
 	glfwGetFramebufferSize(m_window, &width, &height);
