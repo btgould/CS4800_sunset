@@ -2,7 +2,48 @@
 #include <vulkan/vulkan_core.h>
 
 VulkanPipeline::VulkanPipeline(VulkanInstance& instance) : m_instance(instance) {
+	createRenderPass();
 	createGraphicsPipeline();
+}
+
+void VulkanPipeline::createRenderPass() {
+	VkAttachmentDescription colorAttachment {};
+	colorAttachment.format = m_instance.getSwapChainFormat();
+	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;   // clear image before rendering
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save rendered image to display
+	colorAttachment.stencilLoadOp =
+		VK_ATTACHMENT_LOAD_OP_DONT_CARE; // We don't use the stencil buffer
+	colorAttachment.stencilStoreOp =
+		VK_ATTACHMENT_STORE_OP_DONT_CARE; // We don't use the stencil buffer
+	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachment.finalLayout =
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // Ultimately, we want the color buffer to display to the
+	                                     // screen
+
+	// create reference to attached image
+	VkAttachmentReference colorAttachmentRef {};
+	colorAttachmentRef.attachment = 0; // TODO: this should be abstracted
+	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	// Define subpass to do rendering
+	VkSubpassDescription subpass {};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &colorAttachmentRef; // this array is index by frag shader outputs
+
+	// Create render pass
+	VkRenderPassCreateInfo renderPassInfo {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassInfo.attachmentCount = 1;
+	renderPassInfo.pAttachments = &colorAttachment;
+	renderPassInfo.subpassCount = 1;
+	renderPassInfo.pSubpasses = &subpass;
+
+	if (vkCreateRenderPass(m_instance.getLogicalDevice(), &renderPassInfo, nullptr,
+	                       &m_renderPass) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create render pass!");
+	}
 }
 
 void VulkanPipeline::createGraphicsPipeline() {
@@ -36,7 +77,7 @@ void VulkanPipeline::createGraphicsPipeline() {
 	dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	dynamicState.pDynamicStates = dynamicStates.data(); */
 
-	// Specify inputs expected by vertex shader
+	// Specify inputs (uniforms) expected by vertex shader
 	// TODO: abstract this logic to a shader class
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -45,6 +86,10 @@ void VulkanPipeline::createGraphicsPipeline() {
 	vertexInputInfo.vertexAttributeDescriptionCount = 0;
 	vertexInputInfo.pVertexAttributeDescriptions = nullptr; // types of attributes passed
 
+	// Create state for fixed function pipeline stages
+	PipelineConfigInfo pi = defaultPipelineConfigInfo();
+
+	// Create pipeline layout (TODO: not sure what this is for)
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 0;            // Optional
@@ -57,13 +102,39 @@ void VulkanPipeline::createGraphicsPipeline() {
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
 
+	// Create graphics pipeline
+	VkGraphicsPipelineCreateInfo pipelineInfo {};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &pi.inputAssemblyInfo;
+	pipelineInfo.pViewportState = &pi.viewportInfo;
+	pipelineInfo.pRasterizationState = &pi.rasterizationInfo;
+	pipelineInfo.pMultisampleState = &pi.multisampleInfo;
+	pipelineInfo.pDepthStencilState = &pi.depthStencilInfo;
+	pipelineInfo.pColorBlendState = &pi.colorBlendInfo;
+	pipelineInfo.pDynamicState = nullptr;
+	pipelineInfo.layout = m_pipelineLayout;
+	pipelineInfo.renderPass = m_renderPass;
+	pipelineInfo.subpass = 0; // index of the subpass in the render pass to use this pipeline
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // We aren't inheriting from another pipeline
+	pipelineInfo.basePipelineIndex = -1;              // We aren't inheriting from another pipeline
+
+	if (vkCreateGraphicsPipelines(m_instance.getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo,
+	                              nullptr, &m_pipeline) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create graphics pipeline!");
+	}
+
 	// shader modules linked to GPU, can destroy local copy
 	vkDestroyShaderModule(m_instance.getLogicalDevice(), fragShaderModule, nullptr);
 	vkDestroyShaderModule(m_instance.getLogicalDevice(), vertShaderModule, nullptr);
 }
 
 VulkanPipeline::~VulkanPipeline() {
+	vkDestroyPipeline(m_instance.getLogicalDevice(), m_pipeline, nullptr);
 	vkDestroyPipelineLayout(m_instance.getLogicalDevice(), m_pipelineLayout, nullptr);
+	vkDestroyRenderPass(m_instance.getLogicalDevice(), m_renderPass, nullptr);
 }
 
 std::vector<char> VulkanPipeline::readFile(const std::string& filename) {

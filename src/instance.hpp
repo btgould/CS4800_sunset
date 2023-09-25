@@ -38,6 +38,7 @@ class VulkanInstance {
 
 	inline VkDevice& getLogicalDevice() { return m_logicalDevice; }
 	inline VkExtent2D& getSwapChainExtent() { return m_swapChainExtent; }
+	inline VkFormat& getSwapChainFormat() { return m_swapChainImageFormat; }
 
   private: // core interface
 	void init();

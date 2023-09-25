@@ -31,6 +31,7 @@ class VulkanPipeline {
 	VulkanPipeline& operator=(const VulkanPipeline&) = delete;
 
   private:
+	void createRenderPass();
 	void createGraphicsPipeline();
 	static std::vector<char> readFile(const std::string& filename);
 	VkShaderModule createShaderModule(const std::vector<char>& code);
@@ -39,5 +40,7 @@ class VulkanPipeline {
   private:
 	VulkanInstance& m_instance;
 
+	VkRenderPass m_renderPass;
 	VkPipelineLayout m_pipelineLayout;
+	VkPipeline m_pipeline;
 };
