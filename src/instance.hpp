@@ -33,6 +33,9 @@ class VulkanInstance {
 	VulkanInstance(GLFWWindow& window);
 	~VulkanInstance();
 
+	VulkanInstance(const VulkanInstance&) = delete;
+	VulkanInstance& operator=(const VulkanInstance&) = delete;
+
 	inline VkDevice& getLogicalDevice() { return m_logicalDevice; }
 	inline VkExtent2D& getSwapChainExtent() { return m_swapChainExtent; }
 
@@ -94,7 +97,7 @@ class VulkanInstance {
 	void createImageViews();
 
   private:
-	GLFWWindow m_window;
+	GLFWWindow& m_window;
 
 	VkInstance m_instance;
 	VkPhysicalDevice m_physicalDevice;

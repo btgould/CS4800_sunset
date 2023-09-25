@@ -27,6 +27,9 @@ class VulkanPipeline {
 	VulkanPipeline(VulkanInstance& instance);
 	~VulkanPipeline();
 
+	VulkanPipeline(const VulkanPipeline&) = delete;
+	VulkanPipeline& operator=(const VulkanPipeline&) = delete;
+
   private:
 	void createGraphicsPipeline();
 	static std::vector<char> readFile(const std::string& filename);
@@ -34,7 +37,7 @@ class VulkanPipeline {
 	PipelineConfigInfo defaultPipelineConfigInfo();
 
   private:
-	VulkanInstance m_instance;
+	VulkanInstance& m_instance;
 
 	VkPipelineLayout m_pipelineLayout;
 };
