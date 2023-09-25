@@ -2,4 +2,6 @@ bin
 build
 .cache
 
+res/shaderc
+
 compile_commands.json
