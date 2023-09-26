@@ -37,11 +37,15 @@ class VulkanInstance {
 	VulkanInstance& operator=(const VulkanInstance&) = delete;
 
 	inline const VkDevice& getLogicalDevice() const { return m_logicalDevice; }
+	inline const VkSwapchainKHR& getSwapChain() const { return m_swapChain; }
 	inline const VkExtent2D& getSwapChainExtent() const { return m_swapChainExtent; }
 	inline const VkFormat& getSwapChainFormat() const { return m_swapChainImageFormat; }
 	inline const std::vector<VkImageView> getSwapChainImageViews() const {
 		return m_swapChainImageViews;
 	}
+	inline const QueueFamilyIndices getQueueFamilyIndices() const { return m_queueFamilyIndices; }
+	inline const VkQueue getGraphicsQueue() const { return m_graphicsQueue; }
+	inline const VkQueue getPresentQueue() const { return m_presentQueue; }
 
   private: // core interface
 	void init();
@@ -106,14 +110,15 @@ class VulkanInstance {
 	VkInstance m_instance;
 	VkPhysicalDevice m_physicalDevice;
 	VkDevice m_logicalDevice;
-	VkSurfaceKHR m_surface;
 
+	VkSurfaceKHR m_surface;
 	VkSwapchainKHR m_swapChain;
 	std::vector<VkImage> m_swapChainImages;
 	VkFormat m_swapChainImageFormat;
 	VkExtent2D m_swapChainExtent;
 	std::vector<VkImageView> m_swapChainImageViews;
 
+	QueueFamilyIndices m_queueFamilyIndices;
 	VkQueue m_graphicsQueue; // implicitly destroyed with logicalDevice
 	VkQueue m_presentQueue;
 

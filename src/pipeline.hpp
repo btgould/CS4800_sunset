@@ -30,10 +30,17 @@ class VulkanPipeline {
 	VulkanPipeline(const VulkanPipeline&) = delete;
 	VulkanPipeline& operator=(const VulkanPipeline&) = delete;
 
+	void drawFrame();
+	void flush();
+
   private: // core interface
 	void createRenderPass();
 	void createGraphicsPipeline();
 	void createFramebuffers();
+	void createCommandPool();
+	void createCommandBuffer();
+	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+	void createSyncObjects();
 
   private: // helper
 	static std::vector<char> readFile(const std::string& filename);
@@ -47,4 +54,11 @@ class VulkanPipeline {
 	VkPipelineLayout m_pipelineLayout;
 	VkPipeline m_pipeline;
 	std::vector<VkFramebuffer> swapChainFramebuffers;
+
+	VkCommandPool m_commandPool;
+	VkCommandBuffer m_commandBuffer; // automatically freed with m_commandPool
+
+	VkSemaphore m_imageAvailableSemaphore;
+	VkSemaphore m_renderFinishedSemaphore;
+	VkFence m_inFlightFence;
 };

@@ -453,6 +453,7 @@ void VulkanInstance::pickPhysicalDevice() {
 	for (const auto& device : devices) {
 		if (isDeviceSuitable(device)) {
 			m_physicalDevice = device;
+			m_queueFamilyIndices = findQueueFamilies(device);
 			break;
 		}
 	}
@@ -464,12 +465,11 @@ void VulkanInstance::pickPhysicalDevice() {
 
 void VulkanInstance::createLogicalDevice() {
 	float queuePriority = 1.0f;
-	QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
 
 	// Create graphics queues
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(),
-	                                          indices.presentFamily.value()};
+	std::set<uint32_t> uniqueQueueFamilies = {m_queueFamilyIndices.graphicsFamily.value(),
+	                                          m_queueFamilyIndices.presentFamily.value()};
 
 	for (uint32_t queueFamily : uniqueQueueFamilies) {
 		VkDeviceQueueCreateInfo queueCreateInfo {};
@@ -506,8 +506,10 @@ void VulkanInstance::createLogicalDevice() {
 	// Save handle to graphics queue
 	// We use 0 since we just want any queue from the family supporting these actions
 	// Therefore, we take the first one.
-	vkGetDeviceQueue(m_logicalDevice, indices.graphicsFamily.value(), 0, &m_graphicsQueue);
-	vkGetDeviceQueue(m_logicalDevice, indices.presentFamily.value(), 0, &m_presentQueue);
+	vkGetDeviceQueue(m_logicalDevice, m_queueFamilyIndices.graphicsFamily.value(), 0,
+	                 &m_graphicsQueue);
+	vkGetDeviceQueue(m_logicalDevice, m_queueFamilyIndices.presentFamily.value(), 0,
+	                 &m_presentQueue);
 }
 
 void VulkanInstance::createSwapChain() {
@@ -542,11 +544,10 @@ void VulkanInstance::createSwapChain() {
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
 	// Attach queues to swap chain
-	// TODO: Do I have to redo this query?
-	QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
-	uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+	uint32_t queueFamilyIndices[] = {m_queueFamilyIndices.graphicsFamily.value(),
+	                                 m_queueFamilyIndices.presentFamily.value()};
 
-	if (indices.graphicsFamily != indices.presentFamily) {
+	if (m_queueFamilyIndices.graphicsFamily != m_queueFamilyIndices.presentFamily) {
 		// We don't want to explicitly manage queue ownership of an image, let them share
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 2;

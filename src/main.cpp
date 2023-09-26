@@ -11,12 +11,16 @@
 
 class HelloTriangleApplication {
   public:
-	HelloTriangleApplication() : m_window(GLFWWindow("Vulkan")), m_instance(m_window), m_pipeline(m_instance) {}
+	HelloTriangleApplication()
+		: m_window(GLFWWindow("Vulkan")), m_instance(m_window), m_pipeline(m_instance) {}
 
 	void run() {
 		while (!m_window.shouldClose()) {
 			glfwPollEvents();
+			m_pipeline.drawFrame();
 		}
+
+		m_pipeline.flush();
 	}
 
   private:
