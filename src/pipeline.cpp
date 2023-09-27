@@ -3,66 +3,7 @@
 #include <vulkan/vulkan_core.h>
 
 VulkanPipeline::VulkanPipeline(VulkanInstance& instance) : m_instance(instance) {
-	createRenderPass();
 	createGraphicsPipeline();
-	createFramebuffers();
-	createCommandPool();
-	createCommandBuffer();
-	createSyncObjects();
-}
-
-void VulkanPipeline::createRenderPass() {
-	VkAttachmentDescription colorAttachment {};
-	colorAttachment.format = m_instance.getSwapChainFormat();
-	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;   // clear image before rendering
-	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save rendered image to display
-	colorAttachment.stencilLoadOp =
-		VK_ATTACHMENT_LOAD_OP_DONT_CARE; // We don't use the stencil buffer
-	colorAttachment.stencilStoreOp =
-		VK_ATTACHMENT_STORE_OP_DONT_CARE; // We don't use the stencil buffer
-	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.finalLayout =
-		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // Ultimately, we want the color buffer to display to the
-	                                     // screen
-
-	// create reference to attached image
-	VkAttachmentReference colorAttachmentRef {};
-	colorAttachmentRef.attachment = 0; // TODO: this should be abstracted
-	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	// Define subpass to do rendering
-	VkSubpassDescription subpass {};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &colorAttachmentRef; // this array is index by frag shader outputs
-
-	// Create render pass
-	VkRenderPassCreateInfo renderPassInfo {};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	renderPassInfo.attachmentCount = 1;
-	renderPassInfo.pAttachments = &colorAttachment;
-	renderPassInfo.subpassCount = 1;
-	renderPassInfo.pSubpasses = &subpass;
-
-	// Make render pass depend on image being available
-	VkSubpassDependency dependency {};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0; // 0 here indexes our custom subpasses (of which there is only 1)
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // operation to wait on
-	dependency.srcAccessMask = 0;
-	dependency.dstStageMask =
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // operation to prevent until done waiting
-	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-	renderPassInfo.dependencyCount = 1;
-	renderPassInfo.pDependencies = &dependency;
-
-	// Construct render pass
-	if (vkCreateRenderPass(m_instance.getLogicalDevice(), &renderPassInfo, nullptr,
-	                       &m_renderPass) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create render pass!");
-	}
 }
 
 void VulkanPipeline::createGraphicsPipeline() {
@@ -116,8 +57,8 @@ void VulkanPipeline::createGraphicsPipeline() {
 	pipelineLayoutInfo.pushConstantRangeCount = 0;    // Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-	if (vkCreatePipelineLayout(m_instance.getLogicalDevice(), &pipelineLayoutInfo, nullptr,
-	                           &m_pipelineLayout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(m_instance.getDevice().getLogicalDevice(), &pipelineLayoutInfo,
+	                           nullptr, &m_pipelineLayout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
 
@@ -135,73 +76,20 @@ void VulkanPipeline::createGraphicsPipeline() {
 	pipelineInfo.pColorBlendState = &pi.colorBlendInfo;
 	pipelineInfo.pDynamicState = nullptr;
 	pipelineInfo.layout = m_pipelineLayout;
-	pipelineInfo.renderPass = m_renderPass;
-	pipelineInfo.subpass = 0; // index of the subpass in the render pass to use this pipeline
+	pipelineInfo.renderPass = m_instance.getSwapChain().getRenderPass();
+	pipelineInfo.subpass = 0; // index of the subpass in the render pass to use this pipeline FIXME:
+	                          // this is now arbitrary
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // We aren't inheriting from another pipeline
 	pipelineInfo.basePipelineIndex = -1;              // We aren't inheriting from another pipeline
 
-	if (vkCreateGraphicsPipelines(m_instance.getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo,
-	                              nullptr, &m_pipeline) != VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(m_instance.getDevice().getLogicalDevice(), VK_NULL_HANDLE, 1,
+	                              &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
 
 	// shader modules linked to GPU, can destroy local copy
-	vkDestroyShaderModule(m_instance.getLogicalDevice(), fragShaderModule, nullptr);
-	vkDestroyShaderModule(m_instance.getLogicalDevice(), vertShaderModule, nullptr);
-}
-
-void VulkanPipeline::createFramebuffers() {
-	auto scImageViews = m_instance.getSwapChainImageViews();
-
-	swapChainFramebuffers.resize(scImageViews.size());
-
-	for (uint32_t i = 0; i < scImageViews.size(); i++) {
-		VkImageView attachments[] = {scImageViews[i]};
-
-		VkFramebufferCreateInfo framebufferInfo {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = m_renderPass;
-		framebufferInfo.attachmentCount = 1;
-		framebufferInfo.pAttachments = attachments;
-		framebufferInfo.width = m_instance.getSwapChainExtent().width;
-		framebufferInfo.height = m_instance.getSwapChainExtent().height;
-		framebufferInfo.layers = 1;
-
-		if (vkCreateFramebuffer(m_instance.getLogicalDevice(), &framebufferInfo, nullptr,
-		                        &swapChainFramebuffers[i]) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create framebuffer!");
-		}
-	}
-}
-
-void VulkanPipeline::createCommandPool() {
-	QueueFamilyIndices queueFamilyIndices = m_instance.getQueueFamilyIndices();
-
-	VkCommandPoolCreateInfo poolInfo {};
-	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	poolInfo.flags =
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // we want to record command buffers
-	                                                     // individually, not in groups
-	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-
-	if (vkCreateCommandPool(m_instance.getLogicalDevice(), &poolInfo, nullptr, &m_commandPool) !=
-	    VK_SUCCESS) {
-		throw std::runtime_error("failed to create command pool!");
-	}
-}
-
-void VulkanPipeline::createCommandBuffer() {
-	VkCommandBufferAllocateInfo allocInfo {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = m_commandPool;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; // can be submitted for execution, but not
-	                                                   // called by other command buffers
-	allocInfo.commandBufferCount = 1;
-
-	if (vkAllocateCommandBuffers(m_instance.getLogicalDevice(), &allocInfo, &m_commandBuffer) !=
-	    VK_SUCCESS) {
-		throw std::runtime_error("failed to allocate command buffers!");
-	}
+	vkDestroyShaderModule(m_instance.getDevice().getLogicalDevice(), fragShaderModule, nullptr);
+	vkDestroyShaderModule(m_instance.getDevice().getLogicalDevice(), vertShaderModule, nullptr);
 }
 
 void VulkanPipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
@@ -218,10 +106,10 @@ void VulkanPipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 	// Start render pass
 	VkRenderPassBeginInfo renderPassInfo {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = m_renderPass;
-	renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
+	renderPassInfo.renderPass = m_instance.getSwapChain().getRenderPass();
+	renderPassInfo.framebuffer = m_instance.getSwapChain().getFramebuffer(imageIndex);
 	renderPassInfo.renderArea.offset = {0, 0};
-	renderPassInfo.renderArea.extent = m_instance.getSwapChainExtent();
+	renderPassInfo.renderArea.extent = m_instance.getSwapChain().getExtent();
 	VkClearValue clearColor = {{{1.0f, 0.0f, 1.0f, 1.0f}}};
 	renderPassInfo.clearValueCount = 1;
 	renderPassInfo.pClearValues = &clearColor;
@@ -240,97 +128,31 @@ void VulkanPipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 	}
 }
 
-void VulkanPipeline::createSyncObjects() {
-	VkSemaphoreCreateInfo semaphoreInfo {};
-	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-	VkFenceCreateInfo fenceInfo {};
-	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start signaled so that rendering doesn't
-	                                                // block forever on first frame
-
-	if (vkCreateSemaphore(m_instance.getLogicalDevice(), &semaphoreInfo, nullptr,
-	                      &m_imageAvailableSemaphore) != VK_SUCCESS ||
-	    vkCreateSemaphore(m_instance.getLogicalDevice(), &semaphoreInfo, nullptr,
-	                      &m_renderFinishedSemaphore) != VK_SUCCESS ||
-	    vkCreateFence(m_instance.getLogicalDevice(), &fenceInfo, nullptr, &m_inFlightFence) !=
-	        VK_SUCCESS) {
-		throw std::runtime_error("failed to create semaphores!");
-	}
-}
-
 VulkanPipeline::~VulkanPipeline() {
-	vkDestroySemaphore(m_instance.getLogicalDevice(), m_imageAvailableSemaphore, nullptr);
-	vkDestroySemaphore(m_instance.getLogicalDevice(), m_renderFinishedSemaphore, nullptr);
-	vkDestroyFence(m_instance.getLogicalDevice(), m_inFlightFence, nullptr);
-
-	vkDestroyCommandPool(m_instance.getLogicalDevice(), m_commandPool, nullptr);
-
-	for (auto framebuffer : swapChainFramebuffers) {
-		vkDestroyFramebuffer(m_instance.getLogicalDevice(), framebuffer, nullptr);
-	}
-
-	vkDestroyPipeline(m_instance.getLogicalDevice(), m_pipeline, nullptr);
-	vkDestroyPipelineLayout(m_instance.getLogicalDevice(), m_pipelineLayout, nullptr);
-	vkDestroyRenderPass(m_instance.getLogicalDevice(), m_renderPass, nullptr);
+	vkDestroyPipeline(m_instance.getDevice().getLogicalDevice(), m_pipeline, nullptr);
+	vkDestroyPipelineLayout(m_instance.getDevice().getLogicalDevice(), m_pipelineLayout, nullptr);
 }
 
 void VulkanPipeline::drawFrame() {
-	// Wait for previous frame to finish
-	vkWaitForFences(m_instance.getLogicalDevice(), 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
-	vkResetFences(m_instance.getLogicalDevice(), 1, &m_inFlightFence);
-
 	// Get image from swap chain
-	uint32_t imageIndex;
-	vkAcquireNextImageKHR(m_instance.getLogicalDevice(), m_instance.getSwapChain(), UINT64_MAX,
-	                      m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	uint32_t imageIndex = m_instance.getSwapChain().aquireNextFrame();
 
-	// Draw Frame
-	vkResetCommandBuffer(m_commandBuffer, 0);
-	recordCommandBuffer(m_commandBuffer, imageIndex);
+	// Record draw commands for frame
+	VkCommandBuffer cmdBuf = m_instance.getDevice().getCommandBuffer();
+	recordCommandBuffer(cmdBuf, imageIndex);
 
 	// submit drawing to queue
-	VkSubmitInfo submitInfo {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-	// Ordered array of semaphores and stages to wait on until semaphore is available
-	VkSemaphore imageAvailableSemaphores[] = {m_imageAvailableSemaphore};
 	VkPipelineStageFlags waitStages[] = {
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}; // don't color attachment until image is
 	                                                    // available
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = imageAvailableSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;
-	VkSemaphore renderFinishedSemaphores[] = {
-		m_renderFinishedSemaphore}; // signal when rendering finishes
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = renderFinishedSemaphores;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &m_commandBuffer; // command buffers to execute
+	m_instance.getSwapChain().submit(cmdBuf, waitStages);
 
-	if (vkQueueSubmit(m_instance.getGraphicsQueue(), 1, &submitInfo, m_inFlightFence) !=
-	    VK_SUCCESS) {
-		throw std::runtime_error("failed to submit draw command buffer!");
-	}
-
-	// Send rendered image back to swap chain
-	VkPresentInfoKHR presentInfo {};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = renderFinishedSemaphores;
-
-	VkSwapchainKHR swapChains[] = {m_instance.getSwapChain()};
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &imageIndex;
-	presentInfo.pResults = nullptr; // Optional
-
-	vkQueuePresentKHR(m_instance.getPresentQueue(), &presentInfo);
+	// Present rendered image to screen
+	m_instance.getSwapChain().present(imageIndex);
 }
 
 void VulkanPipeline::flush() {
-	vkDeviceWaitIdle(m_instance.getLogicalDevice());
+	vkDeviceWaitIdle(m_instance.getDevice().getLogicalDevice());
 }
 
 std::vector<char> VulkanPipeline::readFile(const std::string& filename) {
@@ -358,8 +180,8 @@ VkShaderModule VulkanPipeline::createShaderModule(const std::vector<char>& code)
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
 	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(m_instance.getLogicalDevice(), &createInfo, nullptr, &shaderModule) !=
-	    VK_SUCCESS) {
+	if (vkCreateShaderModule(m_instance.getDevice().getLogicalDevice(), &createInfo, nullptr,
+	                         &shaderModule) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create shader module!");
 	}
 
@@ -378,16 +200,16 @@ PipelineConfigInfo VulkanPipeline::defaultPipelineConfigInfo() {
 	// Screen coordinate locations to render to
 	configInfo.viewport.x = 0.0f;
 	configInfo.viewport.y = 0.0f;
-	configInfo.viewport.width = m_instance.getSwapChainExtent().width;
-	configInfo.viewport.height = m_instance.getSwapChainExtent().height;
+	configInfo.viewport.width = m_instance.getSwapChain().getExtent().width;
+	configInfo.viewport.height = m_instance.getSwapChain().getExtent().height;
 	configInfo.viewport.minDepth = 0.0f;
 	configInfo.viewport.maxDepth = 1.0f;
 
 	// Pixels outside of this screen coordinate region are simply discarded
 	// Does nothing if this region is larger than the viewport
 	configInfo.scissor.offset = {0, 0};
-	configInfo.scissor.extent = {m_instance.getSwapChainExtent().width,
-	                             m_instance.getSwapChainExtent().height};
+	configInfo.scissor.extent = {m_instance.getSwapChain().getExtent().width,
+	                             m_instance.getSwapChain().getExtent().height};
 
 	// Known issue: this creates a self-referencing structure. Fixed in tutorial 05
 	configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

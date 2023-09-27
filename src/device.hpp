@@ -31,6 +31,14 @@ class VulkanDevice {
 	VulkanDevice(const VulkanDevice&) = delete;
 	VulkanDevice& operator=(const VulkanDevice&) = delete;
 
+	/**
+	 * @brief Gets a command buffer from this device. The buffer is guaranteed to be blank and ready
+	 * for recording
+	 *
+	 * @return A VkCommandBuffer in its initial state
+	 */
+	const VkCommandBuffer getCommandBuffer() const; // FIXME: it's pretty sketchy that this is const
+
 	inline const SwapChainSupportDetails& getSwapChainSupportDetails() const {
 		return m_swapChainSupportDetails;
 	}
@@ -50,6 +58,9 @@ class VulkanDevice {
 	 */
 	void createLogicalDevice();
 
+	void createCommandPool();
+	void createCommandBuffer();
+
 	QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice& device,
 	                                     const VkSurfaceKHR& surface);
 	SwapChainSupportDetails querySwapChainSupport(const VkPhysicalDevice& device,
@@ -65,6 +76,9 @@ class VulkanDevice {
 	QueueFamilyIndices m_queueFamilyIndices;
 	VkQueue m_graphicsQueue; // implicitly destroyed with logicalDevice
 	VkQueue m_presentQueue;
+
+	VkCommandPool m_commandPool;
+	VkCommandBuffer m_commandBuffer; // automatically freed with m_commandPool
 
 	const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 };

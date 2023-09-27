@@ -9,10 +9,18 @@
 VulkanDevice::VulkanDevice(const VkInstance& instance, const VkSurfaceKHR& surface) {
 	pickPhysicalDevice(instance, surface);
 	createLogicalDevice();
+	createCommandPool();
+	createCommandBuffer();
 }
 
 VulkanDevice::~VulkanDevice() {
+	vkDestroyCommandPool(m_logicalDevice, m_commandPool, nullptr);
 	vkDestroyDevice(m_logicalDevice, nullptr);
+}
+
+const VkCommandBuffer VulkanDevice::getCommandBuffer() const {
+	vkResetCommandBuffer(m_commandBuffer, 0);
+	return m_commandBuffer;
 }
 
 void VulkanDevice::pickPhysicalDevice(const VkInstance& instance, const VkSurfaceKHR& surface) {
@@ -89,6 +97,32 @@ void VulkanDevice::createLogicalDevice() {
 	                 &m_graphicsQueue);
 	vkGetDeviceQueue(m_logicalDevice, m_queueFamilyIndices.presentFamily.value(), 0,
 	                 &m_presentQueue);
+}
+
+void VulkanDevice::createCommandPool() {
+	VkCommandPoolCreateInfo poolInfo {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.flags =
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // we want to record command buffers
+	                                                     // individually, not in groups
+	poolInfo.queueFamilyIndex = m_queueFamilyIndices.graphicsFamily.value();
+
+	if (vkCreateCommandPool(m_logicalDevice, &poolInfo, nullptr, &m_commandPool) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create command pool!");
+	}
+}
+
+void VulkanDevice::createCommandBuffer() {
+	VkCommandBufferAllocateInfo allocInfo {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = m_commandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; // can be submitted for execution, but not
+	                                                   // called by other command buffers
+	allocInfo.commandBufferCount = 1;
+
+	if (vkAllocateCommandBuffers(m_logicalDevice, &allocInfo, &m_commandBuffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate command buffers!");
+	}
 }
 
 QueueFamilyIndices VulkanDevice::findQueueFamilies(const VkPhysicalDevice& device,

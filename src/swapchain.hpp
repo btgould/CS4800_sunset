@@ -15,17 +15,26 @@ class VulkanSwapChain {
 	VulkanSwapChain(const VulkanSwapChain&) = delete;
 	VulkanSwapChain& operator=(const VulkanSwapChain&) = delete;
 
+	uint32_t aquireNextFrame() const; // FIXME: it's pretty hacky that these are marked const...
+	void submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages) const;
+	void present(uint32_t imageIndex) const;
+
 	inline const VkSwapchainKHR& getSwapChain() const { return m_swapChain; }
-	inline const VkExtent2D& getSwapChainExtent() const { return m_swapChainExtent; }
-	inline const std::vector<VkImageView> getSwapChainImageViews() const {
-		return m_swapChainImageViews;
+	inline const VkExtent2D& getExtent() const { return m_extent; }
+	inline const std::vector<VkImageView> getImageViews() const { return m_imageViews; }
+	inline const VkFormat& getImageFormat() const { return m_imageFormat; }
+	inline const VkFramebuffer getFramebuffer(uint32_t imageIndex) const {
+		return m_framebuffers[imageIndex];
 	}
-	inline const VkFormat& getSwapChainFormat() const { return m_swapChainImageFormat; }
+	inline const VkRenderPass getRenderPass() const { return m_renderPass; }
 
   private:
 	void createSwapChain(const VulkanDevice& device, const GLFWWindow& window,
-                                      const VkSurfaceKHR& surface);
+	                     const VkSurfaceKHR& surface);
 	void createImageViews();
+	void createRenderPass();
+	void createFramebuffers();
+	void createSyncObjects();
 
 	VkSurfaceFormatKHR
 	chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
@@ -46,8 +55,17 @@ class VulkanSwapChain {
 	const VulkanDevice& m_device;
 
 	VkSwapchainKHR m_swapChain;
-	std::vector<VkImage> m_swapChainImages;
-	VkFormat m_swapChainImageFormat;
-	VkExtent2D m_swapChainExtent;
-	std::vector<VkImageView> m_swapChainImageViews;
+	std::vector<VkImage> m_images;
+	std::vector<VkImageView> m_imageViews;
+	VkFormat m_imageFormat;
+	VkExtent2D m_extent;
+
+	/* Each render pass instance defines a set of image resources, referred to as attachments, used
+	 * during rendering*/
+	VkRenderPass m_renderPass;
+	std::vector<VkFramebuffer> m_framebuffers;
+
+	VkSemaphore m_imageAvailableSemaphore;
+	VkSemaphore m_renderFinishedSemaphore;
+	VkFence m_inFlightFence;
 };

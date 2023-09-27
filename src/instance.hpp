@@ -18,18 +18,8 @@ class VulkanInstance {
 	VulkanInstance(const VulkanInstance&) = delete;
 	VulkanInstance& operator=(const VulkanInstance&) = delete;
 
-	inline const VkDevice& getLogicalDevice() const { return m_device.getLogicalDevice(); }
-	inline const QueueFamilyIndices getQueueFamilyIndices() const {
-		return m_device.getQueueFamilyIndices();
-	}
-	inline const VkQueue getGraphicsQueue() const { return m_device.getGraphicsQueue(); }
-	inline const VkQueue getPresentQueue() const { return m_device.getPresentQueue(); }
-	inline const VkSwapchainKHR& getSwapChain() const { return m_swapChain.getSwapChain(); }
-	inline const VkExtent2D& getSwapChainExtent() const { return m_swapChain.getSwapChainExtent(); }
-	inline const VkFormat& getSwapChainFormat() const { return m_swapChain.getSwapChainFormat(); }
-	inline const std::vector<VkImageView> getSwapChainImageViews() const {
-		return m_swapChain.getSwapChainImageViews();
-	}
+	inline const VulkanDevice& getDevice() const { return m_device; }
+	inline const VulkanSwapChain& getSwapChain() const { return m_swapChain; }
 
   private: // core interface
 	void init();

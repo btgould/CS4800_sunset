@@ -17,9 +17,6 @@ struct PipelineConfigInfo {
 	VkPipelineColorBlendAttachmentState colorBlendAttachment;
 	VkPipelineColorBlendStateCreateInfo colorBlendInfo;
 	VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
-	VkPipelineLayout pipelineLayout = nullptr;
-	VkRenderPass renderPass = nullptr;
-	uint32_t subpass = 0;
 };
 
 class VulkanPipeline {
@@ -34,13 +31,8 @@ class VulkanPipeline {
 	void flush();
 
   private: // core interface
-	void createRenderPass();
 	void createGraphicsPipeline();
-	void createFramebuffers();
-	void createCommandPool();
-	void createCommandBuffer();
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-	void createSyncObjects();
 
   private: // helper
 	static std::vector<char> readFile(const std::string& filename);
@@ -50,15 +42,6 @@ class VulkanPipeline {
   private:
 	VulkanInstance& m_instance;
 
-	VkRenderPass m_renderPass;
 	VkPipelineLayout m_pipelineLayout;
 	VkPipeline m_pipeline;
-	std::vector<VkFramebuffer> swapChainFramebuffers;
-
-	VkCommandPool m_commandPool;
-	VkCommandBuffer m_commandBuffer; // automatically freed with m_commandPool
-
-	VkSemaphore m_imageAvailableSemaphore;
-	VkSemaphore m_renderFinishedSemaphore;
-	VkFence m_inFlightFence;
 };
