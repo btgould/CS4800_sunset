@@ -21,7 +21,7 @@ void GLFWWindow::createSurface(VkInstance instance, VkSurfaceKHR* surface) {
 	}
 }
 
-VkExtent2D GLFWWindow::getFramebufferSize() {
+const VkExtent2D GLFWWindow::getFramebufferSize() const {
 	int width, height;
 	glfwGetFramebufferSize(m_window, &width, &height);
 

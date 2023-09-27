@@ -20,7 +20,7 @@ class GLFWWindow {
 	 *
 	 * @return Extent describing window size in pixels
 	 */
-	VkExtent2D getFramebufferSize();
+	const VkExtent2D getFramebufferSize() const;
 
   private:
 	GLFWwindow* m_window;
