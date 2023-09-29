@@ -37,10 +37,11 @@ class VulkanDevice {
 	 *
 	 * @return A VkCommandBuffer in its initial state
 	 */
-	const VkCommandBuffer getCommandBuffer() const; // FIXME: it's pretty sketchy that this is const
+	const VkCommandBuffer getCommandBuffer();
 
-	inline const SwapChainSupportDetails& getSwapChainSupportDetails() const {
-		return m_swapChainSupportDetails;
+	inline const SwapChainSupportDetails
+	querySwapChainSupportDetails(const VkSurfaceKHR surface) const {
+		return querySwapChainSupport(m_physicalDevice, surface);
 	}
 	inline const QueueFamilyIndices& getQueueFamilyIndices() const { return m_queueFamilyIndices; }
 	inline const VkDevice& getLogicalDevice() const { return m_logicalDevice; }
@@ -64,7 +65,7 @@ class VulkanDevice {
 	QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice& device,
 	                                     const VkSurfaceKHR& surface);
 	SwapChainSupportDetails querySwapChainSupport(const VkPhysicalDevice& device,
-	                                              const VkSurfaceKHR& surface);
+	                                              const VkSurfaceKHR& surface) const;
 	bool checkDeviceExtensionSupport(const VkPhysicalDevice& device);
 	bool isDeviceSuitable(const VkPhysicalDevice& device, const VkSurfaceKHR& surface);
 
@@ -72,7 +73,6 @@ class VulkanDevice {
 	VkPhysicalDevice m_physicalDevice;
 	VkDevice m_logicalDevice;
 
-	SwapChainSupportDetails m_swapChainSupportDetails;
 	QueueFamilyIndices m_queueFamilyIndices;
 	VkQueue m_graphicsQueue; // implicitly destroyed with logicalDevice
 	VkQueue m_presentQueue;

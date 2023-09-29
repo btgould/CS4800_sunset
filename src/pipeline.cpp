@@ -135,7 +135,12 @@ VulkanPipeline::~VulkanPipeline() {
 
 void VulkanPipeline::drawFrame() {
 	// Get image from swap chain
-	uint32_t imageIndex = m_instance.getSwapChain().aquireNextFrame();
+	auto imageIndexOpt = m_instance.getSwapChain().aquireNextFrame();
+	if (!imageIndexOpt.has_value()) {
+		// Swap chain is recreating, wait until next frame
+		return;
+	}
+	uint32_t imageIndex = imageIndexOpt.value();
 
 	// Record draw commands for frame
 	VkCommandBuffer cmdBuf = m_instance.getDevice().getCommandBuffer();

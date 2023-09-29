@@ -8,6 +8,8 @@ GLFWWindow::GLFWWindow(std::string name, uint32_t width, uint32_t height)
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 	m_window = glfwCreateWindow(m_width, m_height, m_name.c_str(), nullptr, nullptr);
+	glfwSetWindowUserPointer(m_window, this);
+	glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
 }
 
 GLFWWindow::~GLFWWindow() {
@@ -26,4 +28,9 @@ const VkExtent2D GLFWWindow::getFramebufferSize() const {
 	glfwGetFramebufferSize(m_window, &width, &height);
 
 	return {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
+}
+
+void GLFWWindow::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+	auto win = reinterpret_cast<GLFWWindow*>(glfwGetWindowUserPointer(window));
+	win->m_resized = true;
 }

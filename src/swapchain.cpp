@@ -1,15 +1,18 @@
 #include "swapchain.hpp"
 #include "device.hpp"
 #include "window.hpp"
+#include "util/log.hpp"
 
+#include <GLFW/glfw3.h>
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
+#include <vulkan/vulkan_core.h>
 
-VulkanSwapChain::VulkanSwapChain(const VulkanDevice& device, const GLFWWindow& window,
-                                 const VkSurfaceKHR& surface)
-	: m_device(device) {
-	createSwapChain(device, window, surface);
+VulkanSwapChain::VulkanSwapChain(const VulkanDevice& device, GLFWWindow& window,
+                                 const VkSurfaceKHR surface)
+	: m_device(device), m_window(window), m_surface(surface) {
+	createSwapChain(m_device, m_window, m_surface);
 	createImageViews();
 	createRenderPass();
 	createFramebuffers();
@@ -20,7 +23,8 @@ void VulkanSwapChain::createSwapChain(const VulkanDevice& device, const GLFWWind
                                       const VkSurfaceKHR& surface) {
 
 	// Get swap chain features supported by GPU
-	SwapChainSupportDetails swapChainSupport = m_device.getSwapChainSupportDetails();
+	// TODO: when allowing resizes, queried extant becomes out of date before recreation
+	SwapChainSupportDetails swapChainSupport = m_device.querySwapChainSupportDetails(surface);
 
 	VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
 	VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -97,19 +101,32 @@ VulkanSwapChain::~VulkanSwapChain() {
 	vkDestroySwapchainKHR(m_device.getLogicalDevice(), m_swapChain, nullptr);
 }
 
-uint32_t VulkanSwapChain::aquireNextFrame() const {
+std::optional<uint32_t> VulkanSwapChain::aquireNextFrame() {
 	// Wait for previous frame to finish
 	vkWaitForFences(m_device.getLogicalDevice(), 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
-	vkResetFences(m_device.getLogicalDevice(), 1, &m_inFlightFence);
 
 	// Get image from swap chain
 	uint32_t imageIndex;
-	vkAcquireNextImageKHR(m_device.getLogicalDevice(), m_swapChain, UINT64_MAX,
-	                      m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-	return imageIndex;
+	VkResult result = vkAcquireNextImageKHR(m_device.getLogicalDevice(), m_swapChain, UINT64_MAX,
+	                                        m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+	switch (result) {
+	case VK_SUCCESS:
+	case VK_SUBOPTIMAL_KHR:
+		// Don't reset fence unless we're going to submit another set of rendering work
+		vkResetFences(m_device.getLogicalDevice(), 1, &m_inFlightFence);
+		return imageIndex;
+	case VK_ERROR_OUT_OF_DATE_KHR:
+		LOG_INFO("Swap chain out of date; recreating");
+		recreate();
+		return std::nullopt;
+	default:
+		LOG_ERROR("Unexpected VkResult: {0}", result);
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
 }
 
-void VulkanSwapChain::submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages) const {
+void VulkanSwapChain::submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages) {
 	VkSubmitInfo submitInfo {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -128,7 +145,7 @@ void VulkanSwapChain::submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitS
 	}
 }
 
-void VulkanSwapChain::present(uint32_t imageIndex) const {
+void VulkanSwapChain::present(uint32_t imageIndex) {
 	VkPresentInfoKHR presentInfo {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -141,7 +158,52 @@ void VulkanSwapChain::present(uint32_t imageIndex) const {
 	presentInfo.pImageIndices = &imageIndex;
 	presentInfo.pResults = nullptr; // Optional
 
-	vkQueuePresentKHR(m_device.getPresentQueue(), &presentInfo);
+	VkResult result = vkQueuePresentKHR(m_device.getPresentQueue(), &presentInfo);
+
+	if (m_window.isResized())
+		result = VK_SUBOPTIMAL_KHR; // explicitly recreate on resize
+
+	switch (result) {
+	case VK_SUCCESS:
+		break;
+	case VK_SUBOPTIMAL_KHR:
+	case VK_ERROR_OUT_OF_DATE_KHR:
+		LOG_INFO("Swap chain out of date; recreating");
+		m_window.clearResize();
+		recreate();
+		break;
+	default:
+		LOG_ERROR("Unexpected VkResult: {0}", result);
+		throw std::runtime_error("failed to present swap chain image!");
+	}
+}
+
+void VulkanSwapChain::recreate() {
+	// don't actually do work until there is something to create
+	VkExtent2D framebufferExtant = m_window.getFramebufferSize();
+	while (framebufferExtant.width == 0 && framebufferExtant.height == 0) {
+		framebufferExtant = m_window.getFramebufferSize();
+		glfwWaitEvents();
+	}
+
+	// Wait until rendering is finished
+	vkDeviceWaitIdle(m_device.getLogicalDevice());
+
+	// Cleanup resources to be recreated
+	for (size_t i = 0; i < m_framebuffers.size(); i++) {
+		vkDestroyFramebuffer(m_device.getLogicalDevice(), m_framebuffers[i], nullptr);
+	}
+
+	for (size_t i = 0; i < m_imageViews.size(); i++) {
+		vkDestroyImageView(m_device.getLogicalDevice(), m_imageViews[i], nullptr);
+	}
+
+	vkDestroySwapchainKHR(m_device.getLogicalDevice(), m_swapChain, nullptr);
+
+	// recreate resources
+	createSwapChain(m_device, m_window, m_surface);
+	createImageViews();
+	createFramebuffers();
 }
 
 VkSurfaceFormatKHR

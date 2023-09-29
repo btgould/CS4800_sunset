@@ -18,8 +18,8 @@ class VulkanInstance {
 	VulkanInstance(const VulkanInstance&) = delete;
 	VulkanInstance& operator=(const VulkanInstance&) = delete;
 
-	inline const VulkanDevice& getDevice() const { return m_device; }
-	inline const VulkanSwapChain& getSwapChain() const { return m_swapChain; }
+	inline VulkanDevice& getDevice() { return m_device; }
+	inline VulkanSwapChain& getSwapChain() { return m_swapChain; }
 
   private: // core interface
 	void init();

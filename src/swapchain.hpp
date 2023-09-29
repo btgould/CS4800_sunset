@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -8,16 +9,15 @@
 
 class VulkanSwapChain {
   public:
-	VulkanSwapChain(const VulkanDevice& device, const GLFWWindow& window,
-	                const VkSurfaceKHR& surface);
+	VulkanSwapChain(const VulkanDevice& device, GLFWWindow& window, const VkSurfaceKHR surface);
 	~VulkanSwapChain();
 
 	VulkanSwapChain(const VulkanSwapChain&) = delete;
 	VulkanSwapChain& operator=(const VulkanSwapChain&) = delete;
 
-	uint32_t aquireNextFrame() const; // FIXME: it's pretty hacky that these are marked const...
-	void submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages) const;
-	void present(uint32_t imageIndex) const;
+	std::optional<uint32_t> aquireNextFrame();
+	void submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages);
+	void present(uint32_t imageIndex);
 
 	inline const VkSwapchainKHR& getSwapChain() const { return m_swapChain; }
 	inline const VkExtent2D& getExtent() const { return m_extent; }
@@ -35,6 +35,8 @@ class VulkanSwapChain {
 	void createRenderPass();
 	void createFramebuffers();
 	void createSyncObjects();
+
+	void recreate();
 
 	VkSurfaceFormatKHR
 	chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
@@ -68,4 +70,8 @@ class VulkanSwapChain {
 	VkSemaphore m_imageAvailableSemaphore;
 	VkSemaphore m_renderFinishedSemaphore;
 	VkFence m_inFlightFence;
+
+	// TODO: this is kinda hacky, but I have to save these handles to recreate
+	GLFWWindow& m_window;
+	const VkSurfaceKHR m_surface;
 };

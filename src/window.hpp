@@ -13,6 +13,8 @@ class GLFWWindow {
 	GLFWWindow& operator=(const GLFWWindow&) = delete;
 
 	inline bool shouldClose() { return glfwWindowShouldClose(m_window); }
+	inline bool isResized() const { return m_resized; }
+	inline void clearResize() { m_resized = false; }
 
 	void createSurface(VkInstance instance, VkSurfaceKHR* surface);
 	/**
@@ -23,9 +25,14 @@ class GLFWWindow {
 	const VkExtent2D getFramebufferSize() const;
 
   private:
+	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
+  private:
 	GLFWwindow* m_window;
 
 	std::string m_name;
 	uint32_t m_width;
 	uint32_t m_height;
+
+	bool m_resized;
 };

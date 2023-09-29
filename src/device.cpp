@@ -18,7 +18,7 @@ VulkanDevice::~VulkanDevice() {
 	vkDestroyDevice(m_logicalDevice, nullptr);
 }
 
-const VkCommandBuffer VulkanDevice::getCommandBuffer() const {
+const VkCommandBuffer VulkanDevice::getCommandBuffer() {
 	vkResetCommandBuffer(m_commandBuffer, 0);
 	return m_commandBuffer;
 }
@@ -40,7 +40,6 @@ void VulkanDevice::pickPhysicalDevice(const VkInstance& instance, const VkSurfac
 		if (isDeviceSuitable(device, surface)) {
 			m_physicalDevice = device;
 			m_queueFamilyIndices = findQueueFamilies(device, surface);
-			m_swapChainSupportDetails = querySwapChainSupport(device, surface);
 			break;
 		}
 	}
@@ -160,7 +159,7 @@ QueueFamilyIndices VulkanDevice::findQueueFamilies(const VkPhysicalDevice& devic
 }
 
 SwapChainSupportDetails VulkanDevice::querySwapChainSupport(const VkPhysicalDevice& device,
-                                                            const VkSurfaceKHR& surface) {
+                                                            const VkSurfaceKHR& surface) const {
 	SwapChainSupportDetails details;
 
 	// Get surface capabilities (i.e. what? TODO)
