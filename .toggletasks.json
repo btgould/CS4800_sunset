@@ -25,12 +25,6 @@
 			"tags": ["build"]
 		},
 		{
-			"name": "generate compile database",
-			"cmd": "compiledb -- make -C build/Debug",
-			"cwd": "${config_dir}",
-			"tags": ["build"]
-		},
-		{
 			"name": "Compile shaders",
 			"cmd": "mkdir -p res/shaderc && for FILE in res/shader/*; do glslc $FILE -o res/shaderc/$(basename \"$FILE\").spv; done",
 			"cwd": "${config_dir}",
