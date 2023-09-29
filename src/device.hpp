@@ -37,7 +37,7 @@ class VulkanDevice {
 	 *
 	 * @return A VkCommandBuffer in its initial state
 	 */
-	const VkCommandBuffer getCommandBuffer();
+	const VkCommandBuffer getCommandBuffer(uint32_t currentFrame);
 
 	inline const SwapChainSupportDetails
 	querySwapChainSupportDetails(const VkSurfaceKHR surface) const {
@@ -60,7 +60,7 @@ class VulkanDevice {
 	void createLogicalDevice();
 
 	void createCommandPool();
-	void createCommandBuffer();
+	void createCommandBuffers();
 
 	QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice& device,
 	                                     const VkSurfaceKHR& surface);
@@ -78,7 +78,7 @@ class VulkanDevice {
 	VkQueue m_presentQueue;
 
 	VkCommandPool m_commandPool;
-	VkCommandBuffer m_commandBuffer; // automatically freed with m_commandPool
+	std::vector<VkCommandBuffer> m_commandBuffers; // automatically freed with m_commandPool
 
 	const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 };

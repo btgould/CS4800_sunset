@@ -1,7 +1,9 @@
 #include "swapchain.hpp"
 #include "device.hpp"
 #include "window.hpp"
+
 #include "util/log.hpp"
+#include "util/constants.hpp"
 
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -84,9 +86,11 @@ void VulkanSwapChain::createSwapChain(const VulkanDevice& device, const GLFWWind
 }
 
 VulkanSwapChain::~VulkanSwapChain() {
-	vkDestroySemaphore(m_device.getLogicalDevice(), m_imageAvailableSemaphore, nullptr);
-	vkDestroySemaphore(m_device.getLogicalDevice(), m_renderFinishedSemaphore, nullptr);
-	vkDestroyFence(m_device.getLogicalDevice(), m_inFlightFence, nullptr);
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		vkDestroySemaphore(m_device.getLogicalDevice(), m_imageAvailableSemaphores[i], nullptr);
+		vkDestroySemaphore(m_device.getLogicalDevice(), m_renderFinishedSemaphores[i], nullptr);
+		vkDestroyFence(m_device.getLogicalDevice(), m_inFlightFences[i], nullptr);
+	}
 
 	for (auto framebuffer : m_framebuffers) {
 		vkDestroyFramebuffer(m_device.getLogicalDevice(), framebuffer, nullptr);
@@ -101,20 +105,22 @@ VulkanSwapChain::~VulkanSwapChain() {
 	vkDestroySwapchainKHR(m_device.getLogicalDevice(), m_swapChain, nullptr);
 }
 
-std::optional<uint32_t> VulkanSwapChain::aquireNextFrame() {
+std::optional<uint32_t> VulkanSwapChain::aquireNextFrame(uint32_t currentFrame) {
 	// Wait for previous frame to finish
-	vkWaitForFences(m_device.getLogicalDevice(), 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
+	vkWaitForFences(m_device.getLogicalDevice(), 1, &m_inFlightFences[currentFrame], VK_TRUE,
+	                UINT64_MAX);
 
 	// Get image from swap chain
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(m_device.getLogicalDevice(), m_swapChain, UINT64_MAX,
-	                                        m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	                                        m_imageAvailableSemaphores[currentFrame],
+	                                        VK_NULL_HANDLE, &imageIndex);
 
 	switch (result) {
 	case VK_SUCCESS:
 	case VK_SUBOPTIMAL_KHR:
 		// Don't reset fence unless we're going to submit another set of rendering work
-		vkResetFences(m_device.getLogicalDevice(), 1, &m_inFlightFence);
+		vkResetFences(m_device.getLogicalDevice(), 1, &m_inFlightFences[currentFrame]);
 		return imageIndex;
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		LOG_INFO("Swap chain out of date; recreating");
@@ -126,31 +132,35 @@ std::optional<uint32_t> VulkanSwapChain::aquireNextFrame() {
 	}
 }
 
-void VulkanSwapChain::submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages) {
+void VulkanSwapChain::submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages,
+                             uint32_t currentFrame) {
 	VkSubmitInfo submitInfo {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 	// Ordered array of semaphores and stages to wait on until semaphore is available
 	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &m_imageAvailableSemaphore;
+	submitInfo.pWaitSemaphores = &m_imageAvailableSemaphores[currentFrame];
 	submitInfo.pWaitDstStageMask =
 		waitStages; // implicitly assume to have same size as waitSemaphores, they are paired up
 	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = &m_renderFinishedSemaphore; // signal when rendering finishes
+	submitInfo.pSignalSemaphores =
+		&m_renderFinishedSemaphores[currentFrame]; // signal when rendering finishes
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &cmdBuf; // command buffers to execute
 
-	if (vkQueueSubmit(m_device.getGraphicsQueue(), 1, &submitInfo, m_inFlightFence) != VK_SUCCESS) {
+	if (vkQueueSubmit(m_device.getGraphicsQueue(), 1, &submitInfo,
+	                  m_inFlightFences[currentFrame]) != VK_SUCCESS) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 }
 
-void VulkanSwapChain::present(uint32_t imageIndex) {
+void VulkanSwapChain::present(uint32_t imageIndex, uint32_t currentFrame) {
 	VkPresentInfoKHR presentInfo {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = &m_renderFinishedSemaphore; // don't present until done rendering
+	presentInfo.pWaitSemaphores =
+		&m_renderFinishedSemaphores[currentFrame]; // don't present until done rendering
 
 	VkSwapchainKHR swapChains[] = {m_swapChain};
 	presentInfo.swapchainCount = 1;
@@ -356,6 +366,10 @@ void VulkanSwapChain::createFramebuffers() {
 }
 
 void VulkanSwapChain::createSyncObjects() {
+	m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
 	VkSemaphoreCreateInfo semaphoreInfo {};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -364,12 +378,15 @@ void VulkanSwapChain::createSyncObjects() {
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start signaled so that rendering doesn't
 	                                                // block forever on first frame
 
-	if (vkCreateSemaphore(m_device.getLogicalDevice(), &semaphoreInfo, nullptr,
-	                      &m_imageAvailableSemaphore) != VK_SUCCESS ||
-	    vkCreateSemaphore(m_device.getLogicalDevice(), &semaphoreInfo, nullptr,
-	                      &m_renderFinishedSemaphore) != VK_SUCCESS ||
-	    vkCreateFence(m_device.getLogicalDevice(), &fenceInfo, nullptr, &m_inFlightFence) !=
-	        VK_SUCCESS) {
-		throw std::runtime_error("failed to create semaphores!");
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
+		if (vkCreateSemaphore(m_device.getLogicalDevice(), &semaphoreInfo, nullptr,
+		                      &m_imageAvailableSemaphores[i]) != VK_SUCCESS ||
+		    vkCreateSemaphore(m_device.getLogicalDevice(), &semaphoreInfo, nullptr,
+		                      &m_renderFinishedSemaphores[i]) != VK_SUCCESS ||
+		    vkCreateFence(m_device.getLogicalDevice(), &fenceInfo, nullptr, &m_inFlightFences[i]) !=
+		        VK_SUCCESS) {
+			throw std::runtime_error("failed to create synchronization objects!");
+		}
 	}
 }

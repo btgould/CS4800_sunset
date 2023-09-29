@@ -1,5 +1,7 @@
 #include "pipeline.hpp"
 
+#include "util/constants.hpp"
+
 #include <vulkan/vulkan_core.h>
 
 VulkanPipeline::VulkanPipeline(VulkanInstance& instance) : m_instance(instance) {
@@ -135,7 +137,7 @@ VulkanPipeline::~VulkanPipeline() {
 
 void VulkanPipeline::drawFrame() {
 	// Get image from swap chain
-	auto imageIndexOpt = m_instance.getSwapChain().aquireNextFrame();
+	auto imageIndexOpt = m_instance.getSwapChain().aquireNextFrame(m_currentFrame);
 	if (!imageIndexOpt.has_value()) {
 		// Swap chain is recreating, wait until next frame
 		return;
@@ -143,17 +145,19 @@ void VulkanPipeline::drawFrame() {
 	uint32_t imageIndex = imageIndexOpt.value();
 
 	// Record draw commands for frame
-	VkCommandBuffer cmdBuf = m_instance.getDevice().getCommandBuffer();
+	VkCommandBuffer cmdBuf = m_instance.getDevice().getCommandBuffer(m_currentFrame);
 	recordCommandBuffer(cmdBuf, imageIndex);
 
 	// submit drawing to queue
 	VkPipelineStageFlags waitStages[] = {
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}; // don't color attachment until image is
 	                                                    // available
-	m_instance.getSwapChain().submit(cmdBuf, waitStages);
+	m_instance.getSwapChain().submit(cmdBuf, waitStages, m_currentFrame);
 
 	// Present rendered image to screen
-	m_instance.getSwapChain().present(imageIndex);
+	m_instance.getSwapChain().present(imageIndex, m_currentFrame);
+
+	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void VulkanPipeline::flush() {

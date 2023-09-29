@@ -1,6 +1,7 @@
 #include "device.hpp"
 
 #include "util/log.hpp"
+#include "util/constants.hpp"
 
 #include <stdexcept>
 #include <string>
@@ -10,7 +11,7 @@ VulkanDevice::VulkanDevice(const VkInstance& instance, const VkSurfaceKHR& surfa
 	pickPhysicalDevice(instance, surface);
 	createLogicalDevice();
 	createCommandPool();
-	createCommandBuffer();
+	createCommandBuffers();
 }
 
 VulkanDevice::~VulkanDevice() {
@@ -18,9 +19,9 @@ VulkanDevice::~VulkanDevice() {
 	vkDestroyDevice(m_logicalDevice, nullptr);
 }
 
-const VkCommandBuffer VulkanDevice::getCommandBuffer() {
-	vkResetCommandBuffer(m_commandBuffer, 0);
-	return m_commandBuffer;
+const VkCommandBuffer VulkanDevice::getCommandBuffer(uint32_t currentFrame) {
+	vkResetCommandBuffer(m_commandBuffers[currentFrame], 0);
+	return m_commandBuffers[currentFrame];
 }
 
 void VulkanDevice::pickPhysicalDevice(const VkInstance& instance, const VkSurfaceKHR& surface) {
@@ -111,15 +112,18 @@ void VulkanDevice::createCommandPool() {
 	}
 }
 
-void VulkanDevice::createCommandBuffer() {
+void VulkanDevice::createCommandBuffers() {
+	m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
 	VkCommandBufferAllocateInfo allocInfo {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = m_commandPool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; // can be submitted for execution, but not
 	                                                   // called by other command buffers
-	allocInfo.commandBufferCount = 1;
+	allocInfo.commandBufferCount = m_commandBuffers.size();
 
-	if (vkAllocateCommandBuffers(m_logicalDevice, &allocInfo, &m_commandBuffer) != VK_SUCCESS) {
+	if (vkAllocateCommandBuffers(m_logicalDevice, &allocInfo, m_commandBuffers.data()) !=
+	    VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate command buffers!");
 	}
 }

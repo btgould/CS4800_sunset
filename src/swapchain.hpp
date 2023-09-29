@@ -15,9 +15,9 @@ class VulkanSwapChain {
 	VulkanSwapChain(const VulkanSwapChain&) = delete;
 	VulkanSwapChain& operator=(const VulkanSwapChain&) = delete;
 
-	std::optional<uint32_t> aquireNextFrame();
-	void submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages);
-	void present(uint32_t imageIndex);
+	std::optional<uint32_t> aquireNextFrame(uint32_t currentFrame);
+	void submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages, uint32_t currentFrame);
+	void present(uint32_t imageIndex, uint32_t currentFrame);
 
 	inline const VkSwapchainKHR& getSwapChain() const { return m_swapChain; }
 	inline const VkExtent2D& getExtent() const { return m_extent; }
@@ -67,9 +67,9 @@ class VulkanSwapChain {
 	VkRenderPass m_renderPass;
 	std::vector<VkFramebuffer> m_framebuffers;
 
-	VkSemaphore m_imageAvailableSemaphore;
-	VkSemaphore m_renderFinishedSemaphore;
-	VkFence m_inFlightFence;
+	std::vector<VkSemaphore> m_imageAvailableSemaphores;
+	std::vector<VkSemaphore> m_renderFinishedSemaphores;
+	std::vector<VkFence> m_inFlightFences;
 
 	// TODO: this is kinda hacky, but I have to save these handles to recreate
 	GLFWWindow& m_window;

@@ -44,4 +44,6 @@ class VulkanPipeline {
 
 	VkPipelineLayout m_pipelineLayout;
 	VkPipeline m_pipeline;
+
+	uint32_t m_currentFrame = 0;
 };
