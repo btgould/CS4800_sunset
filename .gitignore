@@ -5,3 +5,5 @@ build
 res/shaderc
 
 compile_commands.json
+
+*Profile.json
