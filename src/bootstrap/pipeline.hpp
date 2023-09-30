@@ -1,11 +1,12 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
+#include <fstream>
+#include <vector>
 
 #include "instance.hpp"
 
-#include <fstream>
-#include <vector>
+#include "renderer/VertexBuffer.hpp"
 
 struct PipelineConfigInfo {
 	VkViewport viewport;
@@ -41,6 +42,8 @@ class VulkanPipeline {
 
   private:
 	VulkanInstance& m_instance;
+
+	VertexBuffer m_vertexBuffer;
 
 	VkPipelineLayout m_pipelineLayout;
 	VkPipeline m_pipeline;

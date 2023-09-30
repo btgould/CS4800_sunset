@@ -24,6 +24,22 @@ const VkCommandBuffer VulkanDevice::getCommandBuffer(uint32_t currentFrame) {
 	return m_commandBuffers[currentFrame];
 }
 
+uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const{
+	// Get types of memory available on device
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
+
+	// Find memory type that matches the given typeFilter and supports all the given properties
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+		if ((typeFilter & (1 << i)) &&
+		    (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+			return i;
+		}
+	}
+
+	throw std::runtime_error("failed to find suitable memory type!");
+}
+
 void VulkanDevice::pickPhysicalDevice(const VkInstance& instance, const VkSurfaceKHR& surface) {
 	m_physicalDevice = VK_NULL_HANDLE;
 

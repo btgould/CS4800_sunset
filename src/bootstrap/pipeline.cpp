@@ -4,7 +4,11 @@
 
 #include <vulkan/vulkan_core.h>
 
-VulkanPipeline::VulkanPipeline(VulkanInstance& instance) : m_instance(instance) {
+VulkanPipeline::VulkanPipeline(VulkanInstance& instance)
+	: m_instance(instance),
+	  m_vertexBuffer(m_instance.getDevice(), {{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+                                              {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+                                              {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}}) {
 	createGraphicsPipeline();
 }
 
@@ -39,14 +43,18 @@ void VulkanPipeline::createGraphicsPipeline() {
 	dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	dynamicState.pDynamicStates = dynamicStates.data(); */
 
-	// Specify inputs (uniforms) expected by vertex shader
-	// TODO: abstract this logic to a shader class
+	// Specify inputs (uniforms) expected by vertex buffer
+	auto bindingDescription = m_vertexBuffer.getBindingDescription();
+	auto attributeDescriptions = m_vertexBuffer.getAttributeDescriptions();
+
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 0;
-	vertexInputInfo.pVertexBindingDescriptions = nullptr; // spacing between data
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
-	vertexInputInfo.pVertexAttributeDescriptions = nullptr; // types of attributes passed
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; // spacing between data
+	vertexInputInfo.vertexAttributeDescriptionCount =
+		static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexAttributeDescriptions =
+		attributeDescriptions.data(); // type, size, and order of attributes passed
 
 	// Create state for fixed function pipeline stages
 	PipelineConfigInfo pi = defaultPipelineConfigInfo();
@@ -120,8 +128,10 @@ void VulkanPipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 	// Bind pipeline
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 
+	m_vertexBuffer.Bind(commandBuffer);
+
 	// Draw (TODO: I don't understand how this is enough information)
-	vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+	vkCmdDraw(commandBuffer, m_vertexBuffer.Size(), 1, 0, 0);
 
 	// End render pass, stop recording
 	vkCmdEndRenderPass(commandBuffer);

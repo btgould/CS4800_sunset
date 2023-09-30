@@ -39,6 +39,16 @@ class VulkanDevice {
 	 */
 	const VkCommandBuffer getCommandBuffer(uint32_t currentFrame);
 
+	/**
+	 * @brief Gets the index of a memory type on the GPU matching the given type filter and
+	 * supporting all of the desired properties
+	 *
+	 * @param typeFilter bitflag representing the allowable memory types
+	 * @param properties bitflag representing the required memory properties
+	 * @return The index of a memory type matching both the type filter and properties
+	 */
+	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
+
 	inline const SwapChainSupportDetails
 	querySwapChainSupportDetails(const VkSurfaceKHR surface) const {
 		return querySwapChainSupport(m_physicalDevice, surface);
