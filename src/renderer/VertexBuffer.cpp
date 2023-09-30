@@ -9,9 +9,10 @@ VertexBuffer::VertexBuffer(VulkanDevice& device, const std::vector<Vertex>& vert
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-	             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-	             stagingBuffer, stagingBufferMemory);
+	m_device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+	                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+	                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+	                      stagingBuffer, stagingBufferMemory);
 
 	// Copy data from CPU to GPU
 	void* data;
@@ -23,8 +24,9 @@ VertexBuffer::VertexBuffer(VulkanDevice& device, const std::vector<Vertex>& vert
 	                                    // we would have to explicitly flush before unmap
 
 	// Move from staging buffer to (optimally formatted) vertex buffer
-	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-	             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer, m_vertexBufferMemory);
+	m_device.createBuffer(
+		bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer, m_vertexBufferMemory);
 
 	m_device.copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
 
@@ -70,38 +72,4 @@ void VertexBuffer::bind(VkCommandBuffer commandBuffer) {
 	VkBuffer vertexBuffers[] = {m_vertexBuffer};
 	VkDeviceSize offsets[] = {0};
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-}
-
-void VertexBuffer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                                VkMemoryPropertyFlags properties, VkBuffer& buffer,
-                                VkDeviceMemory& bufferMemory) {
-	// Create buffer object
-	VkBufferCreateInfo bufferInfo {};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferInfo.size = size;
-	bufferInfo.usage = usage;
-	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-	if (vkCreateBuffer(m_device.getLogicalDevice(), &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create vertex buffer!");
-	}
-
-	// Allocate memory for buffer on GPU
-	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements(m_device.getLogicalDevice(), buffer, &memRequirements);
-
-	VkMemoryAllocateInfo allocInfo {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = m_device.findMemoryType(memRequirements.memoryTypeBits, properties);
-
-	// TODO: Hardware limits max simultaneous allocations, need to respect this
-	if (vkAllocateMemory(m_device.getLogicalDevice(), &allocInfo, nullptr, &bufferMemory) !=
-	    VK_SUCCESS) {
-		throw std::runtime_error("failed to allocate vertex buffer memory!");
-	}
-
-	// Associate buffer with memory on GPU
-	// 0 here means offset from start of allocated memory
-	vkBindBufferMemory(m_device.getLogicalDevice(), buffer, bufferMemory, 0);
 }

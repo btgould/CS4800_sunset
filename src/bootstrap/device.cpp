@@ -40,6 +40,40 @@ uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags
 	throw std::runtime_error("failed to find suitable memory type!");
 }
 
+void VulkanDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
+                                VkMemoryPropertyFlags properties, VkBuffer& buffer,
+                                VkDeviceMemory& bufferMemory) {
+
+	// Create buffer object
+	VkBufferCreateInfo bufferInfo {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = size;
+	bufferInfo.usage = usage;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (vkCreateBuffer(m_logicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create vertex buffer!");
+	}
+
+	// Allocate memory for buffer on GPU
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(m_logicalDevice, buffer, &memRequirements);
+
+	VkMemoryAllocateInfo allocInfo {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+	// TODO: Hardware limits max simultaneous allocations, need to respect this
+	if (vkAllocateMemory(m_logicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate vertex buffer memory!");
+	}
+
+	// Associate buffer with memory on GPU
+	// 0 here means offset from start of allocated memory
+	vkBindBufferMemory(m_logicalDevice, buffer, bufferMemory, 0);
+}
+
 void VulkanDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 	// Create command buffer to do copying
 	VkCommandBufferAllocateInfo allocInfo {};
@@ -102,6 +136,15 @@ void VulkanDevice::pickPhysicalDevice(const VkInstance& instance, const VkSurfac
 	if (m_physicalDevice == VK_NULL_HANDLE) {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
+
+	VkPhysicalDeviceProperties deviceProps;
+	vkGetPhysicalDeviceProperties(m_physicalDevice, &deviceProps);
+	LOG_INFO("Selected Physical Device: {0}", deviceProps.deviceName);
+	LOG_INFO("\tUsing Vulkan API: {0}.{1}.{2}.{3}", VK_VERSION_MINOR(deviceProps.apiVersion),
+	          VK_VERSION_MINOR(deviceProps.apiVersion),
+	          VK_API_VERSION_VARIANT(deviceProps.apiVersion),
+	          VK_VERSION_PATCH(deviceProps.apiVersion));
+	LOG_INFO("\tUsing Driver Version: {0}", deviceProps.driverVersion);
 }
 
 void VulkanDevice::createLogicalDevice() {

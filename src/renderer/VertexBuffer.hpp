@@ -12,7 +12,7 @@ struct Vertex {
 
 class VertexBuffer {
   public:
-	VertexBuffer( VulkanDevice& device, const std::vector<Vertex>& vertices);
+	VertexBuffer(VulkanDevice& device, const std::vector<Vertex>& vertices);
 	~VertexBuffer();
 
 	VertexBuffer(const VertexBuffer&) = delete;
@@ -26,13 +26,9 @@ class VertexBuffer {
 	inline uint32_t size() const { return m_vertices.size(); }
 
   private:
-	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
-	                  VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-
-  private:
 	std::vector<Vertex> m_vertices;
 
 	VkBuffer m_vertexBuffer;
 	VkDeviceMemory m_vertexBufferMemory;
-	 VulkanDevice& m_device;
+	VulkanDevice& m_device;
 };

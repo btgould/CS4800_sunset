@@ -7,9 +7,11 @@
 
 VulkanPipeline::VulkanPipeline(VulkanInstance& instance)
 	: m_instance(instance),
-	  m_vertexBuffer(m_instance.getDevice(), {{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-                                              {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-                                              {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}}) {
+	  m_vertexBuffer(m_instance.getDevice(), {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+                                              {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+                                              {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+                                              {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}}),
+	  m_indexBuffer(m_instance.getDevice(), {0, 1, 2, 2, 3, 0}) {
 	createGraphicsPipeline();
 }
 
@@ -130,9 +132,10 @@ void VulkanPipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 
 	m_vertexBuffer.bind(commandBuffer);
+	m_indexBuffer.bind(commandBuffer);
 
 	// Draw (TODO: I don't understand how this is enough information)
-	vkCmdDraw(commandBuffer, m_vertexBuffer.size(), 1, 0, 0);
+	vkCmdDrawIndexed(commandBuffer, m_indexBuffer.size(), 1, 0, 0, 0);
 
 	// End render pass, stop recording
 	vkCmdEndRenderPass(commandBuffer);

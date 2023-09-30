@@ -6,6 +6,7 @@
 
 #include "instance.hpp"
 
+#include "renderer/IndexBuffer.hpp"
 #include "renderer/VertexBuffer.hpp"
 
 struct PipelineConfigInfo {
@@ -44,6 +45,7 @@ class VulkanPipeline {
 	VulkanInstance& m_instance;
 
 	VertexBuffer m_vertexBuffer;
+	IndexBuffer m_indexBuffer;
 
 	VkPipelineLayout m_pipelineLayout;
 	VkPipeline m_pipeline;

@@ -49,6 +49,9 @@ class VulkanDevice {
 	 */
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+	                  VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
 	/**
 	 * @brief Copies data from srcBuffer to dstBuffer
 	 *
