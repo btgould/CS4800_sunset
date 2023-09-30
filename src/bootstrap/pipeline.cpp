@@ -128,10 +128,10 @@ void VulkanPipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 	// Bind pipeline
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 
-	m_vertexBuffer.Bind(commandBuffer);
+	m_vertexBuffer.bind(commandBuffer);
 
 	// Draw (TODO: I don't understand how this is enough information)
-	vkCmdDraw(commandBuffer, m_vertexBuffer.Size(), 1, 0, 0);
+	vkCmdDraw(commandBuffer, m_vertexBuffer.size(), 1, 0, 0);
 
 	// End render pass, stop recording
 	vkCmdEndRenderPass(commandBuffer);

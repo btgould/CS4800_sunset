@@ -24,7 +24,7 @@ const VkCommandBuffer VulkanDevice::getCommandBuffer(uint32_t currentFrame) {
 	return m_commandBuffers[currentFrame];
 }
 
-uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const{
+uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const {
 	// Get types of memory available on device
 	VkPhysicalDeviceMemoryProperties memProperties;
 	vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
@@ -38,6 +38,44 @@ uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags
 	}
 
 	throw std::runtime_error("failed to find suitable memory type!");
+}
+
+void VulkanDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+	// Create command buffer to do copying
+	VkCommandBufferAllocateInfo allocInfo {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = m_commandPool;
+	allocInfo.commandBufferCount = 1;
+
+	VkCommandBuffer commandBuffer;
+	vkAllocateCommandBuffers(m_logicalDevice, &allocInfo, &commandBuffer);
+
+	// Record copying to command buffer
+	VkCommandBufferBeginInfo beginInfo {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+	VkBufferCopy copyRegion {};
+	copyRegion.srcOffset = 0; // Optional
+	copyRegion.dstOffset = 0; // Optional
+	copyRegion.size = size;
+	vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+	vkEndCommandBuffer(commandBuffer);
+
+	// Submit command to graphics queue (spec guarantees all graphics queues can copy)
+	VkSubmitInfo submitInfo {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(m_graphicsQueue); // TODO: this could cause unecessary waiting...
+
+	// Free command buffer
+	vkFreeCommandBuffers(m_logicalDevice, m_commandPool, 1, &commandBuffer);
 }
 
 void VulkanDevice::pickPhysicalDevice(const VkInstance& instance, const VkSurfaceKHR& surface) {

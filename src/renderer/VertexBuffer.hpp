@@ -12,7 +12,7 @@ struct Vertex {
 
 class VertexBuffer {
   public:
-	VertexBuffer(const VulkanDevice& device, const std::vector<Vertex>& vertices);
+	VertexBuffer( VulkanDevice& device, const std::vector<Vertex>& vertices);
 	~VertexBuffer();
 
 	VertexBuffer(const VertexBuffer&) = delete;
@@ -21,14 +21,18 @@ class VertexBuffer {
 	// TODO: these are very hardcoded for now, will want to change to make a renderer
 	VkVertexInputBindingDescription getBindingDescription();
 	std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
-	void Bind(VkCommandBuffer commandBuffer);
+	void bind(VkCommandBuffer commandBuffer);
 
-	inline uint32_t Size() const { return m_vertices.size() ; }
+	inline uint32_t size() const { return m_vertices.size(); }
+
+  private:
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+	                  VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
   private:
 	std::vector<Vertex> m_vertices;
 
 	VkBuffer m_vertexBuffer;
 	VkDeviceMemory m_vertexBufferMemory;
-	const VulkanDevice& m_device;
+	 VulkanDevice& m_device;
 };

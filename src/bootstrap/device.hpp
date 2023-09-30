@@ -49,6 +49,15 @@ class VulkanDevice {
 	 */
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
+	/**
+	 * @brief Copies data from srcBuffer to dstBuffer
+	 *
+	 * @param srcBuffer The source of the data to copy
+	 * @param dstBuffer The location to copy to
+	 * @param size The amount of data to copy
+	 */
+	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
 	inline const SwapChainSupportDetails
 	querySwapChainSupportDetails(const VkSurfaceKHR surface) const {
 		return querySwapChainSupport(m_physicalDevice, surface);
