@@ -151,6 +151,7 @@ VulkanPipeline::~VulkanPipeline() {
 
 void VulkanPipeline::drawFrame() {
 	PROFILE_FUNC();
+
 	uint32_t imageIndex;
 	VkCommandBuffer cmdBuf;
 	{

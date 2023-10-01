@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <set>
+#include <vulkan/vulkan_core.h>
 
 VulkanDevice::VulkanDevice(const VkInstance& instance, const VkSurfaceKHR& surface) {
 	pickPhysicalDevice(instance, surface);
@@ -141,9 +142,9 @@ void VulkanDevice::pickPhysicalDevice(const VkInstance& instance, const VkSurfac
 	vkGetPhysicalDeviceProperties(m_physicalDevice, &deviceProps);
 	LOG_INFO("Selected Physical Device: {0}", deviceProps.deviceName);
 	LOG_INFO("\tUsing Vulkan API: {0}.{1}.{2}.{3}", VK_VERSION_MINOR(deviceProps.apiVersion),
-	          VK_VERSION_MINOR(deviceProps.apiVersion),
-	          VK_API_VERSION_VARIANT(deviceProps.apiVersion),
-	          VK_VERSION_PATCH(deviceProps.apiVersion));
+	         VK_VERSION_MINOR(deviceProps.apiVersion),
+	         VK_API_VERSION_VARIANT(deviceProps.apiVersion),
+	         VK_VERSION_PATCH(deviceProps.apiVersion));
 	LOG_INFO("\tUsing Driver Version: {0}", deviceProps.driverVersion);
 }
 
@@ -301,7 +302,11 @@ bool VulkanDevice::isDeviceSuitable(const VkPhysicalDevice& device, const VkSurf
 			!swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 	}
 
-	return indices.isComplete() && extensionsSupported;
+	// NVIDIA causes problems, don't want to deal with that now
+	VkPhysicalDeviceProperties props;
+	vkGetPhysicalDeviceProperties(device, &props);
+
+	return indices.isComplete() && extensionsSupported && (strcmp(props.deviceName, "NVIDIA GeForce RTX 3050") != 0);
 }
 
 bool VulkanDevice::checkDeviceExtensionSupport(const VkPhysicalDevice& device) {

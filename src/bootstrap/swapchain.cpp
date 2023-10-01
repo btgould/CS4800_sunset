@@ -1,5 +1,6 @@
 #include "swapchain.hpp"
 #include "device.hpp"
+#include "util/profiler.hpp"
 #include "window.hpp"
 
 #include "util/log.hpp"
@@ -155,6 +156,7 @@ void VulkanSwapChain::submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitS
 }
 
 void VulkanSwapChain::present(uint32_t imageIndex, uint32_t currentFrame) {
+	PROFILE_FUNC();
 	VkPresentInfoKHR presentInfo {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -168,7 +170,11 @@ void VulkanSwapChain::present(uint32_t imageIndex, uint32_t currentFrame) {
 	presentInfo.pImageIndices = &imageIndex;
 	presentInfo.pResults = nullptr; // Optional
 
-	VkResult result = vkQueuePresentKHR(m_device.getPresentQueue(), &presentInfo);
+	VkResult result;
+	{
+		PROFILE_SCOPE("Presenting to queue");
+		result = vkQueuePresentKHR(m_device.getPresentQueue(), &presentInfo);
+	}
 
 	if (m_window.isResized())
 		result = VK_SUBOPTIMAL_KHR; // explicitly recreate on resize
