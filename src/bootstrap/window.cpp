@@ -1,4 +1,5 @@
 #include "window.hpp"
+
 #include <stdexcept>
 
 GLFWWindow::GLFWWindow(std::string name, uint32_t width, uint32_t height)
@@ -15,6 +16,10 @@ GLFWWindow::GLFWWindow(std::string name, uint32_t width, uint32_t height)
 GLFWWindow::~GLFWWindow() {
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
+}
+
+void GLFWWindow::pollEvents() {
+	glfwPollEvents();
 }
 
 void GLFWWindow::createSurface(VkInstance instance, VkSurfaceKHR* surface) {

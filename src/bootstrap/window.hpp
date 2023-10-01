@@ -12,6 +12,8 @@ class GLFWWindow {
 	GLFWWindow(const GLFWWindow&) = delete;
 	GLFWWindow& operator=(const GLFWWindow&) = delete;
 
+	void pollEvents();
+
 	inline bool shouldClose() { return glfwWindowShouldClose(m_window); }
 	inline bool isResized() const { return m_resized; }
 	inline void clearResize() { m_resized = false; }

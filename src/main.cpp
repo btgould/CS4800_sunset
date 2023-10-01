@@ -1,7 +1,5 @@
 #include "pipeline.hpp"
 #include "spdlog/common.h"
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
 
 #include <stdexcept>
 
@@ -19,7 +17,7 @@ class HelloTriangleApplication {
 
 	void run() {
 		while (!m_window.shouldClose()) {
-			glfwPollEvents();
+			m_window.pollEvents();
 			m_pipeline.drawFrame();
 		}
 
