@@ -306,7 +306,8 @@ bool VulkanDevice::isDeviceSuitable(const VkPhysicalDevice& device, const VkSurf
 	VkPhysicalDeviceProperties props;
 	vkGetPhysicalDeviceProperties(device, &props);
 
-	return indices.isComplete() && extensionsSupported && (strcmp(props.deviceName, "NVIDIA GeForce RTX 3050") != 0);
+	return indices.isComplete() && extensionsSupported &&
+	       (strcmp(props.deviceName, "NVIDIA GeForce RTX 3050") != 0);
 }
 
 bool VulkanDevice::checkDeviceExtensionSupport(const VkPhysicalDevice& device) {

@@ -1,5 +1,7 @@
 #include "swapchain.hpp"
+
 #include "device.hpp"
+#include "pipeline.hpp"
 #include "util/profiler.hpp"
 #include "window.hpp"
 
@@ -12,7 +14,7 @@
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-VulkanSwapChain::VulkanSwapChain(const VulkanDevice& device, GLFWWindow& window,
+VulkanSwapChain::VulkanSwapChain(VulkanDevice& device, GLFWWindow& window,
                                  const VkSurfaceKHR surface)
 	: m_device(device), m_window(window), m_surface(surface) {
 	createSwapChain(m_device, m_window, m_surface);
@@ -20,6 +22,27 @@ VulkanSwapChain::VulkanSwapChain(const VulkanDevice& device, GLFWWindow& window,
 	createRenderPass();
 	createFramebuffers();
 	createSyncObjects();
+}
+
+VulkanSwapChain::~VulkanSwapChain() {
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		// Destroy sync objects
+		vkDestroySemaphore(m_device.getLogicalDevice(), m_imageAvailableSemaphores[i], nullptr);
+		vkDestroySemaphore(m_device.getLogicalDevice(), m_renderFinishedSemaphores[i], nullptr);
+		vkDestroyFence(m_device.getLogicalDevice(), m_inFlightFences[i], nullptr);
+	}
+
+	for (auto framebuffer : m_framebuffers) {
+		vkDestroyFramebuffer(m_device.getLogicalDevice(), framebuffer, nullptr);
+	}
+
+	vkDestroyRenderPass(m_device.getLogicalDevice(), m_renderPass, nullptr);
+
+	for (auto imageView : m_imageViews) {
+		vkDestroyImageView(m_device.getLogicalDevice(), imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(m_device.getLogicalDevice(), m_swapChain, nullptr);
 }
 
 void VulkanSwapChain::createSwapChain(const VulkanDevice& device, const GLFWWindow& window,
@@ -84,26 +107,6 @@ void VulkanSwapChain::createSwapChain(const VulkanDevice& device, const GLFWWind
 
 	m_imageFormat = surfaceFormat.format;
 	m_extent = extent;
-}
-
-VulkanSwapChain::~VulkanSwapChain() {
-	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroySemaphore(m_device.getLogicalDevice(), m_imageAvailableSemaphores[i], nullptr);
-		vkDestroySemaphore(m_device.getLogicalDevice(), m_renderFinishedSemaphores[i], nullptr);
-		vkDestroyFence(m_device.getLogicalDevice(), m_inFlightFences[i], nullptr);
-	}
-
-	for (auto framebuffer : m_framebuffers) {
-		vkDestroyFramebuffer(m_device.getLogicalDevice(), framebuffer, nullptr);
-	}
-
-	vkDestroyRenderPass(m_device.getLogicalDevice(), m_renderPass, nullptr);
-
-	for (auto imageView : m_imageViews) {
-		vkDestroyImageView(m_device.getLogicalDevice(), imageView, nullptr);
-	}
-
-	vkDestroySwapchainKHR(m_device.getLogicalDevice(), m_swapChain, nullptr);
 }
 
 std::optional<uint32_t> VulkanSwapChain::aquireNextFrame(uint32_t currentFrame) {

@@ -9,7 +9,7 @@
 
 class VulkanSwapChain {
   public:
-	VulkanSwapChain(const VulkanDevice& device, GLFWWindow& window, const VkSurfaceKHR surface);
+	VulkanSwapChain(VulkanDevice& device, GLFWWindow& window, const VkSurfaceKHR surface);
 	~VulkanSwapChain();
 
 	VulkanSwapChain(const VulkanSwapChain&) = delete;
@@ -27,6 +27,7 @@ class VulkanSwapChain {
 		return m_framebuffers[imageIndex];
 	}
 	inline const VkRenderPass getRenderPass() const { return m_renderPass; }
+	inline float getAspectRatio() const { return m_extent.width / (float) m_extent.height; }
 
   private:
 	void createSwapChain(const VulkanDevice& device, const GLFWWindow& window,
@@ -54,7 +55,7 @@ class VulkanSwapChain {
 	                            const GLFWWindow& window);
 
   private:
-	const VulkanDevice& m_device;
+	VulkanDevice& m_device;
 
 	VkSwapchainKHR m_swapChain;
 	std::vector<VkImage> m_images;
