@@ -5,11 +5,12 @@
 #include <vulkan/vulkan_core.h>
 
 #include "device.hpp"
+#include "instance.hpp"
 #include "window.hpp"
 
 class VulkanSwapChain {
   public:
-	VulkanSwapChain(VulkanDevice& device, GLFWWindow& window, const VkSurfaceKHR surface);
+	VulkanSwapChain(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window);
 	~VulkanSwapChain();
 
 	VulkanSwapChain(const VulkanSwapChain&) = delete;
@@ -57,6 +58,10 @@ class VulkanSwapChain {
   private:
 	VulkanDevice& m_device;
 
+	// TODO: this is kinda hacky, but I have to save these handles to recreate
+	GLFWWindow& m_window;
+	const VkSurfaceKHR m_surface;
+
 	VkSwapchainKHR m_swapChain;
 	std::vector<VkImage> m_images;
 	std::vector<VkImageView> m_imageViews;
@@ -71,8 +76,4 @@ class VulkanSwapChain {
 	std::vector<VkSemaphore> m_imageAvailableSemaphores;
 	std::vector<VkSemaphore> m_renderFinishedSemaphores;
 	std::vector<VkFence> m_inFlightFences;
-
-	// TODO: this is kinda hacky, but I have to save these handles to recreate
-	GLFWWindow& m_window;
-	const VkSurfaceKHR m_surface;
 };

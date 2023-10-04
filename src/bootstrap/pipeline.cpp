@@ -1,5 +1,6 @@
 #include "pipeline.hpp"
 
+#include "instance.hpp"
 #include "util/constants.hpp"
 #include "util/profiler.hpp"
 
@@ -11,13 +12,13 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-VulkanPipeline::VulkanPipeline(VulkanInstance& instance)
-	: m_instance(instance),
-	  m_vertexBuffer(m_instance.getDevice(), {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-                                              {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-                                              {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-                                              {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}}),
-	  m_indexBuffer(m_instance.getDevice(), {0, 1, 2, 2, 3, 0}) {
+VulkanPipeline::VulkanPipeline(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
+	: m_device(device), m_swapChain(instance, m_device, window),
+	  m_vertexBuffer(m_device, {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+                                {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+                                {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+                                {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}}),
+	  m_indexBuffer(m_device, {0, 1, 2, 2, 3, 0}) {
 	createDescriptorSetLayout();
 	createUniformBuffers();
 	createDescriptorPool();
@@ -28,15 +29,14 @@ VulkanPipeline::VulkanPipeline(VulkanInstance& instance)
 VulkanPipeline::~VulkanPipeline() {
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		// Destroy uniform buffers
-		vkDestroyBuffer(m_instance.getDevice().getLogicalDevice(), m_uniformBuffers[i], nullptr);
-		vkFreeMemory(m_instance.getDevice().getLogicalDevice(), m_uniformBuffersMemory[i], nullptr);
+		vkDestroyBuffer(m_device.getLogicalDevice(), m_uniformBuffers[i], nullptr);
+		vkFreeMemory(m_device.getLogicalDevice(), m_uniformBuffersMemory[i], nullptr);
 	}
 
-	vkDestroyDescriptorPool(m_instance.getDevice().getLogicalDevice(), m_descriptorPool, nullptr);
-	vkDestroyDescriptorSetLayout(m_instance.getDevice().getLogicalDevice(), m_descriptorSetLayout,
-	                             nullptr);
-	vkDestroyPipeline(m_instance.getDevice().getLogicalDevice(), m_pipeline, nullptr);
-	vkDestroyPipelineLayout(m_instance.getDevice().getLogicalDevice(), m_pipelineLayout, nullptr);
+	vkDestroyDescriptorPool(m_device.getLogicalDevice(), m_descriptorPool, nullptr);
+	vkDestroyDescriptorSetLayout(m_device.getLogicalDevice(), m_descriptorSetLayout, nullptr);
+	vkDestroyPipeline(m_device.getLogicalDevice(), m_pipeline, nullptr);
+	vkDestroyPipelineLayout(m_device.getLogicalDevice(), m_pipelineLayout, nullptr);
 }
 
 void VulkanPipeline::createGraphicsPipeline() {
@@ -70,7 +70,7 @@ void VulkanPipeline::createGraphicsPipeline() {
 	dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	dynamicState.pDynamicStates = dynamicStates.data(); */
 
-	// Specify inputs (uniforms) expected by vertex buffer
+	// Specify bind point to incorporate vertex buffer into pipeline
 	auto bindingDescription = m_vertexBuffer.getBindingDescription();
 	auto attributeDescriptions = m_vertexBuffer.getAttributeDescriptions();
 
@@ -96,8 +96,8 @@ void VulkanPipeline::createGraphicsPipeline() {
 	pipelineLayoutInfo.pushConstantRangeCount = 0;           // Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr;        // Optional
 
-	if (vkCreatePipelineLayout(m_instance.getDevice().getLogicalDevice(), &pipelineLayoutInfo,
-	                           nullptr, &m_pipelineLayout) != VK_SUCCESS) {
+	if (vkCreatePipelineLayout(m_device.getLogicalDevice(), &pipelineLayoutInfo, nullptr,
+	                           &m_pipelineLayout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
 
@@ -115,20 +115,20 @@ void VulkanPipeline::createGraphicsPipeline() {
 	pipelineInfo.pColorBlendState = &pi.colorBlendInfo;
 	pipelineInfo.pDynamicState = nullptr;
 	pipelineInfo.layout = m_pipelineLayout;
-	pipelineInfo.renderPass = m_instance.getSwapChain().getRenderPass();
+	pipelineInfo.renderPass = m_swapChain.getRenderPass();
 	pipelineInfo.subpass = 0; // index of the subpass in the render pass to use this pipeline FIXME:
 	                          // this is now arbitrary
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // We aren't inheriting from another pipeline
 	pipelineInfo.basePipelineIndex = -1;              // We aren't inheriting from another pipeline
 
-	if (vkCreateGraphicsPipelines(m_instance.getDevice().getLogicalDevice(), VK_NULL_HANDLE, 1,
-	                              &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(m_device.getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo,
+	                              nullptr, &m_pipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
 
 	// shader modules linked to GPU, can destroy local copy
-	vkDestroyShaderModule(m_instance.getDevice().getLogicalDevice(), fragShaderModule, nullptr);
-	vkDestroyShaderModule(m_instance.getDevice().getLogicalDevice(), vertShaderModule, nullptr);
+	vkDestroyShaderModule(m_device.getLogicalDevice(), fragShaderModule, nullptr);
+	vkDestroyShaderModule(m_device.getLogicalDevice(), vertShaderModule, nullptr);
 }
 
 void VulkanPipeline::createUniformBuffers() {
@@ -140,13 +140,13 @@ void VulkanPipeline::createUniformBuffers() {
 	m_uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		m_instance.getDevice().createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-		                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		                                    m_uniformBuffers[i], m_uniformBuffersMemory[i]);
+		m_device.createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		                      m_uniformBuffers[i], m_uniformBuffersMemory[i]);
 
-		vkMapMemory(m_instance.getDevice().getLogicalDevice(), m_uniformBuffersMemory[i], 0,
-		            bufferSize, 0, &m_uniformBuffersMapped[i]);
+		vkMapMemory(m_device.getLogicalDevice(), m_uniformBuffersMemory[i], 0, bufferSize, 0,
+		            &m_uniformBuffersMapped[i]);
 	}
 }
 
@@ -164,10 +164,10 @@ void VulkanPipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 	// Start render pass
 	VkRenderPassBeginInfo renderPassInfo {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = m_instance.getSwapChain().getRenderPass();
-	renderPassInfo.framebuffer = m_instance.getSwapChain().getFramebuffer(imageIndex);
+	renderPassInfo.renderPass = m_swapChain.getRenderPass();
+	renderPassInfo.framebuffer = m_swapChain.getFramebuffer(imageIndex);
 	renderPassInfo.renderArea.offset = {0, 0};
-	renderPassInfo.renderArea.extent = m_instance.getSwapChain().getExtent();
+	renderPassInfo.renderArea.extent = m_swapChain.getExtent();
 	VkClearValue clearColor = {{{1.0f, 0.0f, 1.0f, 1.0f}}};
 	renderPassInfo.clearValueCount = 1;
 	renderPassInfo.pClearValues = &clearColor;
@@ -208,8 +208,7 @@ void VulkanPipeline::updateUniformBuffer(uint32_t currentImage) {
 		glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
 	                       glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.proj = glm::perspective(glm::radians(45.0f), m_instance.getSwapChain().getAspectRatio(),
-	                            0.1f, 10.0f);
+	ubo.proj = glm::perspective(glm::radians(45.0f), m_swapChain.getAspectRatio(), 0.1f, 10.0f);
 	ubo.proj[1][1] *= -1; // flip to account for OpenGL handedness
 
 	// write transformation to uniform buffer
@@ -224,7 +223,7 @@ void VulkanPipeline::drawFrame() {
 	{
 		PROFILE_SCOPE("Aquire swap chain image");
 		// Get image from swap chain
-		auto imageIndexOpt = m_instance.getSwapChain().aquireNextFrame(m_currentFrame);
+		auto imageIndexOpt = m_swapChain.aquireNextFrame(m_currentFrame);
 		if (!imageIndexOpt.has_value()) {
 			// Swap chain is recreating, wait until next frame
 			return;
@@ -235,7 +234,7 @@ void VulkanPipeline::drawFrame() {
 	{
 		PROFILE_SCOPE("Record draw commands");
 		// Record draw commands for frame
-		cmdBuf = m_instance.getDevice().getCommandBuffer(m_currentFrame);
+		cmdBuf = m_device.getFrameCommandBuffer(m_currentFrame);
 		recordCommandBuffer(cmdBuf, imageIndex);
 	}
 
@@ -247,20 +246,20 @@ void VulkanPipeline::drawFrame() {
 		VkPipelineStageFlags waitStages[] = {
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}; // don't color attachment until image is
 		                                                    // available
-		m_instance.getSwapChain().submit(cmdBuf, waitStages, m_currentFrame);
+		m_swapChain.submit(cmdBuf, waitStages, m_currentFrame);
 	}
 
 	{
 		PROFILE_SCOPE("Present rendered image");
 		// Present rendered image to screen
-		m_instance.getSwapChain().present(imageIndex, m_currentFrame);
+		m_swapChain.present(imageIndex, m_currentFrame);
 
 		m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 	}
 }
 
 void VulkanPipeline::flush() {
-	vkDeviceWaitIdle(m_instance.getDevice().getLogicalDevice());
+	vkDeviceWaitIdle(m_device.getLogicalDevice());
 }
 
 std::vector<char> VulkanPipeline::readFile(const std::string& filename) {
@@ -288,8 +287,8 @@ VkShaderModule VulkanPipeline::createShaderModule(const std::vector<char>& code)
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
 	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(m_instance.getDevice().getLogicalDevice(), &createInfo, nullptr,
-	                         &shaderModule) != VK_SUCCESS) {
+	if (vkCreateShaderModule(m_device.getLogicalDevice(), &createInfo, nullptr, &shaderModule) !=
+	    VK_SUCCESS) {
 		throw std::runtime_error("failed to create shader module!");
 	}
 
@@ -312,7 +311,7 @@ void VulkanPipeline::createDescriptorSetLayout() {
 	layoutInfo.bindingCount = 1;
 	layoutInfo.pBindings = &uboLayoutBinding;
 
-	if (vkCreateDescriptorSetLayout(m_instance.getDevice().getLogicalDevice(), &layoutInfo, nullptr,
+	if (vkCreateDescriptorSetLayout(m_device.getLogicalDevice(), &layoutInfo, nullptr,
 	                                &m_descriptorSetLayout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create descriptor set layout!");
 	}
@@ -329,7 +328,7 @@ void VulkanPipeline::createDescriptorPool() {
 	poolInfo.pPoolSizes = &poolSize;
 	poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
-	if (vkCreateDescriptorPool(m_instance.getDevice().getLogicalDevice(), &poolInfo, nullptr,
+	if (vkCreateDescriptorPool(m_device.getLogicalDevice(), &poolInfo, nullptr,
 	                           &m_descriptorPool) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create descriptor pool!");
 	}
@@ -346,7 +345,7 @@ void VulkanPipeline::createDescriptorSets() {
 	allocInfo.pSetLayouts = layouts.data();
 
 	m_descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
-	if (vkAllocateDescriptorSets(m_instance.getDevice().getLogicalDevice(), &allocInfo,
+	if (vkAllocateDescriptorSets(m_device.getLogicalDevice(), &allocInfo,
 	                             m_descriptorSets.data()) != VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate descriptor sets!");
 	}
@@ -372,8 +371,7 @@ void VulkanPipeline::createDescriptorSets() {
 		descriptorWrite.pTexelBufferView = nullptr; // Optional
 
 		// Write to descriptor set
-		vkUpdateDescriptorSets(m_instance.getDevice().getLogicalDevice(), 1, &descriptorWrite, 0,
-		                       nullptr);
+		vkUpdateDescriptorSets(m_device.getLogicalDevice(), 1, &descriptorWrite, 0, nullptr);
 	}
 }
 
@@ -389,16 +387,15 @@ PipelineConfigInfo VulkanPipeline::defaultPipelineConfigInfo() {
 	// Screen coordinate locations to render to
 	configInfo.viewport.x = 0.0f;
 	configInfo.viewport.y = 0.0f;
-	configInfo.viewport.width = m_instance.getSwapChain().getExtent().width;
-	configInfo.viewport.height = m_instance.getSwapChain().getExtent().height;
+	configInfo.viewport.width = m_swapChain.getExtent().width;
+	configInfo.viewport.height = m_swapChain.getExtent().height;
 	configInfo.viewport.minDepth = 0.0f;
 	configInfo.viewport.maxDepth = 1.0f;
 
 	// Pixels outside of this screen coordinate region are simply discarded
 	// Does nothing if this region is larger than the viewport
 	configInfo.scissor.offset = {0, 0};
-	configInfo.scissor.extent = {m_instance.getSwapChain().getExtent().width,
-	                             m_instance.getSwapChain().getExtent().height};
+	configInfo.scissor.extent = {m_swapChain.getExtent().width, m_swapChain.getExtent().height};
 
 	// Known issue: this creates a self-referencing structure. Fixed in tutorial 05
 	configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

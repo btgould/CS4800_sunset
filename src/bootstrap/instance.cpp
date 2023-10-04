@@ -15,10 +15,7 @@
 // ================================================================================
 
 VulkanInstance::VulkanInstance(GLFWWindow& window)
-	: m_window(window), m_device((init(), m_instance), m_surface),
-	  m_swapChain(m_device, m_window, m_surface) {
-	init();
-}
+	: m_window(window) {init();}
 
 VulkanInstance::~VulkanInstance() {
 	if (enableValidationLayers) {
@@ -27,6 +24,19 @@ VulkanInstance::~VulkanInstance() {
 
 	vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
+}
+
+std::vector<VkPhysicalDevice> VulkanInstance::getPhysicalDevices() const {
+
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
+	if (deviceCount == 0) {
+		throw std::runtime_error("failed to find GPUs with Vulkan support!");
+	}
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
+
+	return devices;
 }
 
 void VulkanInstance::init() {

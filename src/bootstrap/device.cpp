@@ -1,5 +1,6 @@
 #include "device.hpp"
 
+#include "instance.hpp"
 #include "util/log.hpp"
 #include "util/constants.hpp"
 
@@ -8,8 +9,8 @@
 #include <set>
 #include <vulkan/vulkan_core.h>
 
-VulkanDevice::VulkanDevice(const VkInstance& instance, const VkSurfaceKHR& surface) {
-	pickPhysicalDevice(instance, surface);
+VulkanDevice::VulkanDevice(const VulkanInstance& instance) {
+	pickPhysicalDevice(instance);
 	createLogicalDevice();
 	createCommandPool();
 	createCommandBuffers();
@@ -20,7 +21,7 @@ VulkanDevice::~VulkanDevice() {
 	vkDestroyDevice(m_logicalDevice, nullptr);
 }
 
-const VkCommandBuffer VulkanDevice::getCommandBuffer(uint32_t currentFrame) {
+const VkCommandBuffer VulkanDevice::getFrameCommandBuffer(uint32_t currentFrame) {
 	vkResetCommandBuffer(m_commandBuffers[currentFrame], 0);
 	return m_commandBuffers[currentFrame];
 }
@@ -113,20 +114,13 @@ void VulkanDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSi
 	vkFreeCommandBuffers(m_logicalDevice, m_commandPool, 1, &commandBuffer);
 }
 
-void VulkanDevice::pickPhysicalDevice(const VkInstance& instance, const VkSurfaceKHR& surface) {
+void VulkanDevice::pickPhysicalDevice(const VulkanInstance& instance) {
 	m_physicalDevice = VK_NULL_HANDLE;
 
-	// find all available physical devices
-	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-	if (deviceCount == 0) {
-		throw std::runtime_error("failed to find GPUs with Vulkan support!");
-	}
-	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
-
 	// select first suitable physical device
-	for (const auto& device : devices) {
+	auto surface = instance.getSurface();
+
+	for (const auto& device : instance.getPhysicalDevices()) {
 		if (isDeviceSuitable(device, surface)) {
 			m_physicalDevice = device;
 			m_queueFamilyIndices = findQueueFamilies(device, surface);
@@ -226,8 +220,8 @@ void VulkanDevice::createCommandBuffers() {
 	}
 }
 
-QueueFamilyIndices VulkanDevice::findQueueFamilies(const VkPhysicalDevice& device,
-                                                   const VkSurfaceKHR& surface) {
+QueueFamilyIndices VulkanDevice::findQueueFamilies(const VkPhysicalDevice device,
+                                                   const VkSurfaceKHR surface) {
 	QueueFamilyIndices indices;
 
 	// Query queue types supported by physical device
@@ -260,8 +254,8 @@ QueueFamilyIndices VulkanDevice::findQueueFamilies(const VkPhysicalDevice& devic
 	return indices;
 }
 
-SwapChainSupportDetails VulkanDevice::querySwapChainSupport(const VkPhysicalDevice& device,
-                                                            const VkSurfaceKHR& surface) const {
+SwapChainSupportDetails VulkanDevice::querySwapChainSupport(const VkPhysicalDevice device,
+                                                            const VkSurfaceKHR surface) const {
 	SwapChainSupportDetails details;
 
 	// Get surface capabilities (i.e. what? TODO)
@@ -289,7 +283,7 @@ SwapChainSupportDetails VulkanDevice::querySwapChainSupport(const VkPhysicalDevi
 	return details;
 }
 
-bool VulkanDevice::isDeviceSuitable(const VkPhysicalDevice& device, const VkSurfaceKHR& surface) {
+bool VulkanDevice::isDeviceSuitable(const VkPhysicalDevice device, const VkSurfaceKHR surface) {
 	QueueFamilyIndices indices = findQueueFamilies(device, surface);
 
 	bool extensionsSupported = checkDeviceExtensionSupport(device);
@@ -310,7 +304,7 @@ bool VulkanDevice::isDeviceSuitable(const VkPhysicalDevice& device, const VkSurf
 	       (strcmp(props.deviceName, "NVIDIA GeForce RTX 3050") != 0);
 }
 
-bool VulkanDevice::checkDeviceExtensionSupport(const VkPhysicalDevice& device) {
+bool VulkanDevice::checkDeviceExtensionSupport(const VkPhysicalDevice device) {
 	uint32_t extensionCount;
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 

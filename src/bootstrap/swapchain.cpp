@@ -1,6 +1,7 @@
 #include "swapchain.hpp"
 
 #include "device.hpp"
+#include "instance.hpp"
 #include "pipeline.hpp"
 #include "util/profiler.hpp"
 #include "window.hpp"
@@ -14,9 +15,8 @@
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-VulkanSwapChain::VulkanSwapChain(VulkanDevice& device, GLFWWindow& window,
-                                 const VkSurfaceKHR surface)
-	: m_device(device), m_window(window), m_surface(surface) {
+VulkanSwapChain::VulkanSwapChain(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
+	: m_device(device), m_window(window), m_surface(instance.getSurface()) {
 	createSwapChain(m_device, m_window, m_surface);
 	createImageViews();
 	createRenderPass();

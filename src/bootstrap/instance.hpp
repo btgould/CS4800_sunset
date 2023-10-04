@@ -7,8 +7,6 @@
 #include <vector>
 
 #include "window.hpp"
-#include "device.hpp"
-#include "swapchain.hpp"
 
 class VulkanInstance {
   public:
@@ -18,8 +16,10 @@ class VulkanInstance {
 	VulkanInstance(const VulkanInstance&) = delete;
 	VulkanInstance& operator=(const VulkanInstance&) = delete;
 
-	inline VulkanDevice& getDevice() { return m_device; }
-	inline VulkanSwapChain& getSwapChain() { return m_swapChain; }
+	std::vector<VkPhysicalDevice> getPhysicalDevices() const;
+
+	/* inline VulkanDevice& getDevice() { return m_device; } */
+	inline VkSurfaceKHR getSurface() const { return m_surface; }
 
   private: // core interface
 	void init();
@@ -44,8 +44,6 @@ class VulkanInstance {
 
   private:
 	GLFWWindow& m_window;
-	VulkanDevice m_device;
-	VulkanSwapChain m_swapChain;
 
 	VkInstance m_instance;
 	VkSurfaceKHR m_surface;

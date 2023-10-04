@@ -1,5 +1,6 @@
 #pragma once
 
+#include "instance.hpp"
 #include <optional>
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -25,7 +26,16 @@ struct SwapChainSupportDetails {
 
 class VulkanDevice {
   public:
-	VulkanDevice(const VkInstance& instance, const VkSurfaceKHR& surface);
+	/**
+	 * @brief Creates a device to run the given instance
+	 *
+	 * @param instance The instance to run on the device
+	 */
+	VulkanDevice(const VulkanInstance& instance);
+
+	/**
+	 * @brief Cleans up all resources used by this device
+	 */
 	~VulkanDevice();
 
 	VulkanDevice(const VulkanDevice&) = delete;
@@ -33,11 +43,11 @@ class VulkanDevice {
 
 	/**
 	 * @brief Gets a command buffer from this device. The buffer is guaranteed to be blank and ready
-	 * for recording
+	 * for recording, and to come from a command pool supporting graphics operations.
 	 *
 	 * @return A VkCommandBuffer in its initial state
 	 */
-	const VkCommandBuffer getCommandBuffer(uint32_t currentFrame);
+	const VkCommandBuffer getFrameCommandBuffer(uint32_t currentFrame);
 
 	/**
 	 * @brief Gets the index of a memory type on the GPU matching the given type filter and
@@ -49,6 +59,16 @@ class VulkanDevice {
 	 */
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
+	/**
+	 * @brief Creates a buffer
+	 *
+	 * @param size The size in bytes of the buffer to create
+	 * @param usage Bitflag indicating the intended use case of this buffer (affects cache friendly
+	 * allocation procedures)
+	 * @param properties Bitflag indicating the required type of memory to allocate for this buffer
+	 * @param buffer Handle to the buffer object to create
+	 * @param bufferMemory Handle to the memory allocated for this buffer
+	 */
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
 	                  VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 
@@ -66,12 +86,12 @@ class VulkanDevice {
 		return querySwapChainSupport(m_physicalDevice, surface);
 	}
 	inline const QueueFamilyIndices& getQueueFamilyIndices() const { return m_queueFamilyIndices; }
-	inline const VkDevice& getLogicalDevice() const { return m_logicalDevice; }
+	inline const VkDevice getLogicalDevice() const { return m_logicalDevice; }
 	inline const VkQueue getGraphicsQueue() const { return m_graphicsQueue; }
 	inline const VkQueue getPresentQueue() const { return m_presentQueue; }
 
   private:
-	void pickPhysicalDevice(const VkInstance& instance, const VkSurfaceKHR& surface);
+	void pickPhysicalDevice(const VulkanInstance& instance);
 
 	/**
 	 * @brief Creates and initializes a logical device
@@ -84,12 +104,11 @@ class VulkanDevice {
 	void createCommandPool();
 	void createCommandBuffers();
 
-	QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice& device,
-	                                     const VkSurfaceKHR& surface);
-	SwapChainSupportDetails querySwapChainSupport(const VkPhysicalDevice& device,
-	                                              const VkSurfaceKHR& surface) const;
-	bool checkDeviceExtensionSupport(const VkPhysicalDevice& device);
-	bool isDeviceSuitable(const VkPhysicalDevice& device, const VkSurfaceKHR& surface);
+	QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice device, const VkSurfaceKHR surface);
+	SwapChainSupportDetails querySwapChainSupport(const VkPhysicalDevice device,
+	                                              const VkSurfaceKHR surface) const;
+	bool checkDeviceExtensionSupport(const VkPhysicalDevice device);
+	bool isDeviceSuitable(const VkPhysicalDevice device, const VkSurfaceKHR surface);
 
   private:
 	VkPhysicalDevice m_physicalDevice;

@@ -4,10 +4,13 @@
 #include <fstream>
 #include <vector>
 
+#include "device.hpp"
 #include "instance.hpp"
 
 #include "renderer/IndexBuffer.hpp"
 #include "renderer/VertexBuffer.hpp"
+#include "swapchain.hpp"
+#include "window.hpp"
 
 struct PipelineConfigInfo {
 	VkViewport viewport;
@@ -29,7 +32,7 @@ struct MVP {
 
 class VulkanPipeline {
   public:
-	VulkanPipeline(VulkanInstance& instance);
+	VulkanPipeline(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window);
 	~VulkanPipeline();
 
 	VulkanPipeline(const VulkanPipeline&) = delete;
@@ -53,10 +56,12 @@ class VulkanPipeline {
 	PipelineConfigInfo defaultPipelineConfigInfo();
 
   private:
-	VulkanInstance& m_instance;
+	VulkanDevice& m_device;
 
 	VertexBuffer m_vertexBuffer;
 	IndexBuffer m_indexBuffer;
+
+	VulkanSwapChain m_swapChain;
 
 	std::vector<VkBuffer> m_uniformBuffers;
 	std::vector<VkDeviceMemory> m_uniformBuffersMemory;

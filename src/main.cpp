@@ -1,3 +1,4 @@
+#include "device.hpp"
 #include "pipeline.hpp"
 #include "spdlog/common.h"
 
@@ -11,7 +12,8 @@
 class HelloTriangleApplication {
   public:
 	HelloTriangleApplication()
-		: m_window(GLFWWindow("Vulkan")), m_instance(m_window), m_pipeline(m_instance) {}
+		: m_window(GLFWWindow("Vulkan")), m_instance(m_window), m_device(m_instance),
+		  m_pipeline(m_instance, m_device, m_window) {}
 
 	~HelloTriangleApplication() = default;
 
@@ -27,6 +29,7 @@ class HelloTriangleApplication {
   private:
 	GLFWWindow m_window;
 	VulkanInstance m_instance;
+	VulkanDevice m_device;
 	VulkanPipeline m_pipeline;
 };
 
