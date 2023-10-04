@@ -12,18 +12,15 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-VulkanPipeline::VulkanPipeline(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
-	: m_device(device), m_swapChain(instance, m_device, window),
-	  m_vertexBuffer(m_device, {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-                                {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-                                {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-                                {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}}),
-	  m_indexBuffer(m_device, {0, 1, 2, 2, 3, 0}) {
+VulkanPipeline::VulkanPipeline(VulkanDevice& device, VkVertexInputBindingDescription bindingDesc,
+                               std::array<VkVertexInputAttributeDescription, 2> attrDesc,
+                               VkRenderPass renderPass, VkExtent2D extant)
+	: m_device(device), m_extant(extant) {
 	createDescriptorSetLayout();
 	createUniformBuffers();
 	createDescriptorPool();
 	createDescriptorSets();
-	createGraphicsPipeline();
+	createGraphicsPipeline(bindingDesc, attrDesc, renderPass);
 }
 
 VulkanPipeline::~VulkanPipeline() {
@@ -39,7 +36,9 @@ VulkanPipeline::~VulkanPipeline() {
 	vkDestroyPipelineLayout(m_device.getLogicalDevice(), m_pipelineLayout, nullptr);
 }
 
-void VulkanPipeline::createGraphicsPipeline() {
+void VulkanPipeline::createGraphicsPipeline(
+	VkVertexInputBindingDescription bindingDesc,
+	std::array<VkVertexInputAttributeDescription, 2> attrDesc, VkRenderPass renderPass) {
 	auto vertShaderCode = readFile("res/shaderc/triangle.vert.spv");
 	auto fragShaderCode = readFile("res/shaderc/triangle.frag.spv");
 
@@ -71,17 +70,13 @@ void VulkanPipeline::createGraphicsPipeline() {
 	dynamicState.pDynamicStates = dynamicStates.data(); */
 
 	// Specify bind point to incorporate vertex buffer into pipeline
-	auto bindingDescription = m_vertexBuffer.getBindingDescription();
-	auto attributeDescriptions = m_vertexBuffer.getAttributeDescriptions();
-
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertexInputInfo.vertexBindingDescriptionCount = 1;
-	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; // spacing between data
-	vertexInputInfo.vertexAttributeDescriptionCount =
-		static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDesc; // spacing between data
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrDesc.size());
 	vertexInputInfo.pVertexAttributeDescriptions =
-		attributeDescriptions.data(); // type, size, and order of attributes passed
+		attrDesc.data(); // type, size, and order of attributes passed
 
 	// Create state for fixed function pipeline stages
 	PipelineConfigInfo pi = defaultPipelineConfigInfo();
@@ -115,7 +110,7 @@ void VulkanPipeline::createGraphicsPipeline() {
 	pipelineInfo.pColorBlendState = &pi.colorBlendInfo;
 	pipelineInfo.pDynamicState = nullptr;
 	pipelineInfo.layout = m_pipelineLayout;
-	pipelineInfo.renderPass = m_swapChain.getRenderPass();
+	pipelineInfo.renderPass = renderPass;
 	pipelineInfo.subpass = 0; // index of the subpass in the render pass to use this pipeline FIXME:
 	                          // this is now arbitrary
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // We aren't inheriting from another pipeline
@@ -150,49 +145,6 @@ void VulkanPipeline::createUniformBuffers() {
 	}
 }
 
-void VulkanPipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
-	// Start recording
-	VkCommandBufferBeginInfo beginInfo {};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = 0;                  // Optional
-	beginInfo.pInheritanceInfo = nullptr; // Optional
-
-	if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-		throw std::runtime_error("failed to begin recording command buffer!");
-	}
-
-	// Start render pass
-	VkRenderPassBeginInfo renderPassInfo {};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = m_swapChain.getRenderPass();
-	renderPassInfo.framebuffer = m_swapChain.getFramebuffer(imageIndex);
-	renderPassInfo.renderArea.offset = {0, 0};
-	renderPassInfo.renderArea.extent = m_swapChain.getExtent();
-	VkClearValue clearColor = {{{1.0f, 0.0f, 1.0f, 1.0f}}};
-	renderPassInfo.clearValueCount = 1;
-	renderPassInfo.pClearValues = &clearColor;
-	vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-	// Bind pipeline
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
-
-	m_vertexBuffer.bind(commandBuffer);
-	m_indexBuffer.bind(commandBuffer);
-
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1,
-	                        &m_descriptorSets[m_currentFrame], 0, nullptr);
-	vkCmdDrawIndexed(commandBuffer, m_indexBuffer.size(), 1, 0, 0, 0);
-
-	// Draw (TODO: I don't understand how this is enough information)
-	vkCmdDrawIndexed(commandBuffer, m_indexBuffer.size(), 1, 0, 0, 0);
-
-	// End render pass, stop recording
-	vkCmdEndRenderPass(commandBuffer);
-	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-		throw std::runtime_error("failed to record command buffer!");
-	}
-}
-
 void VulkanPipeline::updateUniformBuffer(uint32_t currentImage) {
 	// Get current time
 	static auto startTime = std::chrono::high_resolution_clock::now();
@@ -208,58 +160,21 @@ void VulkanPipeline::updateUniformBuffer(uint32_t currentImage) {
 		glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
 	                       glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.proj = glm::perspective(glm::radians(45.0f), m_swapChain.getAspectRatio(), 0.1f, 10.0f);
+	ubo.proj = glm::perspective(glm::radians(45.0f), m_extant.width / (float) m_extant.height, 0.1f,
+	                            10.0f);
 	ubo.proj[1][1] *= -1; // flip to account for OpenGL handedness
 
 	// write transformation to uniform buffer
 	memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 
-void VulkanPipeline::drawFrame() {
-	PROFILE_FUNC();
-
-	uint32_t imageIndex;
-	VkCommandBuffer cmdBuf;
-	{
-		PROFILE_SCOPE("Aquire swap chain image");
-		// Get image from swap chain
-		auto imageIndexOpt = m_swapChain.aquireNextFrame(m_currentFrame);
-		if (!imageIndexOpt.has_value()) {
-			// Swap chain is recreating, wait until next frame
-			return;
-		}
-		imageIndex = imageIndexOpt.value();
-	}
-
-	{
-		PROFILE_SCOPE("Record draw commands");
-		// Record draw commands for frame
-		cmdBuf = m_device.getFrameCommandBuffer(m_currentFrame);
-		recordCommandBuffer(cmdBuf, imageIndex);
-	}
-
-	updateUniformBuffer(m_currentFrame);
-
-	{
-		PROFILE_SCOPE("Submit drawing commands");
-		// submit drawing to queue
-		VkPipelineStageFlags waitStages[] = {
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}; // don't color attachment until image is
-		                                                    // available
-		m_swapChain.submit(cmdBuf, waitStages, m_currentFrame);
-	}
-
-	{
-		PROFILE_SCOPE("Present rendered image");
-		// Present rendered image to screen
-		m_swapChain.present(imageIndex, m_currentFrame);
-
-		m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-	}
+void VulkanPipeline::bind(VkCommandBuffer commandBuffer) {
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 }
 
-void VulkanPipeline::flush() {
-	vkDeviceWaitIdle(m_device.getLogicalDevice());
+void VulkanPipeline::bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame) {
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1,
+	                        &m_descriptorSets[currentFrame], 0, nullptr);
 }
 
 std::vector<char> VulkanPipeline::readFile(const std::string& filename) {
@@ -387,15 +302,15 @@ PipelineConfigInfo VulkanPipeline::defaultPipelineConfigInfo() {
 	// Screen coordinate locations to render to
 	configInfo.viewport.x = 0.0f;
 	configInfo.viewport.y = 0.0f;
-	configInfo.viewport.width = m_swapChain.getExtent().width;
-	configInfo.viewport.height = m_swapChain.getExtent().height;
+	configInfo.viewport.width = m_extant.width;
+	configInfo.viewport.height = m_extant.height;
 	configInfo.viewport.minDepth = 0.0f;
 	configInfo.viewport.maxDepth = 1.0f;
 
 	// Pixels outside of this screen coordinate region are simply discarded
 	// Does nothing if this region is larger than the viewport
 	configInfo.scissor.offset = {0, 0};
-	configInfo.scissor.extent = {m_swapChain.getExtent().width, m_swapChain.getExtent().height};
+	configInfo.scissor.extent = {m_extant.width, m_extant.height};
 
 	// Known issue: this creates a self-referencing structure. Fixed in tutorial 05
 	configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

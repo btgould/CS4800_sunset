@@ -40,34 +40,6 @@ VertexBuffer::~VertexBuffer() {
 	vkFreeMemory(m_device.getLogicalDevice(), m_vertexBufferMemory, nullptr);
 }
 
-VkVertexInputBindingDescription VertexBuffer::getBindingDescription() {
-	VkVertexInputBindingDescription bindingDescription {};
-
-	bindingDescription.binding = 0; // NOTE: not exactly sure what a "binding" is here
-	bindingDescription.stride = sizeof(Vertex);
-	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	return bindingDescription;
-}
-
-std::array<VkVertexInputAttributeDescription, 2> VertexBuffer::getAttributeDescriptions() {
-	std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions {};
-
-	// Declare position attribute
-	attributeDescriptions[0].binding = 0;
-	attributeDescriptions[0].location = 0;
-	attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-	// Declare color attribute
-	attributeDescriptions[1].binding = 0;
-	attributeDescriptions[1].location = 1;
-	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-	return attributeDescriptions;
-}
-
 void VertexBuffer::bind(VkCommandBuffer commandBuffer) {
 	VkBuffer vertexBuffers[] = {m_vertexBuffer};
 	VkDeviceSize offsets[] = {0};

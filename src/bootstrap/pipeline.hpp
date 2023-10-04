@@ -32,20 +32,23 @@ struct MVP {
 
 class VulkanPipeline {
   public:
-	VulkanPipeline(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window);
+	VulkanPipeline(VulkanDevice& device, VkVertexInputBindingDescription bindingDesc,
+	               std::array<VkVertexInputAttributeDescription, 2> attrDesc,
+	               VkRenderPass renderPass, VkExtent2D extant);
 	~VulkanPipeline();
 
 	VulkanPipeline(const VulkanPipeline&) = delete;
 	VulkanPipeline& operator=(const VulkanPipeline&) = delete;
 
-	void drawFrame();
-	void flush();
+	void bind(VkCommandBuffer commandBuffer);
+	void bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame);
+	void updateUniformBuffer(uint32_t currentImage);
 
   private: // core interface
-	void createGraphicsPipeline();
+	void createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
+	                            std::array<VkVertexInputAttributeDescription, 2> attrDesc,
+	                            VkRenderPass renderPass);
 	void createUniformBuffers();
-	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-	void updateUniformBuffer(uint32_t currentImage);
 
   private: // helper
 	static std::vector<char> readFile(const std::string& filename);
@@ -58,11 +61,6 @@ class VulkanPipeline {
   private:
 	VulkanDevice& m_device;
 
-	VertexBuffer m_vertexBuffer;
-	IndexBuffer m_indexBuffer;
-
-	VulkanSwapChain m_swapChain;
-
 	std::vector<VkBuffer> m_uniformBuffers;
 	std::vector<VkDeviceMemory> m_uniformBuffersMemory;
 	std::vector<void*> m_uniformBuffersMapped;
@@ -71,8 +69,8 @@ class VulkanPipeline {
 	VkDescriptorSetLayout m_descriptorSetLayout;
 	std::vector<VkDescriptorSet> m_descriptorSets;
 
+	VkExtent2D m_extant;
+
 	VkPipelineLayout m_pipelineLayout;
 	VkPipeline m_pipeline;
-
-	uint32_t m_currentFrame = 0;
 };

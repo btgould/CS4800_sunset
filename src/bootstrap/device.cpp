@@ -114,6 +114,10 @@ void VulkanDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSi
 	vkFreeCommandBuffers(m_logicalDevice, m_commandPool, 1, &commandBuffer);
 }
 
+void VulkanDevice::flush() {
+	vkDeviceWaitIdle(m_logicalDevice);
+}
+
 void VulkanDevice::pickPhysicalDevice(const VulkanInstance& instance) {
 	m_physicalDevice = VK_NULL_HANDLE;
 

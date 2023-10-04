@@ -81,6 +81,11 @@ class VulkanDevice {
 	 */
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
+	/**
+	 * @brief Wait until all pending commands on this device have been executed
+	 */
+	void flush();
+
 	inline const SwapChainSupportDetails
 	querySwapChainSupportDetails(const VkSurfaceKHR surface) const {
 		return querySwapChainSupport(m_physicalDevice, surface);

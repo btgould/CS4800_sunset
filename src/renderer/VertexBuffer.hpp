@@ -1,3 +1,5 @@
+#pragma once
+
 #include <array>
 #include <glm/glm.hpp>
 #include <vector>
@@ -33,10 +35,6 @@ class VertexBuffer {
 
 	VertexBuffer(const VertexBuffer&) = delete;
 	VertexBuffer operator=(const VertexBuffer&) = delete;
-
-	// TODO: these are very hardcoded for now, will want to change to make a renderer
-	VkVertexInputBindingDescription getBindingDescription();
-	std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
 
 	/**
 	 * @brief "Activates" this buffer, causing it to be used for the next draw call
