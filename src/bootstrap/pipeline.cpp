@@ -13,7 +13,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 VulkanPipeline::VulkanPipeline(VulkanDevice& device, VkVertexInputBindingDescription bindingDesc,
-                               std::array<VkVertexInputAttributeDescription, 2> attrDesc,
+                               std::vector<VkVertexInputAttributeDescription> attrDesc,
                                VkRenderPass renderPass, VkExtent2D extant)
 	: m_device(device), m_extant(extant) {
 	createDescriptorSetLayout();
@@ -36,9 +36,9 @@ VulkanPipeline::~VulkanPipeline() {
 	vkDestroyPipelineLayout(m_device.getLogicalDevice(), m_pipelineLayout, nullptr);
 }
 
-void VulkanPipeline::createGraphicsPipeline(
-	VkVertexInputBindingDescription bindingDesc,
-	std::array<VkVertexInputAttributeDescription, 2> attrDesc, VkRenderPass renderPass) {
+void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
+                                            std::vector<VkVertexInputAttributeDescription> attrDesc,
+                                            VkRenderPass renderPass) {
 	auto vertShaderCode = readFile("res/shaderc/triangle.vert.spv");
 	auto fragShaderCode = readFile("res/shaderc/triangle.frag.spv");
 
@@ -82,8 +82,6 @@ void VulkanPipeline::createGraphicsPipeline(
 	PipelineConfigInfo pi = defaultPipelineConfigInfo();
 
 	// Create pipeline layout
-	// A pipeline layout is a list of descriptor layouts, which themselves are a list of buffers
-	// used by shaders. I use them to upload uniforms
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;                   // Optional
@@ -111,8 +109,8 @@ void VulkanPipeline::createGraphicsPipeline(
 	pipelineInfo.pDynamicState = nullptr;
 	pipelineInfo.layout = m_pipelineLayout;
 	pipelineInfo.renderPass = renderPass;
-	pipelineInfo.subpass = 0; // index of the subpass in the render pass to use this pipeline FIXME:
-	                          // this is now arbitrary
+	pipelineInfo.subpass = 0; // index of the subpass in the render pass to use this pipeline
+	                          // FIXME: this is now arbitrary
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // We aren't inheriting from another pipeline
 	pipelineInfo.basePipelineIndex = -1;              // We aren't inheriting from another pipeline
 
@@ -127,7 +125,7 @@ void VulkanPipeline::createGraphicsPipeline(
 }
 
 void VulkanPipeline::createUniformBuffers() {
-	// TODO: I need some way to describe what type of object to create a buffer for...
+	// TODO: CAMERA I need some way to describe what type of object to create a buffer for...
 	VkDeviceSize bufferSize = sizeof(MVP);
 
 	m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -154,7 +152,8 @@ void VulkanPipeline::updateUniformBuffer(uint32_t currentImage) {
 		std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 	// Calculate transformation based on current time
-	// TODO: this should be abstracted to camera class
+	// TODO: CAMERA model mat should be separate uniform, broken into TRS
+	// TODO: CAMERA VP should really be abstracted to camera class
 	MVP ubo;
 	ubo.model =
 		glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -211,12 +210,11 @@ VkShaderModule VulkanPipeline::createShaderModule(const std::vector<char>& code)
 }
 
 void VulkanPipeline::createDescriptorSetLayout() {
-	// List of bindings to be used for this pipeling
+	// List of bindings to be used for this pipeline
 	VkDescriptorSetLayoutBinding uboLayoutBinding {};
 	uboLayoutBinding.binding = 0; // This is the first binding used in the shader
 	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	uboLayoutBinding.descriptorCount = 1;
-
 	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	uboLayoutBinding.pImmutableSamplers = nullptr; // not doing image sampling yet
 
@@ -233,15 +231,16 @@ void VulkanPipeline::createDescriptorSetLayout() {
 }
 
 void VulkanPipeline::createDescriptorPool() {
+	// We want one uniform buffer for each frame in flight
 	VkDescriptorPoolSize poolSize {};
 	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
 	VkDescriptorPoolCreateInfo poolInfo {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.poolSizeCount = 1;
-	poolInfo.pPoolSizes = &poolSize;
-	poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	poolInfo.poolSizeCount = 1;      // we allow 1 type of descriptor
+	poolInfo.pPoolSizes = &poolSize; // limits count of a certain type of descriptor
+	poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT); // max total descriptors in pool
 
 	if (vkCreateDescriptorPool(m_device.getLogicalDevice(), &poolInfo, nullptr,
 	                           &m_descriptorPool) != VK_SUCCESS) {

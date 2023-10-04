@@ -315,7 +315,7 @@ void VulkanSwapChain::createRenderPass() {
 
 	// create reference to attached image
 	VkAttachmentReference colorAttachmentRef {};
-	colorAttachmentRef.attachment = 0; // TODO: this should be abstracted
+	colorAttachmentRef.attachment = 0;
 	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	// Define subpass to do rendering

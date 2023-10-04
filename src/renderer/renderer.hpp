@@ -4,6 +4,7 @@
 #include "pipeline.hpp"
 #include "renderer/VertexBuffer.hpp"
 #include "renderer/IndexBuffer.hpp"
+#include "renderer/vertex_array.hpp"
 #include "swapchain.hpp"
 #include <vulkan/vulkan_core.h>
 
@@ -21,11 +22,9 @@ class VulkanRenderer {
 	void endScene();
 
   private:
-	// TODO: these are very hardcoded for now, will want to change to allow arbitrary layouts
-	VkVertexInputBindingDescription getDefaultBindingDescription();
-	std::array<VkVertexInputAttributeDescription, 2> getDefaultAttributeDescriptions();
+	/* The list attributes each vertex has */
+	VertexArray m_vertexArray;
 
-  private:
 	/* The swapchain the render images to */
 	VulkanSwapChain m_swapChain;
 
@@ -38,7 +37,10 @@ class VulkanRenderer {
 	/* Buffer holding all the drawing commands for the current frame */
 	VkCommandBuffer m_commandBuffer;
 
-	// TODO: Figure out what makes these two things distinct!
+	/* Index of the frame in flight being rendered */
 	uint32_t m_currentFrame = 0;
+
+
+	/* Index of the image in the image in the swapchain being rendered to */
 	uint32_t m_imageIndex = 0;
 };

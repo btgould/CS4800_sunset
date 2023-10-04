@@ -33,8 +33,8 @@ struct MVP {
 class VulkanPipeline {
   public:
 	VulkanPipeline(VulkanDevice& device, VkVertexInputBindingDescription bindingDesc,
-	               std::array<VkVertexInputAttributeDescription, 2> attrDesc,
-	               VkRenderPass renderPass, VkExtent2D extant);
+	               std::vector<VkVertexInputAttributeDescription> attrDesc, VkRenderPass renderPass,
+	               VkExtent2D extant);
 	~VulkanPipeline();
 
 	VulkanPipeline(const VulkanPipeline&) = delete;
@@ -46,7 +46,7 @@ class VulkanPipeline {
 
   private: // core interface
 	void createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
-	                            std::array<VkVertexInputAttributeDescription, 2> attrDesc,
+	                            std::vector<VkVertexInputAttributeDescription> attrDesc,
 	                            VkRenderPass renderPass);
 	void createUniformBuffers();
 
@@ -61,16 +61,23 @@ class VulkanPipeline {
   private:
 	VulkanDevice& m_device;
 
+	/* Buffer to store uniforms data in */
 	std::vector<VkBuffer> m_uniformBuffers;
+	/* Memory on GPU to store uniform buffers */
 	std::vector<VkDeviceMemory> m_uniformBuffersMemory;
+	/* CPU address linked to location of uniforms on GPU */
 	std::vector<void*> m_uniformBuffersMapped;
 
+	/* Pool to allocate descriptor sets from */
 	VkDescriptorPool m_descriptorPool;
+	/* A list of buffers used by shaders. I use this to upload uniforms. */
 	VkDescriptorSetLayout m_descriptorSetLayout;
+	/* Describes where to get uniform data, and how the GPU should use it */
 	std::vector<VkDescriptorSet> m_descriptorSets;
 
 	VkExtent2D m_extant;
 
+	/* A list of descriptor layouts, describing dynamic resources used by pipeline */
 	VkPipelineLayout m_pipelineLayout;
 	VkPipeline m_pipeline;
 };

@@ -1,14 +1,16 @@
 #include "renderer.hpp"
 
+#include "renderer/vertex_array.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
 
 VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
-	: m_swapChain(instance, device, window),
-	  m_pipeline(device, this->getDefaultBindingDescription(),
-                 this->getDefaultAttributeDescriptions(), m_swapChain.getRenderPass(),
-                 m_swapChain.getExtent()),
-	  m_device(device) {}
+	: m_swapChain(instance, device, window), m_device(device),
+	  m_vertexArray({{VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}, /* pos */
+                     {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}} /* color */),
+	  m_pipeline(VulkanPipeline(device, m_vertexArray.getBindingDescription(),
+                                m_vertexArray.getAttributeDescriptions(),
+                                m_swapChain.getRenderPass(), m_swapChain.getExtent())) {}
 
 VulkanRenderer::~VulkanRenderer() {}
 
@@ -58,7 +60,7 @@ void VulkanRenderer::draw(VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer) 
 
 	m_pipeline.bindDescriptorSets(m_commandBuffer, m_currentFrame);
 
-	// Draw (TODO: I don't understand how this is enough information)
+	// Draw
 	vkCmdDrawIndexed(m_commandBuffer, indexBuffer.size(), 1, 0, 0, 0);
 }
 
@@ -83,32 +85,4 @@ void VulkanRenderer::endScene() {
 	m_swapChain.present(m_imageIndex, m_currentFrame);
 
 	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-}
-
-VkVertexInputBindingDescription VulkanRenderer::getDefaultBindingDescription() {
-	VkVertexInputBindingDescription bindingDescription {};
-
-	bindingDescription.binding = 0; // NOTE: not exactly sure what a "binding" is here
-	bindingDescription.stride = sizeof(Vertex);
-	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	return bindingDescription;
-}
-
-std::array<VkVertexInputAttributeDescription, 2> VulkanRenderer::getDefaultAttributeDescriptions() {
-	std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions {};
-
-	// Declare position attribute
-	attributeDescriptions[0].binding = 0;
-	attributeDescriptions[0].location = 0;
-	attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-	// Declare color attribute
-	attributeDescriptions[1].binding = 0;
-	attributeDescriptions[1].location = 1;
-	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-	return attributeDescriptions;
 }
