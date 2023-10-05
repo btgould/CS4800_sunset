@@ -20,8 +20,7 @@ Texture::~Texture() {
 void Texture::createTextureImage(std::string path) {
 	// load image from file
 	int texWidth, texHeight, texChannels;
-	stbi_uc* pixels =
-		stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
 	if (!pixels) {

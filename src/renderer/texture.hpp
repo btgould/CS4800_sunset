@@ -11,7 +11,7 @@ class Texture {
 	Texture(const Texture&) = delete;
 	Texture& operator=(const Texture&) = delete;
 
-	inline VkImageView getImageView() const { return m_textureImageView;}
+	inline VkImageView getImageView() const { return m_textureImageView; }
 
   private: // core interface
 	void createTextureImage(std::string path);

@@ -37,7 +37,6 @@ class VulkanRenderer {
 	/* The graphics pipeline used to render */
 	VulkanPipeline m_pipeline;
 
-
 	/* Buffer holding all the drawing commands for the current frame */
 	VkCommandBuffer m_commandBuffer;
 
