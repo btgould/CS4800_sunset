@@ -1,11 +1,11 @@
 #pragma once
 
-#include "device.hpp"
-#include "pipeline.hpp"
+#include "bootstrap/device.hpp"
+#include "bootstrap/pipeline.hpp"
 #include "renderer/VertexBuffer.hpp"
 #include "renderer/IndexBuffer.hpp"
 #include "renderer/vertex_array.hpp"
-#include "swapchain.hpp"
+#include "bootstrap/swapchain.hpp"
 #include <vulkan/vulkan_core.h>
 
 class VulkanRenderer {
@@ -39,7 +39,6 @@ class VulkanRenderer {
 
 	/* Index of the frame in flight being rendered */
 	uint32_t m_currentFrame = 0;
-
 
 	/* Index of the image in the image in the swapchain being rendered to */
 	uint32_t m_imageIndex = 0;

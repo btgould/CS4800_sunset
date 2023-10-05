@@ -152,7 +152,6 @@ void VulkanPipeline::updateUniformBuffer(uint32_t currentImage) {
 		std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 	// Calculate transformation based on current time
-	// TODO: CAMERA model mat should be separate uniform, broken into TRS
 	// TODO: CAMERA VP should really be abstracted to camera class
 	MVP ubo;
 	ubo.model =

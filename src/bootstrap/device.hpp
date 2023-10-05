@@ -82,6 +82,43 @@ class VulkanDevice {
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 	/**
+	 * @brief Creates an image object on the GPU
+	 *
+	 * @param width Width of the image in texels
+	 * @param height Height of the image in texels
+	 * @param format Describes the data types used to store each texel
+	 * @param tiling Describes how texels should be laid out in memory
+	 * @param usage Describes what the image will be used for
+	 * @param properties Required properties for the allocated memory to support
+	 * @param image Image object to create the image to
+	 * @param imageMemory GPU memory to store the image in
+	 */
+	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+	                 VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image,
+	                 VkDeviceMemory& imageMemory);
+
+	/**
+	 * @brief Changes the layout of the given image from oldLayout to newLayout
+	 *
+	 * @param image The image to transition
+	 * @param format The data types used to represent each texel of the image
+	 * @param oldLayout The previous ordering of image texels in memory
+	 * @param newLayout The desired ordering of image texels in memory
+	 */
+	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout,
+	                           VkImageLayout newLayout);
+
+	/**
+	 * @brief Copies a buffer object into an image object
+	 *
+	 * @param buffer The buffer to copy data from
+	 * @param image The image to copy data into
+	 * @param width The width of the image to copy
+	 * @param height The height of the image to copy
+	 */
+	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+	/**
 	 * @brief Wait until all pending commands on this device have been executed
 	 */
 	void flush();
@@ -108,6 +145,8 @@ class VulkanDevice {
 
 	void createCommandPool();
 	void createCommandBuffers();
+	VkCommandBuffer beginSingleTimeCommands();
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 	QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice device, const VkSurfaceKHR surface);
 	SwapChainSupportDetails querySwapChainSupport(const VkPhysicalDevice device,

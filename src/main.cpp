@@ -1,15 +1,15 @@
-#include "device.hpp"
-#include "pipeline.hpp"
-#include "renderer/IndexBuffer.hpp"
-#include "renderer/renderer.hpp"
-#include "spdlog/common.h"
-
 #include <stdexcept>
+
+#include "spdlog/common.h"
 
 #include "util/log.hpp"
 #include "util/profiler.hpp"
-#include "instance.hpp"
-#include "window.hpp"
+#include "bootstrap/device.hpp"
+#include "bootstrap/pipeline.hpp"
+#include "bootstrap/instance.hpp"
+#include "bootstrap/window.hpp"
+#include "renderer/IndexBuffer.hpp"
+#include "renderer/renderer.hpp"
 
 class HelloTriangleApplication {
   public:

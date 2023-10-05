@@ -18,8 +18,8 @@ file(GLOB_RECURSE SOURCE_FILES RELATIVE ${CMAKE_SOURCE_DIR} CONFIGURE_DEPENDS sr
 add_executable(sunset ${SOURCE_FILES})
 
 target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/src/bootstrap")
 target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/vendor/spdlog")
+target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/vendor/stb")
 
 target_link_libraries(sunset glfw vulkan dl pthread X11 Xxf86vm Xrandr Xi)
 target_link_libraries(sunset spdlog)
