@@ -4,6 +4,7 @@
 #include "bootstrap/pipeline.hpp"
 #include "renderer/VertexBuffer.hpp"
 #include "renderer/IndexBuffer.hpp"
+#include "renderer/texture.hpp"
 #include "renderer/vertex_array.hpp"
 #include "bootstrap/swapchain.hpp"
 #include <vulkan/vulkan_core.h>
@@ -28,11 +29,14 @@ class VulkanRenderer {
 	/* The swapchain the render images to */
 	VulkanSwapChain m_swapChain;
 
+	/* Device to execute the rendering on */
+	VulkanDevice& m_device;
+
+	Texture m_texture;
+
 	/* The graphics pipeline used to render */
 	VulkanPipeline m_pipeline;
 
-	/* Device to execute the rendering on */
-	VulkanDevice& m_device;
 
 	/* Buffer holding all the drawing commands for the current frame */
 	VkCommandBuffer m_commandBuffer;

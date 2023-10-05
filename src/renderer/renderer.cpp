@@ -7,10 +7,17 @@
 VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
 	: m_swapChain(instance, device, window), m_device(device),
 	  m_vertexArray({{VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}, /* pos */
-                     {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}} /* color */),
-	  m_pipeline(VulkanPipeline(device, m_vertexArray.getBindingDescription(),
-                                m_vertexArray.getAttributeDescriptions(),
-                                m_swapChain.getRenderPass(), m_swapChain.getExtent())) {}
+                     {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}, /* color */
+                     {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}} /* uv */),
+	  m_texture("res/texture/texture.jpg", m_device),
+	  m_pipeline(VulkanPipeline(
+		  device, m_vertexArray.getBindingDescription(), m_vertexArray.getAttributeDescriptions(),
+		  m_swapChain.getRenderPass(), m_swapChain.getExtent(), m_texture.getImageView())) {
+	// FIXME: I want pipeline creation to work like
+	// 1. specify array of vertex attributes in pipeline
+	// 2. specify array of descriptors used in pipeline
+	// 3. "create" pipeline following capable of receiving these resources
+}
 
 VulkanRenderer::~VulkanRenderer() {}
 

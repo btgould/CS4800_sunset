@@ -11,15 +11,17 @@ Texture::Texture(std::string path, VulkanDevice& device) : m_device(device) {
 }
 
 Texture::~Texture() {
-	vkDestroyImage(m_device.getLogicalDevice(), textureImage, nullptr);
-	vkFreeMemory(m_device.getLogicalDevice(), textureImageMemory, nullptr);
+	vkDestroyImageView(m_device.getLogicalDevice(), m_textureImageView, nullptr);
+
+	vkDestroyImage(m_device.getLogicalDevice(), m_textureImage, nullptr);
+	vkFreeMemory(m_device.getLogicalDevice(), m_textureImageMemory, nullptr);
 }
 
 void Texture::createTextureImage(std::string path) {
 	// load image from file
 	int texWidth, texHeight, texChannels;
 	stbi_uc* pixels =
-		stbi_load("textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+		stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
 	if (!pixels) {
@@ -43,26 +45,50 @@ void Texture::createTextureImage(std::string path) {
 
 	// Create image object from buffer (optimized for shading)
 	createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-	                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-	                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
+	            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+	            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage, m_textureImageMemory);
 
 	// Copy buffer data into image object
-	transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
-	                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth),
-	                           static_cast<uint32_t>(texHeight));
+	transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+	                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	copyBufferToImage(stagingBuffer, m_textureImage, static_cast<uint32_t>(texWidth),
+	                  static_cast<uint32_t>(texHeight));
 
 	// Prepare image for shader access
-transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB,
-	                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-	                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB,
+	                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+	                      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	// Free staging buffer
 	vkDestroyBuffer(m_device.getLogicalDevice(), stagingBuffer, nullptr);
 	vkFreeMemory(m_device.getLogicalDevice(), stagingBufferMemory, nullptr);
 }
 
-void Texture::createTextureImageView() {}
+void Texture::createTextureImageView() {
+	VkImageViewCreateInfo createInfo {};
+	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	createInfo.image = m_textureImage;
+	createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	createInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+
+	// We want to use RGBA components, in that order
+	createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+	// We want a color image with no mipmapping
+	createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	createInfo.subresourceRange.baseMipLevel = 0;
+	createInfo.subresourceRange.levelCount = 1;
+	createInfo.subresourceRange.baseArrayLayer = 0;
+	createInfo.subresourceRange.layerCount = 1; // this is used for stereographic stuff
+
+	if (vkCreateImageView(m_device.getLogicalDevice(), &createInfo, nullptr, &m_textureImageView) !=
+	    VK_SUCCESS) {
+		throw std::runtime_error("failed to create image views!");
+	}
+}
 
 void Texture::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
                           VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image,

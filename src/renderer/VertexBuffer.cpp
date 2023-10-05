@@ -3,9 +3,9 @@
 #include <stdexcept>
 #include <vector>
 
-VertexBuffer::VertexBuffer(VulkanDevice& device, const std::vector<Vertex>& vertices)
-	: m_device(device), m_vertices(vertices) {
-	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+VertexBuffer::VertexBuffer(VulkanDevice& device, void* data, uint32_t vertexSize, uint32_t count)
+	: m_device(device), m_data(data), m_vertexSize(vertexSize), m_count(count) {
+	VkDeviceSize bufferSize = m_count * m_vertexSize;
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
@@ -15,9 +15,8 @@ VertexBuffer::VertexBuffer(VulkanDevice& device, const std::vector<Vertex>& vert
 	                      stagingBuffer, stagingBufferMemory);
 
 	// Copy data from CPU to GPU
-	void* data;
 	vkMapMemory(device.getLogicalDevice(), stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, vertices.data(), (size_t) bufferSize);
+	memcpy(data, m_data, (size_t) bufferSize);
 	vkUnmapMemory(device.getLogicalDevice(),
 	              stagingBufferMemory); // We can immediately unmap here because of the
 	                                    // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT property. Otherwise,

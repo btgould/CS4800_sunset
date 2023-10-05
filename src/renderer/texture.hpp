@@ -11,6 +11,8 @@ class Texture {
 	Texture(const Texture&) = delete;
 	Texture& operator=(const Texture&) = delete;
 
+	inline VkImageView getImageView() const { return m_textureImageView;}
+
   private: // core interface
 	void createTextureImage(std::string path);
 	void createTextureImageView();
@@ -56,7 +58,7 @@ class Texture {
   private:
 	VulkanDevice& m_device;
 
-	VkImage textureImage;
-	VkImageView textureImageView;
-	VkDeviceMemory textureImageMemory;
+	VkImage m_textureImage;
+	VkImageView m_textureImageView;
+	VkDeviceMemory m_textureImageMemory;
 };

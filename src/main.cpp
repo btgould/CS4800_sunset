@@ -11,15 +11,24 @@
 #include "renderer/IndexBuffer.hpp"
 #include "renderer/renderer.hpp"
 
+struct Vertex {
+	glm::vec2 pos;
+	glm::vec3 color;
+	glm::vec2 texCoord;
+};
+
 class HelloTriangleApplication {
   public:
 	HelloTriangleApplication()
 		: m_window(GLFWWindow("Vulkan")), m_instance(m_window), m_device(m_instance),
 		  m_renderer(m_instance, m_device, m_window),
-		  m_vertexBuffer(m_device, {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-	                                {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-	                                {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-	                                {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}}),
+		  m_vertexBuffer(m_device,
+	                     std::vector<Vertex>({{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+	                                          {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+	                                          {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+	                                          {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}})
+	                         .data(),
+	                     sizeof(float) * 7, 4),
 		  m_indexBuffer(m_device, {0, 1, 2, 2, 3, 0}) {}
 
 	~HelloTriangleApplication() = default;

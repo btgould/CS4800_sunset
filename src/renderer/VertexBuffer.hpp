@@ -7,11 +7,6 @@
 
 #include "bootstrap/device.hpp"
 
-struct Vertex {
-	glm::vec2 pos;
-	glm::vec3 color;
-};
-
 /**
  * @class VertexBuffer
  * @brief Represents a list of Vertices, each of which can have an arbitrary list of attributes.
@@ -26,7 +21,7 @@ class VertexBuffer {
 	 * @param vertices Array of vertices, each of which must have the same set and order of
 	 * attributes
 	 */
-	VertexBuffer(VulkanDevice& device, const std::vector<Vertex>& vertices);
+	VertexBuffer(VulkanDevice& device, void* data, uint32_t vertexSize, uint32_t count);
 
 	/**
 	 * @brief Frees memory allocated on the GPU for this buffer
@@ -43,14 +38,15 @@ class VertexBuffer {
 	 */
 	void bind(VkCommandBuffer commandBuffer);
 
-	inline uint32_t size() const { return m_vertices.size(); }
+	inline uint32_t size() const { return m_count; }
 
   private:
 	/* Device to store this buffer on */
 	VulkanDevice& m_device;
 
-	/* List of vertices used by this buffer */
-	std::vector<Vertex> m_vertices;
+	void* m_data;
+	uint32_t m_vertexSize;
+	uint32_t m_count;
 
 	/* Buffer object to store vertex data */
 	VkBuffer m_vertexBuffer;

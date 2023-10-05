@@ -146,14 +146,13 @@ void VulkanDevice::pickPhysicalDevice(const VulkanInstance& instance) {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
 
-	VkPhysicalDeviceProperties deviceProps;
-	vkGetPhysicalDeviceProperties(m_physicalDevice, &deviceProps);
-	LOG_INFO("Selected Physical Device: {0}", deviceProps.deviceName);
-	LOG_INFO("\tUsing Vulkan API: {0}.{1}.{2}.{3}", VK_VERSION_MINOR(deviceProps.apiVersion),
-	         VK_VERSION_MINOR(deviceProps.apiVersion),
-	         VK_API_VERSION_VARIANT(deviceProps.apiVersion),
-	         VK_VERSION_PATCH(deviceProps.apiVersion));
-	LOG_INFO("\tUsing Driver Version: {0}", deviceProps.driverVersion);
+	vkGetPhysicalDeviceProperties(m_physicalDevice, &m_deviceProps);
+	LOG_INFO("Selected Physical Device: {0}", m_deviceProps.deviceName);
+	LOG_INFO("\tUsing Vulkan API: {0}.{1}.{2}.{3}", VK_VERSION_MINOR(m_deviceProps.apiVersion),
+	         VK_VERSION_MINOR(m_deviceProps.apiVersion),
+	         VK_API_VERSION_VARIANT(m_deviceProps.apiVersion),
+	         VK_VERSION_PATCH(m_deviceProps.apiVersion));
+	LOG_INFO("\tUsing Driver Version: {0}", m_deviceProps.driverVersion);
 }
 
 void VulkanDevice::createLogicalDevice() {
@@ -174,6 +173,7 @@ void VulkanDevice::createLogicalDevice() {
 	}
 	// Create logical device
 	VkPhysicalDeviceFeatures deviceFeatures {};
+	deviceFeatures.samplerAnisotropy = VK_TRUE;
 
 	VkDeviceCreateInfo deviceCreateInfo {};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -314,7 +314,11 @@ bool VulkanDevice::isDeviceSuitable(const VkPhysicalDevice device, const VkSurfa
 	VkPhysicalDeviceProperties props;
 	vkGetPhysicalDeviceProperties(device, &props);
 
-	return indices.isComplete() && extensionsSupported &&
+	VkPhysicalDeviceFeatures supportedFeatures;
+	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+	return indices.isComplete() && extensionsSupported && swapChainAdequate &&
+	       supportedFeatures.samplerAnisotropy &&
 	       (strcmp(props.deviceName, "NVIDIA GeForce RTX 3050") != 0);
 }
 

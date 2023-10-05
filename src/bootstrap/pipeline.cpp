@@ -14,16 +14,18 @@
 
 VulkanPipeline::VulkanPipeline(VulkanDevice& device, VkVertexInputBindingDescription bindingDesc,
                                std::vector<VkVertexInputAttributeDescription> attrDesc,
-                               VkRenderPass renderPass, VkExtent2D extant)
+                               VkRenderPass renderPass, VkExtent2D extant, VkImageView imageView)
 	: m_device(device), m_extant(extant) {
 	createDescriptorSetLayout();
 	createUniformBuffers();
+	createTextureSampler();
 	createDescriptorPool();
-	createDescriptorSets();
+	createDescriptorSets(imageView);
 	createGraphicsPipeline(bindingDesc, attrDesc, renderPass);
 }
 
 VulkanPipeline::~VulkanPipeline() {
+	vkDestroySampler(m_device.getLogicalDevice(), m_textureSampler, nullptr);
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		// Destroy uniform buffers
 		vkDestroyBuffer(m_device.getLogicalDevice(), m_uniformBuffers[i], nullptr);
@@ -166,6 +168,31 @@ void VulkanPipeline::updateUniformBuffer(uint32_t currentImage) {
 	memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 
+void VulkanPipeline::createTextureSampler() {
+	VkSamplerCreateInfo samplerInfo {};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = VK_FILTER_LINEAR;
+	samplerInfo.minFilter = VK_FILTER_LINEAR;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.anisotropyEnable = VK_TRUE;
+	samplerInfo.maxAnisotropy = m_device.getMaxAnistropy();
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	samplerInfo.compareEnable = VK_FALSE;
+	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerInfo.mipLodBias = 0.0f;
+	samplerInfo.minLod = 0.0f;
+	samplerInfo.maxLod = 0.0f;
+
+	if (vkCreateSampler(m_device.getLogicalDevice(), &samplerInfo, nullptr, &m_textureSampler) !=
+	    VK_SUCCESS) {
+		throw std::runtime_error("failed to create texture sampler!");
+	}
+}
+
 void VulkanPipeline::bind(VkCommandBuffer commandBuffer) {
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 }
@@ -217,11 +244,20 @@ void VulkanPipeline::createDescriptorSetLayout() {
 	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	uboLayoutBinding.pImmutableSamplers = nullptr; // not doing image sampling yet
 
+	VkDescriptorSetLayoutBinding samplerLayoutBinding {};
+	samplerLayoutBinding.binding = 1;
+	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding.pImmutableSamplers = nullptr;
+	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
+
 	// Group bindings into a descriptor set
 	VkDescriptorSetLayoutCreateInfo layoutInfo {};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = 1;
-	layoutInfo.pBindings = &uboLayoutBinding;
+	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+	layoutInfo.pBindings = bindings.data();
 
 	if (vkCreateDescriptorSetLayout(m_device.getLogicalDevice(), &layoutInfo, nullptr,
 	                                &m_descriptorSetLayout) != VK_SUCCESS) {
@@ -230,15 +266,18 @@ void VulkanPipeline::createDescriptorSetLayout() {
 }
 
 void VulkanPipeline::createDescriptorPool() {
-	// We want one uniform buffer for each frame in flight
-	VkDescriptorPoolSize poolSize {};
-	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	// We want one uniform buffer and one image sampler for each frame in flight
+	std::array<VkDescriptorPoolSize, 2> poolSizes {};
+	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
 	VkDescriptorPoolCreateInfo poolInfo {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.poolSizeCount = 1;      // we allow 1 type of descriptor
-	poolInfo.pPoolSizes = &poolSize; // limits count of a certain type of descriptor
+	poolInfo.poolSizeCount =
+		static_cast<uint32_t>(poolSizes.size()); // number of different types of descriptors
+	poolInfo.pPoolSizes = poolSizes.data();      // limits count of a certain type of descriptor
 	poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT); // max total descriptors in pool
 
 	if (vkCreateDescriptorPool(m_device.getLogicalDevice(), &poolInfo, nullptr,
@@ -247,7 +286,7 @@ void VulkanPipeline::createDescriptorPool() {
 	}
 }
 
-void VulkanPipeline::createDescriptorSets() {
+void VulkanPipeline::createDescriptorSets(VkImageView imageView) {
 	std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, m_descriptorSetLayout);
 
 	// Allocate descriptor sets
@@ -263,7 +302,7 @@ void VulkanPipeline::createDescriptorSets() {
 		throw std::runtime_error("failed to allocate descriptor sets!");
 	}
 
-	// Populate descriptor sets (each one takes one MVP uniform)
+	// Populate descriptor sets (each one takes one MVP uniform and one image sampler)
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		// Describe the buffer to put in each descriptor set
 		VkDescriptorBufferInfo bufferInfo {};
@@ -271,20 +310,34 @@ void VulkanPipeline::createDescriptorSets() {
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(MVP);
 
+		VkDescriptorImageInfo imageInfo {};
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageView = imageView;
+		imageInfo.sampler = m_textureSampler;
+
 		// Describe how to write to the descriptor set
-		VkWriteDescriptorSet descriptorWrite {};
-		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet = m_descriptorSets[i];
-		descriptorWrite.dstBinding = 0;      // binding location of this uniform in the shader
-		descriptorWrite.dstArrayElement = 0; // this uniform is a scalar, definitely first element
-		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrite.descriptorCount = 1;
-		descriptorWrite.pBufferInfo = &bufferInfo;
-		descriptorWrite.pImageInfo = nullptr;       // Optional
-		descriptorWrite.pTexelBufferView = nullptr; // Optional
+		std::array<VkWriteDescriptorSet, 2> descriptorWrites {};
+
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = m_descriptorSets[i];
+		descriptorWrites[0].dstBinding = 0;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = m_descriptorSets[i];
+		descriptorWrites[1].dstBinding = 1;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pImageInfo = &imageInfo;
 
 		// Write to descriptor set
-		vkUpdateDescriptorSets(m_device.getLogicalDevice(), 1, &descriptorWrite, 0, nullptr);
+		vkUpdateDescriptorSets(m_device.getLogicalDevice(),
+		                       static_cast<uint32_t>(descriptorWrites.size()),
+		                       descriptorWrites.data(), 0, nullptr);
 	}
 }
 

@@ -34,7 +34,7 @@ class VulkanPipeline {
   public:
 	VulkanPipeline(VulkanDevice& device, VkVertexInputBindingDescription bindingDesc,
 	               std::vector<VkVertexInputAttributeDescription> attrDesc, VkRenderPass renderPass,
-	               VkExtent2D extant);
+	               VkExtent2D extant, VkImageView imageView);
 	~VulkanPipeline();
 
 	VulkanPipeline(const VulkanPipeline&) = delete;
@@ -49,13 +49,14 @@ class VulkanPipeline {
 	                            std::vector<VkVertexInputAttributeDescription> attrDesc,
 	                            VkRenderPass renderPass);
 	void createUniformBuffers();
+	void createTextureSampler();
 
   private: // helper
 	static std::vector<char> readFile(const std::string& filename);
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	void createDescriptorSetLayout();
 	void createDescriptorPool();
-	void createDescriptorSets();
+	void createDescriptorSets(VkImageView imageView);
 	PipelineConfigInfo defaultPipelineConfigInfo();
 
   private:
@@ -67,6 +68,8 @@ class VulkanPipeline {
 	std::vector<VkDeviceMemory> m_uniformBuffersMemory;
 	/* CPU address linked to location of uniforms on GPU */
 	std::vector<void*> m_uniformBuffersMapped;
+
+	VkSampler m_textureSampler;
 
 	/* Pool to allocate descriptor sets from */
 	VkDescriptorPool m_descriptorPool;

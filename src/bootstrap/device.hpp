@@ -81,7 +81,6 @@ class VulkanDevice {
 	 */
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-
 	/**
 	 * @brief Wait until all pending commands on this device have been executed
 	 */
@@ -98,6 +97,7 @@ class VulkanDevice {
 	inline const VkDevice getLogicalDevice() const { return m_logicalDevice; }
 	inline const VkQueue getGraphicsQueue() const { return m_graphicsQueue; }
 	inline const VkQueue getPresentQueue() const { return m_presentQueue; }
+	inline const float getMaxAnistropy() const { return m_deviceProps.limits.maxSamplerAnisotropy; }
 
   private:
 	void pickPhysicalDevice(const VulkanInstance& instance);
@@ -123,7 +123,9 @@ class VulkanDevice {
 	VkPhysicalDevice m_physicalDevice;
 	VkDevice m_logicalDevice;
 
+	VkPhysicalDeviceProperties m_deviceProps;
 	QueueFamilyIndices m_queueFamilyIndices;
+
 	VkQueue m_graphicsQueue; // implicitly destroyed with logicalDevice
 	VkQueue m_presentQueue;
 
