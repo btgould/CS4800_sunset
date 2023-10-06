@@ -7,6 +7,8 @@
 #include "renderer/texture.hpp"
 #include "renderer/vertex_array.hpp"
 #include "bootstrap/swapchain.hpp"
+#include <map>
+#include <string>
 #include <vulkan/vulkan_core.h>
 
 class VulkanRenderer {
@@ -17,10 +19,15 @@ class VulkanRenderer {
 	VulkanRenderer(const VulkanRenderer&) = delete;
 	VulkanRenderer& operator=(const VulkanRenderer&) = delete;
 
+	// TODO: CAMERA this should be owned by camera, I need to get rid of it here
+	inline float getAspectRatio() const { return m_swapChain.getAspectRatio(); }
+
   public:
 	void beginScene();
 	void draw(VertexBuffer& vertices, IndexBuffer& indices);
 	void endScene();
+
+	void updateUniform(std::string name, void* data);
 
   private:
 	/* The list attributes each vertex has */
@@ -36,6 +43,8 @@ class VulkanRenderer {
 
 	/* The graphics pipeline used to render */
 	VulkanPipeline m_pipeline;
+
+	std::map<std::string, uint32_t> m_uniformIDs;
 
 	/* Buffer holding all the drawing commands for the current frame */
 	VkCommandBuffer m_commandBuffer;

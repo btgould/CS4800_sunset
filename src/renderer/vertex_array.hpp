@@ -46,7 +46,7 @@ struct VertexAtrribute {
 
 class VertexArray {
   public:
-	VertexArray(const std::vector<VertexAtrribute>& attribs);
+	VertexArray();
 	~VertexArray();
 
 	VertexArray(const VertexArray&) = delete;
@@ -55,8 +55,8 @@ class VertexArray {
   public:
 	void push(VertexAtrribute attr);
 
-	VkVertexInputBindingDescription getBindingDescription();
-	std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+	VkVertexInputBindingDescription getBindingDescription() const;
+	std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() const;
 
   private:
 	std::vector<VertexAtrribute> m_attribs;

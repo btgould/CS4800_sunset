@@ -3,20 +3,21 @@
 #include "renderer/vertex_array.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
+#include <stdexcept>
 
 VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
 	: m_swapChain(instance, device, window), m_device(device),
-	  m_vertexArray({{VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}, /* pos */
-                     {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}, /* color */
-                     {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}} /* uv */),
 	  m_texture("res/texture/texture.jpg", m_device),
-	  m_pipeline(VulkanPipeline(
-		  device, m_vertexArray.getBindingDescription(), m_vertexArray.getAttributeDescriptions(),
-		  m_swapChain.getRenderPass(), m_swapChain.getExtent(), m_texture.getImageView())) {
-	// FIXME: I want pipeline creation to work like
-	// 1. specify array of vertex attributes in pipeline
-	// 2. specify array of descriptors used in pipeline
-	// 3. "create" pipeline following capable of receiving these resources
+	  m_pipeline(VulkanPipeline(device, m_swapChain, m_texture.getImageView())) {
+	// Configure and create pipeline
+	m_vertexArray.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}); // pos
+	m_vertexArray.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}); // color
+	m_vertexArray.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}); // uv
+	m_pipeline.setVertexArray(m_vertexArray);
+
+	m_uniformIDs["MVP"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(MVP));
+
+	m_pipeline.create();
 }
 
 VulkanRenderer::~VulkanRenderer() {}
@@ -72,10 +73,6 @@ void VulkanRenderer::draw(VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer) 
 }
 
 void VulkanRenderer::endScene() {
-	// Update uniforms
-	// FIXME: This really should be put somewhere else, but will do here for now
-	m_pipeline.updateUniformBuffer(m_currentFrame);
-
 	// End render pass, stop recording
 	vkCmdEndRenderPass(m_commandBuffer);
 	if (vkEndCommandBuffer(m_commandBuffer) != VK_SUCCESS) {
@@ -92,4 +89,15 @@ void VulkanRenderer::endScene() {
 	m_swapChain.present(m_imageIndex, m_currentFrame);
 
 	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void VulkanRenderer::updateUniform(std::string name, void* data) {
+	auto uniformID = m_uniformIDs.find(name);
+
+	if (uniformID == m_uniformIDs.end()) {
+		// uniform name was not found
+		throw std::runtime_error("Unrecognized uniform name");
+	}
+
+	m_pipeline.writeUniform(uniformID->second, data, m_currentFrame);
 }

@@ -2,7 +2,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-VertexArray::VertexArray(const std::vector<VertexAtrribute>& attribs) : m_attribs(attribs) {}
+VertexArray::VertexArray() {}
 
 VertexArray::~VertexArray() {}
 
@@ -10,7 +10,7 @@ void VertexArray::push(VertexAtrribute attr) {
 	m_attribs.push_back(attr);
 }
 
-VkVertexInputBindingDescription VertexArray::getBindingDescription() {
+VkVertexInputBindingDescription VertexArray::getBindingDescription() const {
 	// calculate total size of vertex
 	uint32_t totalSize = 0;
 
@@ -28,7 +28,7 @@ VkVertexInputBindingDescription VertexArray::getBindingDescription() {
 	return bindingDescription;
 }
 
-std::vector<VkVertexInputAttributeDescription> VertexArray::getAttributeDescriptions() {
+std::vector<VkVertexInputAttributeDescription> VertexArray::getAttributeDescriptions() const {
 	std::vector<VkVertexInputAttributeDescription> descList(m_attribs.size());
 
 	uint32_t runningOffset = 0;

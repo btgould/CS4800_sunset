@@ -4,11 +4,14 @@
 #include <fstream>
 #include <vector>
 
+#include "util/constants.hpp"
+
 #include "device.hpp"
 #include "instance.hpp"
 
 #include "renderer/IndexBuffer.hpp"
 #include "renderer/VertexBuffer.hpp"
+#include "renderer/vertex_array.hpp"
 #include "swapchain.hpp"
 #include "window.hpp"
 
@@ -32,23 +35,32 @@ struct MVP {
 
 class VulkanPipeline {
   public:
-	VulkanPipeline(VulkanDevice& device, VkVertexInputBindingDescription bindingDesc,
-	               std::vector<VkVertexInputAttributeDescription> attrDesc, VkRenderPass renderPass,
-	               VkExtent2D extant, VkImageView imageView);
+	VulkanPipeline(VulkanDevice& device, const VulkanSwapChain& swapChain, VkImageView imageView);
 	~VulkanPipeline();
 
 	VulkanPipeline(const VulkanPipeline&) = delete;
 	VulkanPipeline& operator=(const VulkanPipeline&) = delete;
 
+  public:
+	/**
+	 * @brief Creates the pipeline object on the GPU
+	 *
+	 * After this creation, no pipeline configuration can be changed. If a change is needed, the
+	 * pipeline must be recreated from scratch.
+	 */
+	void create();
+
+	void setVertexArray(const VertexArray& vertexArray);
+	uint32_t pushUniform(VkShaderStageFlags stage, uint32_t size);
+	void writeUniform(uint32_t uniformID, void* data, uint32_t currentFrame);
+
 	void bind(VkCommandBuffer commandBuffer);
 	void bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame);
-	void updateUniformBuffer(uint32_t currentImage);
 
   private: // core interface
 	void createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
 	                            std::vector<VkVertexInputAttributeDescription> attrDesc,
 	                            VkRenderPass renderPass);
-	void createUniformBuffers();
 	void createTextureSampler();
 
   private: // helper
@@ -61,15 +73,29 @@ class VulkanPipeline {
 
   private:
 	VulkanDevice& m_device;
+	const VulkanSwapChain& m_swapChain;
+
+	VkVertexInputBindingDescription m_vertexAttrBindings;
+	std::vector<VkVertexInputAttributeDescription> m_vertexAttr;
+
+	// TODO: I'd really like to find a way to get rid of this
+	VkImageView m_imageView;
+
+	template <typename T> using Frames = std::array<T, MAX_FRAMES_IN_FLIGHT>;
+
+	std::vector<VkDescriptorSetLayoutBinding> m_bindings;
+	std::vector<uint32_t> m_uniformSizes;
+	std::vector<VkDescriptorPoolSize> m_poolSizes;
 
 	/* Buffer to store uniforms data in */
-	std::vector<VkBuffer> m_uniformBuffers;
+	std::vector<Frames<VkBuffer>> m_uniformBuffers;
 	/* Memory on GPU to store uniform buffers */
-	std::vector<VkDeviceMemory> m_uniformBuffersMemory;
+	std::vector<Frames<VkDeviceMemory>> m_uniformBuffersMemory;
 	/* CPU address linked to location of uniforms on GPU */
-	std::vector<void*> m_uniformBuffersMapped;
+	std::vector<Frames<void*>> m_uniformBuffersMapped;
 
-	VkSampler m_textureSampler;
+	VkSampler m_textureSampler; // TODO: I want a pool of texture samplers, statically owned by
+	                            // texture class
 
 	/* Pool to allocate descriptor sets from */
 	VkDescriptorPool m_descriptorPool;
@@ -77,9 +103,6 @@ class VulkanPipeline {
 	VkDescriptorSetLayout m_descriptorSetLayout;
 	/* Describes where to get uniform data, and how the GPU should use it */
 	std::vector<VkDescriptorSet> m_descriptorSets;
-
-	VkExtent2D m_extant;
-
 	/* A list of descriptor layouts, describing dynamic resources used by pipeline */
 	VkPipelineLayout m_pipelineLayout;
 	VkPipeline m_pipeline;
