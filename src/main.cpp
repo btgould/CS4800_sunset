@@ -2,6 +2,7 @@
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include "spdlog/common.h"
 
@@ -13,6 +14,7 @@
 #include "bootstrap/window.hpp"
 #include "renderer/IndexBuffer.hpp"
 #include "renderer/renderer.hpp"
+#include "renderer/camera.hpp"
 
 struct Vertex {
 	glm::vec2 pos;
@@ -32,7 +34,8 @@ class HelloTriangleApplication {
 	                                          {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}})
 	                         .data(),
 	                     sizeof(float) * 7, 4),
-		  m_indexBuffer(m_device, {0, 1, 2, 2, 3, 0}) {}
+		  m_indexBuffer(m_device, {0, 1, 2, 2, 3, 0}),
+		  m_camera(glm::radians(45.0f), m_renderer.getAspectRatio(), glm::vec3(2.0f, 2.0f, 2.0f)) {}
 
 	~HelloTriangleApplication() = default;
 
@@ -44,29 +47,17 @@ class HelloTriangleApplication {
 			m_renderer.draw(m_vertexBuffer, m_indexBuffer);
 
 			// update uniforms
-			// Get current time
 			static auto startTime = std::chrono::high_resolution_clock::now();
-
 			auto currentTime = std::chrono::high_resolution_clock::now();
-			float time =
+			float dt =
 				std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime)
 					.count();
 
-			// Calculate transformation based on current time
-			// TODO: CAMERA VP should really be abstracted to camera class
-			MVP ubo;
-			ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f),
-			                        glm::vec3(0.0f, 0.0f, 1.0f));
-			ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-			                       glm::vec3(0.0f, 0.0f, 1.0f));
-			ubo.proj =
-				glm::perspective(glm::radians(45.0f), m_renderer.getAspectRatio(), 0.1f, 10.0f);
-			ubo.proj[1][1] *= -1; // flip to account for OpenGL handedness
-
+			MVP ubo = m_camera.getMVP();
 			m_renderer.updateUniform("MVP", &ubo);
+			/* m_camera.translate(glm::vec3(-1.0f, -1.0f, -1.0f) * (dt / 100)); */
 
 			m_renderer.endScene();
-			/* m_pipeline.drawFrame(); */
 		}
 
 		m_device.flush();
@@ -79,6 +70,7 @@ class HelloTriangleApplication {
 	VulkanRenderer m_renderer;
 	VertexBuffer m_vertexBuffer;
 	IndexBuffer m_indexBuffer;
+	Camera m_camera;
 };
 
 int main() {

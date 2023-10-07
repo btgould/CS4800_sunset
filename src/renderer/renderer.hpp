@@ -1,15 +1,18 @@
 #pragma once
 
+#include <map>
+#include <string>
+#include <vulkan/vulkan_core.h>
+
 #include "bootstrap/device.hpp"
 #include "bootstrap/pipeline.hpp"
+#include "bootstrap/swapchain.hpp"
+
 #include "renderer/VertexBuffer.hpp"
 #include "renderer/IndexBuffer.hpp"
 #include "renderer/texture.hpp"
 #include "renderer/vertex_array.hpp"
-#include "bootstrap/swapchain.hpp"
-#include <map>
-#include <string>
-#include <vulkan/vulkan_core.h>
+#include "renderer/camera.hpp"
 
 class VulkanRenderer {
   public:
@@ -19,7 +22,6 @@ class VulkanRenderer {
 	VulkanRenderer(const VulkanRenderer&) = delete;
 	VulkanRenderer& operator=(const VulkanRenderer&) = delete;
 
-	// TODO: CAMERA this should be owned by camera, I need to get rid of it here
 	inline float getAspectRatio() const { return m_swapChain.getAspectRatio(); }
 
   public:

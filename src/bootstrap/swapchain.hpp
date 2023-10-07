@@ -21,13 +21,13 @@ class VulkanSwapChain {
 	void present(uint32_t imageIndex, uint32_t currentFrame);
 
 	inline const VkSwapchainKHR& getSwapChain() const { return m_swapChain; }
-	inline const VkExtent2D& getExtent() const { return m_extent; }
+	inline const VkRenderPass getRenderPass() const { return m_renderPass; }
 	inline const std::vector<VkImageView> getImageViews() const { return m_imageViews; }
 	inline const VkFormat& getImageFormat() const { return m_imageFormat; }
 	inline const VkFramebuffer getFramebuffer(uint32_t imageIndex) const {
 		return m_framebuffers[imageIndex];
 	}
-	inline const VkRenderPass getRenderPass() const { return m_renderPass; }
+	inline const VkExtent2D& getExtent() const { return m_extent; }
 	inline float getAspectRatio() const { return m_extent.width / (float) m_extent.height; }
 
   private:

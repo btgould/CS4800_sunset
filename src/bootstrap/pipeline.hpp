@@ -27,12 +27,6 @@ struct PipelineConfigInfo {
 	VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
 };
 
-struct MVP {
-	alignas(16) glm::mat4 model;
-	alignas(16) glm::mat4 view;
-	alignas(16) glm::mat4 proj;
-};
-
 class VulkanPipeline {
   public:
 	VulkanPipeline(VulkanDevice& device, const VulkanSwapChain& swapChain, VkImageView imageView);
