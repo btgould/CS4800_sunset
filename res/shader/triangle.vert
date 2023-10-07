@@ -1,9 +1,11 @@
 #version 450
 
-layout(binding = 0) uniform MVP {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
+layout(binding = 0) uniform TRS {
+    mat4 trs;
+} trs;
+
+layout(binding = 1) uniform MVP {
+    mat4 vp;
 } mvp;
 
 layout(location = 0) in vec2 inPosition;
@@ -14,7 +16,7 @@ layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 
 void main() {
-	gl_Position = mvp.proj * mvp.view * mvp.model * vec4(inPosition, 0.0, 1.0);
+	gl_Position = mvp.vp * trs.trs * vec4(inPosition, 0.0, 1.0);
     fragColor = inColor;
     fragTexCoord = inTexCoord;
 }

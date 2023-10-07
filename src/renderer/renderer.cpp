@@ -15,7 +15,9 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	m_vertexArray.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}); // uv
 	m_pipeline.setVertexArray(m_vertexArray);
 
-	m_uniformIDs["MVP"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(MVP));
+	m_uniformIDs["modelTRS"] =
+		m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
+	m_uniformIDs["camVP"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 
 	m_pipeline.create();
 }

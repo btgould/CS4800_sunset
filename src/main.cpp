@@ -35,7 +35,11 @@ class HelloTriangleApplication {
 	                         .data(),
 	                     sizeof(float) * 7, 4),
 		  m_indexBuffer(m_device, {0, 1, 2, 2, 3, 0}),
-		  m_camera(glm::radians(45.0f), m_renderer.getAspectRatio(), glm::vec3(2.0f, 2.0f, 2.0f)) {}
+		  m_camera(glm::radians(45.0f), m_renderer.getAspectRatio(), glm::vec3(2.0f, 2.0f, 2.0f)) {
+		m_modelTranslation = glm::mat4(1.0f);
+		m_modelRotation = glm::mat4(1.0f);
+		m_modelScale = glm::mat4(1.0f);
+	}
 
 	~HelloTriangleApplication() = default;
 
@@ -53,9 +57,13 @@ class HelloTriangleApplication {
 				std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime)
 					.count();
 
-			MVP ubo = m_camera.getMVP();
-			m_renderer.updateUniform("MVP", &ubo);
-			/* m_camera.translate(glm::vec3(-1.0f, -1.0f, -1.0f) * (dt / 100)); */
+			m_modelRotation = glm::rotate(glm::mat4(1.0f), dt * glm::radians(90.0f),
+			                              glm::vec3(0.0f, 0.0f, 1.0f));
+
+			glm::mat4 modelTRS = m_modelScale * m_modelRotation * m_modelTranslation;
+			m_renderer.updateUniform("modelTRS", &modelTRS);
+			glm::mat4 camVP = m_camera.getVP();
+			m_renderer.updateUniform("camVP", &camVP);
 
 			m_renderer.endScene();
 		}
@@ -71,6 +79,8 @@ class HelloTriangleApplication {
 	VertexBuffer m_vertexBuffer;
 	IndexBuffer m_indexBuffer;
 	Camera m_camera;
+
+	glm::mat4 m_modelTranslation, m_modelRotation, m_modelScale;
 };
 
 int main() {

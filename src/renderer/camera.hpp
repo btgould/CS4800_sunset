@@ -3,12 +3,6 @@
 #include "glm/glm.hpp"
 #include <glm/ext/matrix_transform.hpp>
 
-struct MVP {
-	alignas(16) glm::mat4 model;
-	alignas(16) glm::mat4 view;
-	alignas(16) glm::mat4 proj;
-};
-
 class Camera {
   public:
 	Camera(float fovY, float aspect, glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f),
@@ -16,17 +10,12 @@ class Camera {
 	~Camera();
 
   public:
-	inline MVP getMVP()  {
+	inline const glm::mat4 getVP() {
 		// Update data members
 		m_view = glm::lookAt(m_pos, m_pos + m_look, glm::vec3(0.0f, 0.0f, 1.0f));
 
 		// Return computed result
-		MVP mvp;
-		mvp.model = glm::mat4(1.0f);
-		mvp.view = m_view;
-		mvp.proj = m_proj;
-
-		return mvp;
+		return m_proj * m_view;
 	}
 
 	void translate(const glm::vec3& tr);
