@@ -7,7 +7,8 @@
 
 Texture::Texture(std::string path, VulkanDevice& device) : m_device(device) {
 	createTextureImage(path);
-	createTextureImageView();
+	m_textureImageView = m_device.createImageView(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB,
+	                                              VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 Texture::~Texture() {
@@ -43,9 +44,9 @@ void Texture::createTextureImage(std::string path) {
 	stbi_image_free(pixels);
 
 	// Create image object from buffer (optimized for shading)
-	createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-	            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-	            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage, m_textureImageMemory);
+	m_device.createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+	                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+	                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage, m_textureImageMemory);
 
 	// Copy buffer data into image object
 	transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
@@ -61,70 +62,6 @@ void Texture::createTextureImage(std::string path) {
 	// Free staging buffer
 	vkDestroyBuffer(m_device.getLogicalDevice(), stagingBuffer, nullptr);
 	vkFreeMemory(m_device.getLogicalDevice(), stagingBufferMemory, nullptr);
-}
-
-void Texture::createTextureImageView() {
-	VkImageViewCreateInfo createInfo {};
-	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	createInfo.image = m_textureImage;
-	createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	createInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-
-	// We want to use RGBA components, in that order
-	createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-	createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-	createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-	createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-	// We want a color image with no mipmapping
-	createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	createInfo.subresourceRange.baseMipLevel = 0;
-	createInfo.subresourceRange.levelCount = 1;
-	createInfo.subresourceRange.baseArrayLayer = 0;
-	createInfo.subresourceRange.layerCount = 1; // this is used for stereographic stuff
-
-	if (vkCreateImageView(m_device.getLogicalDevice(), &createInfo, nullptr, &m_textureImageView) !=
-	    VK_SUCCESS) {
-		throw std::runtime_error("failed to create image views!");
-	}
-}
-
-void Texture::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
-                          VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image,
-                          VkDeviceMemory& imageMemory) {
-	VkImageCreateInfo imageInfo {};
-	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	imageInfo.imageType = VK_IMAGE_TYPE_2D;
-	imageInfo.extent.width = width;
-	imageInfo.extent.height = height;
-	imageInfo.extent.depth = 1;
-	imageInfo.mipLevels = 1;
-	imageInfo.arrayLayers = 1;
-	imageInfo.format = format;
-	imageInfo.tiling = tiling;
-	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	imageInfo.usage = usage;
-	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-	if (vkCreateImage(m_device.getLogicalDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create image!");
-	}
-
-	VkMemoryRequirements memRequirements;
-	vkGetImageMemoryRequirements(m_device.getLogicalDevice(), image, &memRequirements);
-
-	VkMemoryAllocateInfo allocInfo {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize = memRequirements.size;
-	allocInfo.memoryTypeIndex = m_device.findMemoryType(memRequirements.memoryTypeBits, properties);
-
-	if (vkAllocateMemory(m_device.getLogicalDevice(), &allocInfo, nullptr, &imageMemory) !=
-	    VK_SUCCESS) {
-		throw std::runtime_error("failed to allocate image memory!");
-	}
-
-	vkBindImageMemory(m_device.getLogicalDevice(), image, imageMemory, 0);
 }
 
 void Texture::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout,

@@ -15,25 +15,8 @@ class Texture {
 
   private: // core interface
 	void createTextureImage(std::string path);
-	void createTextureImageView();
 
   private: // helper functions
-	/**
-	 * @brief Creates an image object on the GPU
-	 *
-	 * @param width Width of the image in texels
-	 * @param height Height of the image in texels
-	 * @param format Describes the data types used to store each texel
-	 * @param tiling Describes how texels should be laid out in memory
-	 * @param usage Describes what the image will be used for
-	 * @param properties Required properties for the allocated memory to support
-	 * @param image Image object to create the image to
-	 * @param imageMemory GPU memory to store the image in
-	 */
-	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
-	                 VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image,
-	                 VkDeviceMemory& imageMemory);
-
 	/**
 	 * @brief Changes the layout of the given image from oldLayout to newLayout
 	 *

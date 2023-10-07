@@ -24,6 +24,8 @@ target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/vendor/stb")
 target_link_libraries(sunset glfw vulkan dl pthread X11 Xxf86vm Xrandr Xi)
 target_link_libraries(sunset spdlog)
 
+target_compile_definitions(sunset PRIVATE GLM_FORCE_RADIANS GLM_FORCE_DEPTH_ZERO_TO_ONE)
+
 if(${CMAKE_BUILD_TYPE} STREQUAL Release)
 	target_compile_definitions(sunset PRIVATE SUNSET_DIST)
 elseif(${CMAKE_BUILD_TYPE} STREQUAL RelWithDebugInfo)

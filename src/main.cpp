@@ -17,7 +17,7 @@
 #include "renderer/camera.hpp"
 
 struct Vertex {
-	glm::vec2 pos;
+	glm::vec3 pos;
 	glm::vec3 color;
 	glm::vec2 texCoord;
 };
@@ -27,14 +27,6 @@ class HelloTriangleApplication {
 	HelloTriangleApplication()
 		: m_window(GLFWWindow("Vulkan")), m_instance(m_window), m_device(m_instance),
 		  m_renderer(m_instance, m_device, m_window),
-		  m_vertexBuffer(m_device,
-	                     std::vector<Vertex>({{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-	                                          {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-	                                          {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-	                                          {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}})
-	                         .data(),
-	                     sizeof(float) * 7, 4),
-		  m_indexBuffer(m_device, {0, 1, 2, 2, 3, 0}),
 		  m_camera(glm::radians(45.0f), m_renderer.getAspectRatio(), glm::vec3(2.0f, 2.0f, 2.0f)) {
 		m_modelTranslation = glm::mat4(1.0f);
 		m_modelRotation = glm::mat4(1.0f);
@@ -44,11 +36,30 @@ class HelloTriangleApplication {
 	~HelloTriangleApplication() = default;
 
 	void run() {
+		VertexBuffer vb1(
+			m_device,
+			std::vector<Vertex>({{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+		                         {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+		                         {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+		                         {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}})
+				.data(),
+			sizeof(float) * 8, 4);
+		VertexBuffer vb2(
+			m_device,
+			std::vector<Vertex>({{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+		                         {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+		                         {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+		                         {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}})
+				.data(),
+			sizeof(float) * 8, 4);
+		IndexBuffer ib(m_device, {0, 1, 2, 2, 3, 0});
+
 		while (!m_window.shouldClose()) {
 			m_window.pollEvents();
 
 			m_renderer.beginScene();
-			m_renderer.draw(m_vertexBuffer, m_indexBuffer);
+			m_renderer.draw(vb1, ib);
+			m_renderer.draw(vb2, ib);
 
 			// update uniforms
 			static auto startTime = std::chrono::high_resolution_clock::now();
@@ -57,8 +68,8 @@ class HelloTriangleApplication {
 				std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime)
 					.count();
 
-			m_modelRotation = glm::rotate(glm::mat4(1.0f), dt * glm::radians(90.0f),
-			                              glm::vec3(0.0f, 0.0f, 1.0f));
+			m_modelRotation =
+				glm::rotate(glm::mat4(1.0f), dt * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 			glm::mat4 modelTRS = m_modelScale * m_modelRotation * m_modelTranslation;
 			m_renderer.updateUniform("modelTRS", &modelTRS);
@@ -76,8 +87,6 @@ class HelloTriangleApplication {
 	VulkanInstance m_instance;
 	VulkanDevice m_device;
 	VulkanRenderer m_renderer;
-	VertexBuffer m_vertexBuffer;
-	IndexBuffer m_indexBuffer;
 	Camera m_camera;
 
 	glm::mat4 m_modelTranslation, m_modelRotation, m_modelScale;

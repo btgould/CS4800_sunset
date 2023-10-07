@@ -37,8 +37,10 @@ class VulkanSwapChain {
 	void createRenderPass();
 	void createFramebuffers();
 	void createSyncObjects();
+	void createDepthResources();
 
 	void recreate();
+	void cleanup();
 
 	VkSurfaceFormatKHR
 	chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
@@ -54,6 +56,10 @@ class VulkanSwapChain {
 	 */
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
 	                            const GLFWWindow& window);
+	VkFormat findDepthFormat();
+	inline bool hasStencilComponent(VkFormat format) {
+		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+	}
 
   private:
 	VulkanDevice& m_device;
@@ -67,6 +73,10 @@ class VulkanSwapChain {
 	std::vector<VkImageView> m_imageViews;
 	VkFormat m_imageFormat;
 	VkExtent2D m_extent;
+
+	VkImage m_depthImage;
+	VkDeviceMemory m_depthImageMemory;
+	VkImageView m_depthImageView;
 
 	/* Each render pass instance defines a set of image resources, referred to as attachments, used
 	 * during rendering*/
