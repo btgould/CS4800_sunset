@@ -7,7 +7,7 @@
 
 VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
 	: m_swapChain(instance, device, window), m_device(device),
-	  m_texture("res/texture/viking_room.png", m_device),
+	  m_texture("res/texture/mountain.png", m_device),
 	  m_pipeline(VulkanPipeline(device, m_swapChain, m_texture.getImageView())) {
 	// Configure and create pipeline
 	m_vertexArray.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}); // pos

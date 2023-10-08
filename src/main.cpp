@@ -44,7 +44,8 @@ class HelloTriangleApplication {
 	HelloTriangleApplication()
 		: m_window(GLFWWindow("Vulkan")), m_instance(m_window), m_device(m_instance),
 		  m_renderer(m_instance, m_device, m_window),
-		  m_camera(glm::radians(45.0f), m_renderer.getAspectRatio(), glm::vec3(2.0f, 2.0f, 2.0f)) {
+		  m_camera(glm::radians(45.0f), m_renderer.getAspectRatio(),
+	               glm::vec3(300.0f, 300.0f, 300.0f), 1.0f, 1000.0f) {
 		m_modelTranslation = glm::mat4(1.0f);
 		m_modelRotation = glm::mat4(1.0f);
 		m_modelScale = glm::mat4(1.0f);
@@ -53,8 +54,7 @@ class HelloTriangleApplication {
 	~HelloTriangleApplication() = default;
 
 	void run() {
-		const std::string modelPath = "res/model/viking_room.obj";
-		const std::string texPath = "res/texture/viking_room.png";
+		const std::string modelPath = "res/model/mountain.obj";
 
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
