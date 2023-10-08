@@ -1,5 +1,6 @@
 #include "camera.hpp"
 
+#include <glm/common.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/quaternion_common.hpp>
@@ -29,22 +30,30 @@ const glm::mat4 Camera::getVP() {
 }
 
 void Camera::translate(const glm::vec3& tr) {
-	m_pos += tr;
+	m_pos += m_orientation * tr;
 }
 
-/* void Camera::rotate(const glm::vec3& axis, const float amount) {} */
+void Camera::translateAbsolute(const glm::vec3& tr) {
+	m_pos += tr;
+}
 
 void Camera::setTranslation(const glm::vec3& pos) {
 	m_pos = pos;
 }
 
 void Camera::lookAt(const glm::vec3& target) {
-	m_orientation = glm::quatLookAt(glm::normalize(target - m_pos), glm::vec3(0.0f, 0.0f, 1.0f));
-}
-/* void Camera::setRotation(const glm::quat& rot) {
+	m_look = glm::normalize(target - m_pos);
 
+	// prevent needing to change up direction
+	if (glm::abs(glm::dot(m_look, m_up)) > m_upThreshold) {
+		m_look.z = m_upThreshold * glm::sign(m_look.z);
+		m_look = glm::normalize(m_look);
+	}
+
+	m_orientation = glm::quatLookAt(m_look, m_up);
 }
 
-void Camera::setHeading(const glm::vec3& heading) {
-    m_look = heading;
-} */
+void Camera::setRotation(const glm::quat& rot) {
+	// TODO: keep look vector updated here
+	m_orientation = rot;
+}

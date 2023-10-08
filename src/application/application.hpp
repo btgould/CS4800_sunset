@@ -5,6 +5,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtx/hash.hpp>
 
+#include "application/camera_controller.hpp"
 #include "bootstrap/device.hpp"
 #include "bootstrap/instance.hpp"
 #include "bootstrap/window.hpp"
@@ -51,6 +52,7 @@ class Application {
 	VulkanDevice m_device;
 	VulkanRenderer m_renderer;
 	Camera m_camera;
+	CameraController m_camController;
 
 	glm::mat4 m_modelTranslation, m_modelRotation, m_modelScale;
 };

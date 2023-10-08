@@ -2,8 +2,6 @@
 #include "application/application.hpp"
 #include <GLFW/glfw3.h>
 
-bool Input::s_initialized = false;
-
 bool Input::isKeyPressed(int key) {
 	GLFWwindow* window = Application::get().getWindow().getNativeWindow();
 
@@ -16,7 +14,7 @@ bool Input::isMouseButtonPressed(int button) {
 	return glfwGetMouseButton(window, button);
 }
 
-std::pair<float, float> Input::getMousePos() {
+glm::vec2 Input::getMousePos() {
 	GLFWwindow* window = Application::get().getWindow().getNativeWindow();
 
 	double xpos, ypos;
