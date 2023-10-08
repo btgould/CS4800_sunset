@@ -17,6 +17,7 @@ class GLFWWindow {
 	inline bool shouldClose() { return glfwWindowShouldClose(m_window); }
 	inline bool isResized() const { return m_resized; }
 	inline void clearResize() { m_resized = false; }
+	inline GLFWwindow* getNativeWindow() const { return m_window; }
 
 	void createSurface(VkInstance instance, VkSurfaceKHR* surface);
 	/**
