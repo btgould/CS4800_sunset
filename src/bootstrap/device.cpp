@@ -394,16 +394,11 @@ bool VulkanDevice::isDeviceSuitable(const VkPhysicalDevice device, const VkSurfa
 			!swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 	}
 
-	// NVIDIA causes problems, don't want to deal with that now
-	VkPhysicalDeviceProperties props;
-	vkGetPhysicalDeviceProperties(device, &props);
-
 	VkPhysicalDeviceFeatures supportedFeatures;
 	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
 	return indices.isComplete() && extensionsSupported && swapChainAdequate &&
-	       supportedFeatures.samplerAnisotropy &&
-	       (strcmp(props.deviceName, "NVIDIA GeForce RTX 3050") != 0);
+	       supportedFeatures.samplerAnisotropy;
 }
 
 bool VulkanDevice::checkDeviceExtensionSupport(const VkPhysicalDevice device) {

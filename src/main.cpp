@@ -1,10 +1,14 @@
 #include <stdexcept>
+#include <unordered_map>
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/hash.hpp>
 
 #include "spdlog/common.h"
+
+#include "tiny_obj_loader.h"
 
 #include "util/log.hpp"
 #include "util/profiler.hpp"
@@ -12,7 +16,7 @@
 #include "bootstrap/pipeline.hpp"
 #include "bootstrap/instance.hpp"
 #include "bootstrap/window.hpp"
-#include "renderer/IndexBuffer.hpp"
+#include "renderer/index_buffer.hpp"
 #include "renderer/renderer.hpp"
 #include "renderer/camera.hpp"
 
@@ -20,7 +24,20 @@ struct Vertex {
 	glm::vec3 pos;
 	glm::vec3 color;
 	glm::vec2 texCoord;
+
+	bool operator==(const Vertex& other) const {
+		return pos == other.pos && color == other.color && texCoord == other.texCoord;
+	}
 };
+
+namespace std {
+	template <> struct hash<Vertex> {
+		size_t operator()(Vertex const& vertex) const {
+			return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+			       (hash<glm::vec2>()(vertex.texCoord) << 1);
+		}
+	};
+} // namespace std
 
 class HelloTriangleApplication {
   public:
@@ -36,30 +53,51 @@ class HelloTriangleApplication {
 	~HelloTriangleApplication() = default;
 
 	void run() {
-		VertexBuffer vb1(
-			m_device,
-			std::vector<Vertex>({{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-		                         {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-		                         {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-		                         {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}})
-				.data(),
-			sizeof(float) * 8, 4);
-		VertexBuffer vb2(
-			m_device,
-			std::vector<Vertex>({{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-		                         {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-		                         {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-		                         {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}})
-				.data(),
-			sizeof(float) * 8, 4);
-		IndexBuffer ib(m_device, {0, 1, 2, 2, 3, 0});
+		const std::string modelPath = "res/model/viking_room.obj";
+		const std::string texPath = "res/texture/viking_room.png";
+
+		tinyobj::attrib_t attrib;
+		std::vector<tinyobj::shape_t> shapes;
+		std::vector<tinyobj::material_t> materials;
+		std::string warn, err;
+
+		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath.c_str())) {
+			throw std::runtime_error(warn + err);
+		}
+
+		std::unordered_map<Vertex, uint32_t> uniqueVertices {};
+		std::vector<Vertex> vertices;
+		std::vector<uint32_t> indices;
+
+		for (const auto& shape : shapes) {
+			for (const auto& index : shape.mesh.indices) {
+				Vertex vertex {};
+
+				vertex.pos = {attrib.vertices[3 * index.vertex_index + 0],
+				              attrib.vertices[3 * index.vertex_index + 1],
+				              attrib.vertices[3 * index.vertex_index + 2]};
+
+				vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
+				                   1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
+				vertex.color = {1.0f, 1.0f, 1.0f};
+
+				if (uniqueVertices.count(vertex) == 0) {
+					uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+					vertices.push_back(vertex);
+				}
+
+				indices.push_back(uniqueVertices[vertex]);
+			}
+		}
+
+		VertexBuffer modelVB(m_device, vertices.data(), sizeof(Vertex), vertices.size());
+		IndexBuffer modelIB(m_device, indices);
 
 		while (!m_window.shouldClose()) {
 			m_window.pollEvents();
 
 			m_renderer.beginScene();
-			m_renderer.draw(vb1, ib);
-			m_renderer.draw(vb2, ib);
+			m_renderer.draw(modelVB, modelIB);
 
 			// update uniforms
 			static auto startTime = std::chrono::high_resolution_clock::now();

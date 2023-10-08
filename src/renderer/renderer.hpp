@@ -8,8 +8,8 @@
 #include "bootstrap/pipeline.hpp"
 #include "bootstrap/swapchain.hpp"
 
-#include "renderer/VertexBuffer.hpp"
-#include "renderer/IndexBuffer.hpp"
+#include "renderer/vertex_buffer.hpp"
+#include "renderer/index_buffer.hpp"
 #include "renderer/texture.hpp"
 #include "renderer/vertex_array.hpp"
 #include "renderer/camera.hpp"
@@ -41,6 +41,7 @@ class VulkanRenderer {
 	/* Device to execute the rendering on */
 	VulkanDevice& m_device;
 
+	// TODO: I'd like to find some way to decouple this from the renderer
 	Texture m_texture;
 
 	/* The graphics pipeline used to render */

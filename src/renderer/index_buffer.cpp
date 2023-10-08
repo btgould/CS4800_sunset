@@ -1,8 +1,8 @@
-#include "IndexBuffer.hpp"
+#include "index_buffer.hpp"
 
 #include <cstring>
 
-IndexBuffer::IndexBuffer(VulkanDevice& device, const std::vector<uint16_t>& indices)
+IndexBuffer::IndexBuffer(VulkanDevice& device, const std::vector<uint32_t>& indices)
 	: m_device(device), m_indices(indices) {
 	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
@@ -37,5 +37,5 @@ IndexBuffer::~IndexBuffer() {
 }
 
 void IndexBuffer::bind(VkCommandBuffer commandBuffer) {
-	vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+	vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 }

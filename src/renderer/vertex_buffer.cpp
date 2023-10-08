@@ -1,4 +1,4 @@
-#include "VertexBuffer.hpp"
+#include "vertex_buffer.hpp"
 #include <cstring>
 #include <stdexcept>
 #include <vector>

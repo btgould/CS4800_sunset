@@ -9,8 +9,8 @@
 #include "device.hpp"
 #include "instance.hpp"
 
-#include "renderer/IndexBuffer.hpp"
-#include "renderer/VertexBuffer.hpp"
+#include "renderer/index_buffer.hpp"
+#include "renderer/vertex_buffer.hpp"
 #include "renderer/vertex_array.hpp"
 #include "swapchain.hpp"
 #include "window.hpp"
