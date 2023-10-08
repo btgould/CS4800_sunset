@@ -1,5 +1,7 @@
 #include "application.hpp"
 
+#include <GLFW/glfw3.h>
+#include <bits/chrono.h>
 #include <stdexcept>
 #include <unordered_map>
 
@@ -71,6 +73,10 @@ void Application::run() {
 	IndexBuffer modelIB(m_device, indices);
 
 	while (!m_window.shouldClose()) {
+		double newTime = glfwGetTime();
+		double dt = (newTime - m_time) / 0.0166666;
+		m_time = newTime;
+
 		m_window.pollEvents();
 
 		m_renderer.beginScene();
@@ -79,17 +85,14 @@ void Application::run() {
 		// update uniforms
 		static auto startTime = std::chrono::high_resolution_clock::now();
 		auto currentTime = std::chrono::high_resolution_clock::now();
-		float dt =
-			std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime)
-				.count();
 
-		m_modelRotation =
-			glm::rotate(glm::mat4(1.0f), dt * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		m_modelRotation = glm::rotate(m_modelRotation, (float) dt * glm::radians(1.0f),
+		                              glm::vec3(0.0f, 0.0f, 1.0f));
 
 		glm::mat4 modelTRS = m_modelScale * m_modelRotation * m_modelTranslation;
 		m_renderer.updateUniform("modelTRS", &modelTRS);
 
-		m_camController.OnUpdate();
+		m_camController.OnUpdate(dt);
 		glm::mat4 camVP = m_camera.getVP();
 		m_renderer.updateUniform("camVP", &camVP);
 

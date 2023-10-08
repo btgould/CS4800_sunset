@@ -11,12 +11,12 @@ CameraController::CameraController(Camera& cam) : m_cam(cam) {}
 
 CameraController::~CameraController() {}
 
-void CameraController::OnUpdate() {
-	checkForTranslation();
-	checkForRotation();
+void CameraController::OnUpdate(double dt) {
+	checkForTranslation(dt);
+	checkForRotation(dt);
 }
 
-void CameraController::checkForTranslation() {
+void CameraController::checkForTranslation(double dt) {
 	glm::vec3 translation(0.0f, 0.0f, 0.0f);
 
 	if (Input::isKeyPressed(GLFW_KEY_W)) {
@@ -30,10 +30,10 @@ void CameraController::checkForTranslation() {
 		translation += glm::vec3(-1.0f, 0.0f, 0.0f);
 	}
 
-	m_cam.translate(translation * m_translationSpeed);
+	m_cam.translate(translation * m_translationSpeed * (float) dt);
 }
 
-void CameraController::checkForRotation() {
+void CameraController::checkForRotation(double dt) {
 	glm::vec2 newMousePos = Input::getMousePos();
 	glm::vec2 displacement = newMousePos - m_lastMousePos;
 	m_lastMousePos = newMousePos;
@@ -55,5 +55,6 @@ void CameraController::checkForRotation() {
 	// Apply displacement normal to look vector
 	glm::vec3 horizComp = m_cam.getRight() * displacement.x;
 	glm::vec3 vertComp = -m_cam.getUp() * displacement.y;
-	m_cam.lookAt(m_cam.getPos() + m_cam.getLook() + (m_rotationSpeed * (horizComp + vertComp)));
+	m_cam.lookAt(m_cam.getPos() + m_cam.getLook() +
+	             (m_rotationSpeed * (float) dt * (horizComp + vertComp)));
 }

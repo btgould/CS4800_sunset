@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -55,4 +56,6 @@ class Application {
 	CameraController m_camController;
 
 	glm::mat4 m_modelTranslation, m_modelRotation, m_modelScale;
+
+	double m_time;
 };
