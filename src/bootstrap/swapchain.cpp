@@ -251,7 +251,10 @@ VulkanSwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& avai
 	}
 
 	// otherwise, use basic VSync
-	return VK_PRESENT_MODE_FIFO_KHR;
+	// return VK_PRESENT_MODE_FIFO_KHR;
+	// otherwise, present as fast as possible
+	// Vulkan, NVIDIA, GLFW, and VSync do not interact well together
+	return VK_PRESENT_MODE_IMMEDIATE_KHR;
 }
 
 VkExtent2D VulkanSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,

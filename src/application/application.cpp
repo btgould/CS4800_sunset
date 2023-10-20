@@ -1,7 +1,6 @@
 #include "application.hpp"
 
 #include <GLFW/glfw3.h>
-#include <bits/chrono.h>
 #include <stdexcept>
 #include <unordered_map>
 
