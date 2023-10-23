@@ -77,6 +77,15 @@ void VulkanRenderer::draw(VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer) 
 	vkCmdDrawIndexed(m_commandBuffer, indexBuffer.size(), 1, 0, 0, 0);
 }
 
+void VulkanRenderer::draw(Model& model) {
+	model.bind(m_commandBuffer);
+
+	m_pipeline.bindDescriptorSets(m_commandBuffer, m_currentFrame);
+
+	// Draw
+	vkCmdDrawIndexed(m_commandBuffer, model.numIndices(), 1, 0, 0, 0);
+}
+
 void VulkanRenderer::endScene() {
 	// End render pass, stop recording
 	vkCmdEndRenderPass(m_commandBuffer);

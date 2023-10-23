@@ -6,8 +6,6 @@
 
 #include "spdlog/common.h"
 
-#include "tiny_obj_loader.h"
-
 #include "util/log.hpp"
 #include "util/profiler.hpp"
 #include "input.hpp"
@@ -33,43 +31,8 @@ Application::Application()
 
 void Application::run() {
 	const std::string modelPath = "res/model/mountain.obj";
-
-	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	std::string warn, err;
-
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath.c_str())) {
-		throw std::runtime_error(warn + err);
-	}
-
-	std::unordered_map<Vertex, uint32_t> uniqueVertices {};
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
-
-	for (const auto& shape : shapes) {
-		for (const auto& index : shape.mesh.indices) {
-			Vertex vertex {};
-
-			vertex.pos = {attrib.vertices[3 * index.vertex_index + 0],
-			              attrib.vertices[3 * index.vertex_index + 1],
-			              attrib.vertices[3 * index.vertex_index + 2]};
-
-			vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
-			                   1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
-			vertex.color = {1.0f, 1.0f, 1.0f};
-
-			if (uniqueVertices.count(vertex) == 0) {
-				uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-				vertices.push_back(vertex);
-			}
-
-			indices.push_back(uniqueVertices[vertex]);
-		}
-	}
-
-	VertexBuffer modelVB(m_device, vertices.data(), sizeof(Vertex), vertices.size());
-	IndexBuffer modelIB(m_device, indices);
+	const std::string texPath = "res/texture/mountain.png";
+	Model model(m_device, modelPath, texPath);
 
 	while (!m_window.shouldClose()) {
 		double newTime = glfwGetTime();
@@ -79,7 +42,7 @@ void Application::run() {
 		m_window.pollEvents();
 
 		m_renderer.beginScene();
-		m_renderer.draw(modelVB, modelIB);
+		m_renderer.draw(model);
 
 		// update uniforms
 		static auto startTime = std::chrono::high_resolution_clock::now();

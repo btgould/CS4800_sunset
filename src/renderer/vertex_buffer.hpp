@@ -29,7 +29,7 @@ class VertexBuffer {
 	~VertexBuffer();
 
 	VertexBuffer(const VertexBuffer&) = delete;
-	VertexBuffer operator=(const VertexBuffer&) = delete;
+	VertexBuffer& operator=(const VertexBuffer&) = delete;
 
 	/**
 	 * @brief "Activates" this buffer, causing it to be used for the next draw call

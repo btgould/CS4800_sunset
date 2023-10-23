@@ -25,7 +25,7 @@ class IndexBuffer {
 	~IndexBuffer();
 
 	IndexBuffer(const IndexBuffer&) = delete;
-	IndexBuffer& operator=(IndexBuffer&&) = delete;
+	IndexBuffer& operator=(const IndexBuffer&) = delete;
 
 	/**
 	 * @brief "Activates" this index buffer, causing its indices to be used for the next draw call
