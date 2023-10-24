@@ -1,10 +1,10 @@
 #version 450
 
-layout(binding = 0) uniform TRS {
+layout(set = 0, binding = 0) uniform TRS {
     mat4 trs;
 } trs;
 
-layout(binding = 1) uniform MVP {
+layout(set = 0, binding = 1) uniform MVP {
     mat4 vp;
 } mvp;
 

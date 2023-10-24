@@ -9,6 +9,10 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	: m_swapChain(instance, device, window), m_device(device),
 	  m_texture("res/texture/mountain.png", m_device),
 	  m_pipeline(VulkanPipeline(device, m_swapChain, m_texture.getImageView())) {
+
+	// TODO: It would be nice to have a PipelineBuilder class, separate from the Pipeline class for
+	// better RAII
+
 	// Configure and create pipeline
 	m_vertexArray.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}); // pos
 	m_vertexArray.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}); // color
@@ -18,6 +22,8 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	m_uniformIDs["modelTRS"] =
 		m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 	m_uniformIDs["camVP"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
+
+	m_pipeline.pushTexture(m_texture);
 
 	m_pipeline.create();
 }

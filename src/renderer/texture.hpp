@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bootstrap/device.hpp"
+
 #include <string>
 
 class Texture {

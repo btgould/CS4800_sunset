@@ -43,7 +43,7 @@ class VulkanRenderer {
 	/* Device to execute the rendering on */
 	VulkanDevice& m_device;
 
-	// TODO: I'd like to find some way to decouple this from the renderer
+	// FIXME: I'd like to find some way to decouple this from the renderer
 	Texture m_texture;
 
 	/* The graphics pipeline used to render */
