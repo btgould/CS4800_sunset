@@ -1,14 +1,13 @@
 #include "renderer.hpp"
 
 #include "renderer/vertex_array.hpp"
+#include "util/memory.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
 #include <stdexcept>
 
 VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
-	: m_swapChain(instance, device, window), m_device(device),
-	  m_texture("res/texture/mountain.png", m_device),
-	  m_pipeline(VulkanPipeline(device, m_swapChain, m_texture.getImageView())) {
+	: m_swapChain(instance, device, window), m_device(device), m_pipeline(device, m_swapChain) {
 
 	// TODO: It would be nice to have a PipelineBuilder class, separate from the Pipeline class for
 	// better RAII
@@ -23,7 +22,10 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 		m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 	m_uniformIDs["camVP"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 
+	m_texture = CreateRef<Texture>("res/texture/mountain.png", m_device);
+	auto altTex = CreateRef<Texture>("res/texture/viking_room.png", m_device);
 	m_pipeline.pushTexture(m_texture);
+	m_pipeline.pushTexture(altTex);
 
 	m_pipeline.create();
 }

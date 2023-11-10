@@ -14,6 +14,7 @@
 #include "renderer/vertex_buffer.hpp"
 #include "renderer/vertex_array.hpp"
 #include "swapchain.hpp"
+#include "util/memory.hpp"
 #include "window.hpp"
 
 struct PipelineConfigInfo {
@@ -30,7 +31,7 @@ struct PipelineConfigInfo {
 
 class VulkanPipeline {
   public:
-	VulkanPipeline(VulkanDevice& device, const VulkanSwapChain& swapChain, VkImageView imageView);
+	VulkanPipeline(VulkanDevice& device, const VulkanSwapChain& swapChain);
 	~VulkanPipeline();
 
 	VulkanPipeline(const VulkanPipeline&) = delete;
@@ -50,7 +51,8 @@ class VulkanPipeline {
 	uint32_t pushUniform(VkShaderStageFlags stage, uint32_t size);
 	void writeUniform(uint32_t uniformID, void* data, uint32_t currentFrame);
 
-	void pushTexture(const Texture& tex);
+	void pushTexture(const Ref<Texture> tex);
+	inline void setActiveTexture(const Ref<Texture> tex) { m_activeTex = tex; }
 
 	void bind(VkCommandBuffer commandBuffer);
 	void bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame);
@@ -81,13 +83,15 @@ class VulkanPipeline {
 	std::array<VkDescriptorSet, 2> m_activeDescriptorSets;
 
 	// Texture resources
-	std::vector<VkImageView> m_images;
+	Ref<Texture> m_activeTex;
+	std::vector<Ref<Texture>> m_textures;
 	/* list of structs, each describing a texture this pipeline makes available to shaders */
 	std::vector<VkDescriptorSetLayoutBinding> m_textureBindings;
 	VkDescriptorSetLayout m_textureLayout;
-	Frames<VkDescriptorSet> m_textureDescriptorSets;
+	std::vector<Frames<VkDescriptorSet>> m_textureDescriptorSets;
 
 	// Uniform resources
+	std::vector<uint32_t> m_uniformSizes;
 	/* Buffer to store uniforms data in */
 	std::vector<Frames<VkBuffer>> m_uniformBuffers;
 	/* Memory on GPU to store uniform buffers */
@@ -96,15 +100,14 @@ class VulkanPipeline {
 	std::vector<Frames<void*>> m_uniformBuffersMapped;
 	/* list of structs, each describing a uniform this pipeline makes available to shaders */
 	std::vector<VkDescriptorSetLayoutBinding> m_uniformBindings;
-	std::vector<uint32_t> m_uniformSizes;
 	/* A list of buffers used by shaders. I use this to upload uniforms. */
 	VkDescriptorSetLayout m_uniformLayout;
+	/* Describes where to get uniform data, and how the GPU should use it */
+	Frames<VkDescriptorSet> m_uniformDescriptorSets;
 
 	/* Pool to allocate descriptor sets from */
 	VkDescriptorPool m_descriptorPool;
 	std::vector<VkDescriptorPoolSize> m_poolSizes;
-	/* Describes where to get uniform data, and how the GPU should use it */
-	Frames<VkDescriptorSet> m_uniformDescriptorSets;
 	/* A list of descriptor layouts, describing dynamic resources used by pipeline */
 	VkPipelineLayout m_pipelineLayout;
 

@@ -44,7 +44,7 @@ class VulkanRenderer {
 	VulkanDevice& m_device;
 
 	// FIXME: I'd like to find some way to decouple this from the renderer
-	Texture m_texture;
+	Ref<Texture> m_texture;
 
 	/* The graphics pipeline used to render */
 	VulkanPipeline m_pipeline;

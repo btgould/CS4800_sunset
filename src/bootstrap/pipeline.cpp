@@ -2,6 +2,7 @@
 
 #include "instance.hpp"
 #include "util/constants.hpp"
+#include "util/memory.hpp"
 #include "util/profiler.hpp"
 
 #include <cstring>
@@ -11,8 +12,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-VulkanPipeline::VulkanPipeline(VulkanDevice& device, const VulkanSwapChain& swapChain,
-                               VkImageView imageView)
+VulkanPipeline::VulkanPipeline(VulkanDevice& device, const VulkanSwapChain& swapChain)
 	: m_device(device), m_swapChain(swapChain) {
 	// FIXME: set up reasonable default vertex attributes, descriptors
 }
@@ -84,16 +84,16 @@ uint32_t VulkanPipeline::pushUniform(VkShaderStageFlags stage, uint32_t size) {
 	return uniformID;
 }
 
-void VulkanPipeline::pushTexture(const Texture& tex) {
+void VulkanPipeline::pushTexture(const Ref<Texture> tex) {
 	VkDescriptorSetLayoutBinding samplerLayoutBinding {};
-	samplerLayoutBinding.binding = m_textureBindings.size();
+	samplerLayoutBinding.binding = 0;
 	samplerLayoutBinding.descriptorCount = 1;
 	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	samplerLayoutBinding.pImmutableSamplers = nullptr;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	m_textureBindings.push_back(samplerLayoutBinding);
-	m_images.push_back(tex.getImageView());
+	m_textures.push_back(tex);
 }
 
 void VulkanPipeline::bind(VkCommandBuffer commandBuffer) {
@@ -102,7 +102,8 @@ void VulkanPipeline::bind(VkCommandBuffer commandBuffer) {
 
 void VulkanPipeline::bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame) {
 	m_activeDescriptorSets[0] = m_uniformDescriptorSets[currentFrame];
-	m_activeDescriptorSets[1] = m_textureDescriptorSets[currentFrame];
+	m_activeDescriptorSets[1] =
+		m_textureDescriptorSets[0][currentFrame]; // TODO: actually index by texture ID
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 2,
 	                        m_activeDescriptorSets.data(), 0, nullptr);
 }
@@ -262,7 +263,7 @@ void VulkanPipeline::createDescriptorSetLayout() {
 	// Bindings for uniforms stored in m_uniformBindings
 	// Bindings for textures stored in m_textureBindings
 
-	// Group uniform bindings into a descriptor set
+	// Create layout for all uniform bindings in one descriptor set
 	VkDescriptorSetLayoutCreateInfo uniformLayoutInfo {};
 	uniformLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	uniformLayoutInfo.bindingCount = static_cast<uint32_t>(m_uniformBindings.size());
@@ -273,11 +274,18 @@ void VulkanPipeline::createDescriptorSetLayout() {
 		throw std::runtime_error("failed to create descriptor set layout!");
 	}
 
-	// Group image sampler bindings into a descriptor set
+	// Create layout for descriptor set with one texture
+	VkDescriptorSetLayoutBinding samplerLayoutBinding {};
+	samplerLayoutBinding.binding = 0;
+	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding.pImmutableSamplers = nullptr;
+	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 	VkDescriptorSetLayoutCreateInfo textureLayoutInfo {};
 	textureLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	textureLayoutInfo.bindingCount = static_cast<uint32_t>(m_textureBindings.size());
-	textureLayoutInfo.pBindings = m_textureBindings.data();
+	textureLayoutInfo.bindingCount = 1;
+	textureLayoutInfo.pBindings = &samplerLayoutBinding;
 
 	if (vkCreateDescriptorSetLayout(m_device.getLogicalDevice(), &textureLayoutInfo, nullptr,
 	                                &m_textureLayout) != VK_SUCCESS) {
@@ -295,7 +303,7 @@ void VulkanPipeline::createDescriptorPool() {
 	}
 
 	// Create descriptor for image sampler for each frame in flight
-	for (const auto& texture : m_images) {
+	for (const auto& texture : m_textures) {
 		VkDescriptorPoolSize imageSamplerPoolSize;
 		imageSamplerPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		imageSamplerPoolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
@@ -307,8 +315,9 @@ void VulkanPipeline::createDescriptorPool() {
 	poolInfo.poolSizeCount = static_cast<uint32_t>(m_poolSizes.size());
 	poolInfo.pPoolSizes = m_poolSizes.data(); // describes number and type of different descriptors
 	poolInfo.maxSets =
-		2 * static_cast<uint32_t>(
-				MAX_FRAMES_IN_FLIGHT); // max number of descriptor sets allocated at a time
+		(m_textures.size() + 1) *
+		static_cast<uint32_t>(
+			MAX_FRAMES_IN_FLIGHT); // max number of descriptor sets allocated at a time
 
 	if (vkCreateDescriptorPool(m_device.getLogicalDevice(), &poolInfo, nullptr,
 	                           &m_descriptorPool) != VK_SUCCESS) {
@@ -317,7 +326,6 @@ void VulkanPipeline::createDescriptorPool() {
 }
 
 void VulkanPipeline::createDescriptorSets() {
-	// TODO: DRY: I say everything here twice, can abstract
 	// Allocate uniform descriptor sets (1 for each frame)
 	std::vector<VkDescriptorSetLayout> uniformLayouts(MAX_FRAMES_IN_FLIGHT, m_uniformLayout);
 
@@ -332,18 +340,22 @@ void VulkanPipeline::createDescriptorSets() {
 		throw std::runtime_error("failed to allocate uniform descriptor sets!");
 	}
 
-	// Allocate texture descriptor sets (1 for each frame)
+	// Allocate texture descriptor sets (1 for each texture and frame)
 	std::vector<VkDescriptorSetLayout> textureLayouts(MAX_FRAMES_IN_FLIGHT, m_textureLayout);
 
-	VkDescriptorSetAllocateInfo textureAllocInfo {};
-	textureAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	textureAllocInfo.descriptorPool = m_descriptorPool;
-	textureAllocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-	textureAllocInfo.pSetLayouts = textureLayouts.data();
+	m_textureDescriptorSets.resize(m_textures.size());
+	for (const auto texture : m_textures) {
+		VkDescriptorSetAllocateInfo textureAllocInfo {};
+		textureAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		textureAllocInfo.descriptorPool = m_descriptorPool;
+		textureAllocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+		textureAllocInfo.pSetLayouts = textureLayouts.data();
 
-	if (vkAllocateDescriptorSets(m_device.getLogicalDevice(), &textureAllocInfo,
-	                             m_textureDescriptorSets.data()) != VK_SUCCESS) {
-		throw std::runtime_error("failed to allocate texture descriptor sets!");
+		if (vkAllocateDescriptorSets(m_device.getLogicalDevice(), &textureAllocInfo,
+		                             m_textureDescriptorSets[texture->getID()].data()) !=
+		    VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate texture descriptor sets!");
+		}
 	}
 
 	// Populate descriptor sets (describe data that goes in each binding available to shader)
@@ -360,13 +372,13 @@ void VulkanPipeline::createDescriptorSets() {
 			bufferInfos[uniformIdx] = bufferInfo;
 		}
 
-		// Add descriptor for texture
-		std::vector<VkDescriptorImageInfo> imageInfos(m_images.size());
+		// Add descriptor for each texture
+		std::vector<VkDescriptorImageInfo> imageInfos(m_textures.size());
 
-		for (uint32_t textureIdx = 0; textureIdx < m_images.size(); textureIdx++) {
+		for (uint32_t textureIdx = 0; textureIdx < m_textures.size(); textureIdx++) {
 			VkDescriptorImageInfo imageInfo {};
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo.imageView = m_images[textureIdx];
+			imageInfo.imageView = m_textures[textureIdx]->getImageView();
 			imageInfo.sampler = m_textureSampler;
 
 			imageInfos[textureIdx] = imageInfo;
@@ -386,12 +398,12 @@ void VulkanPipeline::createDescriptorSets() {
 			uniformDescriptorWrites[uniformIdx].pBufferInfo = &bufferInfos[uniformIdx];
 		}
 
-		std::vector<VkWriteDescriptorSet> textureDescriptorWrites(m_images.size());
 		// Textures:
-		for (uint32_t imageIdx = 0; imageIdx < m_images.size(); imageIdx++) {
+		std::vector<VkWriteDescriptorSet> textureDescriptorWrites(m_textures.size());
+		for (uint32_t imageIdx = 0; imageIdx < m_textures.size(); imageIdx++) {
 			textureDescriptorWrites[imageIdx].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			textureDescriptorWrites[imageIdx].dstSet = m_textureDescriptorSets[frameIdx];
-			textureDescriptorWrites[imageIdx].dstBinding = imageIdx;
+			textureDescriptorWrites[imageIdx].dstSet = m_textureDescriptorSets[imageIdx][frameIdx];
+			textureDescriptorWrites[imageIdx].dstBinding = 0;
 			textureDescriptorWrites[imageIdx].dstArrayElement = 0;
 			textureDescriptorWrites[imageIdx].descriptorType =
 				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
