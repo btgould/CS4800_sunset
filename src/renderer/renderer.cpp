@@ -1,5 +1,6 @@
 #include "renderer.hpp"
 
+#include "renderer/texture_lib.hpp"
 #include "renderer/vertex_array.hpp"
 #include "util/memory.hpp"
 #include "util/profiler.hpp"
@@ -22,10 +23,9 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 		m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 	m_uniformIDs["camVP"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 
-	m_texture = CreateRef<Texture>("res/texture/mountain.png", m_device);
-	auto altTex = CreateRef<Texture>("res/texture/viking_room.png", m_device);
-	m_pipeline.pushTexture(m_texture);
-	m_pipeline.pushTexture(altTex);
+	m_pipeline.pushTexture(TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"));
+	m_pipeline.pushTexture(
+		TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"));
 
 	m_pipeline.create();
 }
@@ -88,6 +88,7 @@ void VulkanRenderer::draw(VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer) 
 void VulkanRenderer::draw(Model& model) {
 	model.bind(m_commandBuffer);
 
+	m_pipeline.bindTexture(model.getTexture());
 	m_pipeline.bindDescriptorSets(m_commandBuffer, m_currentFrame);
 
 	// Draw

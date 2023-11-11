@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map>
 #include <vulkan/vulkan_core.h>
 #include <fstream>
 #include <vector>
@@ -55,6 +56,7 @@ class VulkanPipeline {
 	inline void setActiveTexture(const Ref<Texture> tex) { m_activeTex = tex; }
 
 	void bind(VkCommandBuffer commandBuffer);
+	void bindTexture(Ref<Texture> tex);
 	void bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame);
 
   private: // core interface
@@ -85,6 +87,8 @@ class VulkanPipeline {
 	// Texture resources
 	Ref<Texture> m_activeTex;
 	std::vector<Ref<Texture>> m_textures;
+	std::unordered_map<Ref<Texture>, uint32_t>
+		m_textureIdx; // TODO: using two DS like this is clunky
 	/* list of structs, each describing a texture this pipeline makes available to shaders */
 	std::vector<VkDescriptorSetLayoutBinding> m_textureBindings;
 	VkDescriptorSetLayout m_textureLayout;

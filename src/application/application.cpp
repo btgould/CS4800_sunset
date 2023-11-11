@@ -4,9 +4,11 @@
 #include <stdexcept>
 #include <unordered_map>
 
+#include "renderer/texture_lib.hpp"
 #include "spdlog/common.h"
 
 #include "util/log.hpp"
+#include "util/memory.hpp"
 #include "util/profiler.hpp"
 #include "input.hpp"
 
@@ -32,7 +34,11 @@ Application::Application()
 void Application::run() {
 	const std::string modelPath = "res/model/mountain.obj";
 	const std::string texPath = "res/texture/mountain.png";
-	Model model(m_device, modelPath, texPath);
+
+	Ref<Texture> modelTex = TextureLibrary::get()->getTexture(m_device, texPath);
+	Model model(m_device, modelPath, modelTex);
+	Model room(m_device, "res/model/viking_room.obj",
+	           TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"));
 
 	while (!m_window.shouldClose()) {
 		double newTime = glfwGetTime();
@@ -43,6 +49,7 @@ void Application::run() {
 
 		m_renderer.beginScene();
 		m_renderer.draw(model);
+		m_renderer.draw(room);
 
 		// update uniforms
 		static auto startTime = std::chrono::high_resolution_clock::now();
@@ -62,4 +69,8 @@ void Application::run() {
 	}
 
 	m_device.flush();
+}
+
+void Application::shutdown() {
+	TextureLibrary::get()->cleanup();
 }

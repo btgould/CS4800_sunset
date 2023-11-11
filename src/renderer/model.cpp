@@ -10,7 +10,8 @@
 #include <stdexcept>
 #include <unordered_map>
 
-Model::Model(VulkanDevice& device, const std::string& modelPath, const std::string& texPath) {
+Model::Model(VulkanDevice& device, const std::string& modelPath, Ref<Texture> tex)
+	: m_texture(tex) {
 	// Load model data
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -49,9 +50,6 @@ Model::Model(VulkanDevice& device, const std::string& modelPath, const std::stri
 	m_vertices =
 		CreateScopedRef<VertexBuffer>(device, vertices.data(), sizeof(Vertex), vertices.size());
 	m_indices = CreateScopedRef<IndexBuffer>(device, indices);
-
-	// Load texture data
-	m_texture = CreateScopedRef<Texture>(texPath, device);
 }
 
 void Model::bind(VkCommandBuffer commandBuffer) {

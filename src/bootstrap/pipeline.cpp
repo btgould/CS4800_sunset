@@ -93,6 +93,7 @@ void VulkanPipeline::pushTexture(const Ref<Texture> tex) {
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	m_textureBindings.push_back(samplerLayoutBinding);
+	m_textureIdx[tex] = m_textures.size();
 	m_textures.push_back(tex);
 }
 
@@ -100,10 +101,17 @@ void VulkanPipeline::bind(VkCommandBuffer commandBuffer) {
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 }
 
+void VulkanPipeline::bindTexture(Ref<Texture> tex) {
+	m_activeTex = tex;
+}
+
 void VulkanPipeline::bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame) {
 	m_activeDescriptorSets[0] = m_uniformDescriptorSets[currentFrame];
 	m_activeDescriptorSets[1] =
-		m_textureDescriptorSets[0][currentFrame]; // TODO: actually index by texture ID
+		m_textureDescriptorSets[m_textureIdx[m_activeTex]]
+							   [currentFrame]; // TODO: should maybe consider error handling here
+	// Map insertion will happen automatically , but isn't guaranteed to line up w/ descriptor set
+	// order / len
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 2,
 	                        m_activeDescriptorSets.data(), 0, nullptr);
 }
@@ -344,7 +352,7 @@ void VulkanPipeline::createDescriptorSets() {
 	std::vector<VkDescriptorSetLayout> textureLayouts(MAX_FRAMES_IN_FLIGHT, m_textureLayout);
 
 	m_textureDescriptorSets.resize(m_textures.size());
-	for (const auto texture : m_textures) {
+	for (uint32_t i = 0; i < m_textures.size(); i++) {
 		VkDescriptorSetAllocateInfo textureAllocInfo {};
 		textureAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		textureAllocInfo.descriptorPool = m_descriptorPool;
@@ -352,8 +360,7 @@ void VulkanPipeline::createDescriptorSets() {
 		textureAllocInfo.pSetLayouts = textureLayouts.data();
 
 		if (vkAllocateDescriptorSets(m_device.getLogicalDevice(), &textureAllocInfo,
-		                             m_textureDescriptorSets[texture->getID()].data()) !=
-		    VK_SUCCESS) {
+		                             m_textureDescriptorSets[i].data()) != VK_SUCCESS) {
 			throw std::runtime_error("failed to allocate texture descriptor sets!");
 		}
 	}

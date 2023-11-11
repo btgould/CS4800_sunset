@@ -18,5 +18,7 @@ int main() {
 		return EXIT_FAILURE;
 	}
 
+	app.shutdown();
+
 	return EXIT_SUCCESS;
 }

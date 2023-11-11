@@ -43,6 +43,7 @@ class Application {
 
   public:
 	void run();
+	void shutdown();
 	inline const GLFWWindow& getWindow() const { return m_window; }
 
   private:

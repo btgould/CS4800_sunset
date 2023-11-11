@@ -13,7 +13,7 @@
 
 class Model {
   public:
-	Model(VulkanDevice& device, const std::string& modelPath, const std::string& texPath);
+	Model(VulkanDevice& device, const std::string& modelPath, Ref<Texture> tex);
 	~Model() = default;
 
 	Model(const Model&) = delete;
@@ -21,16 +21,12 @@ class Model {
 
   public:
 	void bind(VkCommandBuffer commandBuffer);
+	Ref<Texture> getTexture() { return m_texture; }
 
 	inline uint32_t numIndices() { return m_indices->size(); }
 
   private:
 	ScopedRef<VertexBuffer> m_vertices;
 	ScopedRef<IndexBuffer> m_indices;
-	ScopedRef<Texture> m_texture;
+	Ref<Texture> m_texture;
 };
-
-// THIS IS WHAT I SHOULD DO NEXT !!!
-
-// Instead of passing a string to Model constructor, pass this ID
-// When drawing a model, look at the ID of its texture, bind corresponding descriptor set

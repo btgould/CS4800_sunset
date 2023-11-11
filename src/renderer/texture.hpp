@@ -13,7 +13,6 @@ class Texture {
 	Texture& operator=(const Texture&) = delete;
 
 	inline VkImageView getImageView() const { return m_textureImageView; }
-	inline uint32_t getID() const { return m_id; }
 
   private: // core interface
 	void createTextureImage(std::string path);
@@ -46,8 +45,4 @@ class Texture {
 	VkImage m_textureImage;
 	VkImageView m_textureImageView;
 	VkDeviceMemory m_textureImageMemory;
-
-	uint32_t m_id;
-
-	static uint32_t count;
 };

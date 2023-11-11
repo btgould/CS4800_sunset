@@ -5,13 +5,10 @@
 #include <stdexcept>
 #include <vulkan/vulkan.h>
 
-uint32_t Texture::count = 0;
-
-Texture::Texture(std::string path, VulkanDevice& device) : m_device(device), m_id(Texture::count) {
+Texture::Texture(std::string path, VulkanDevice& device) : m_device(device) {
 	createTextureImage(path);
 	m_textureImageView = m_device.createImageView(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB,
 	                                              VK_IMAGE_ASPECT_COLOR_BIT);
-	Texture::count++;
 }
 
 Texture::~Texture() {
