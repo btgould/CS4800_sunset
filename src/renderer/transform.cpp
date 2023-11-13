@@ -26,7 +26,7 @@ void Transform::scale(const glm::vec3& scale) {
 }
 
 glm::mat4 Transform::getTRS() {
-	m_TRS = m_scale * m_rotation * m_translation;
+	m_TRS = m_translation * m_rotation * m_scale;
 
 	return m_TRS;
 }

@@ -5,6 +5,7 @@
 #include "renderer/texture.hpp"
 #include "renderer/vertex_buffer.hpp"
 #include "util/memory.hpp"
+#include "util/log.hpp"
 
 #include <tiny_obj_loader.h>
 #include <stdexcept>

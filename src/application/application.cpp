@@ -20,7 +20,7 @@ Application::Application()
 	: m_window("Vulkan"), m_instance(m_window), m_device(m_instance),
 	  m_renderer(m_instance, m_device, m_window),
 	  m_camera(glm::radians(45.0f), m_renderer.getAspectRatio(), glm::vec3(300.0f, 300.0f, 300.0f),
-               1.0f, 1000.0f),
+               1.0f, 10000.0f),
 	  m_camController(m_camera) {
 	if (s_instance) {
 		throw std::runtime_error("Tried to create multiple application instances");
@@ -41,6 +41,11 @@ void Application::run() {
 	Model model(m_device, modelPath, modelTex);
 	Model room(m_device, "res/model/viking_room.obj",
 	           TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"));
+	Model skybox(m_device, "res/skybox/skybox.obj",
+	             TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png"));
+	skybox.getTransform().setScale(glm::vec3(1000.0f, 1000.0f, 1000.0f));
+	skybox.getTransform().setTranslation(
+		glm::vec3(300.0f, 300.0f, 300.0f)); // TODO: tie this to camera pos
 
 	LightSource light;
 	light.pos = glm::vec3(-300.0f, -300.0f, 300.0f);
@@ -59,7 +64,8 @@ void Application::run() {
 
 		// Draw model
 		m_renderer.draw(model);
-		m_renderer.draw(room);
+		// m_renderer.draw(room);
+		m_renderer.draw(skybox);
 
 		m_renderer.endScene();
 

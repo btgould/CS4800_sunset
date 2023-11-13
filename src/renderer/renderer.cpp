@@ -32,6 +32,7 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	m_pipeline.pushTexture(TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"));
 	m_pipeline.pushTexture(
 		TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"));
+	m_pipeline.pushTexture(TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png"));
 
 	m_pipeline.create();
 }
