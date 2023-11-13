@@ -1,9 +1,11 @@
 #include "application.hpp"
 
 #include <GLFW/glfw3.h>
+#include <glm/fwd.hpp>
 #include <stdexcept>
 #include <unordered_map>
 
+#include "renderer/renderer.hpp"
 #include "renderer/texture_lib.hpp"
 #include "spdlog/common.h"
 
@@ -40,6 +42,12 @@ void Application::run() {
 	Model room(m_device, "res/model/viking_room.obj",
 	           TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"));
 
+	LightSource light;
+	light.pos = glm::vec3(-300.0f, -300.0f, 300.0f);
+	light.color = glm::vec3(1.0f, 1.0f, 1.0f);
+	light.ambientStrength = 0.1f;
+	light.diffuseStrength = 1.0f;
+
 	while (!m_window.shouldClose()) {
 		double newTime = glfwGetTime();
 		double dt = (newTime - m_time) / 0.0166666;
@@ -48,11 +56,6 @@ void Application::run() {
 		m_window.pollEvents();
 
 		m_renderer.beginScene();
-
-		// Update model rotation
-		static auto startTime = std::chrono::high_resolution_clock::now();
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		model.getTransform().rotateAbout(glm::vec3(0.0f, 0.0f, 1.0f), dt * glm::radians(1.0f));
 
 		// Draw model
 		m_renderer.draw(model);
@@ -64,6 +67,7 @@ void Application::run() {
 		m_camController.OnUpdate(dt);
 		glm::mat4 camVP = m_camera.getVP();
 		m_renderer.updateUniform("camVP", &camVP);
+		m_renderer.updateUniform("light", &light); // do this in loop b/c >1 framebuffers
 	}
 
 	m_device.flush();

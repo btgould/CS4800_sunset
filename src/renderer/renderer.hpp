@@ -15,6 +15,13 @@
 #include "renderer/vertex_array.hpp"
 #include "renderer/camera.hpp"
 
+struct LightSource {
+	alignas(16) glm::vec3 pos;
+	alignas(16) glm::vec3 color;
+	alignas(4) float ambientStrength;
+	alignas(4) float diffuseStrength;
+};
+
 class VulkanRenderer {
   public:
 	VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window);
