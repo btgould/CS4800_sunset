@@ -56,7 +56,7 @@ class VulkanPipeline {
 	inline void setActiveTexture(const Ref<Texture> tex) { m_activeTex = tex; }
 
 	uint32_t pushPushConstant(VkShaderStageFlags stage, uint32_t size);
-	void writePushConstant(VkCommandBuffer commandBuffer, uint32_t pushConstantId, void* data,
+	void writePushConstant(VkCommandBuffer commandBuffer, uint32_t pushConstantId, const void* data,
 	                       uint32_t currentFrame);
 
 	void bind(VkCommandBuffer commandBuffer);

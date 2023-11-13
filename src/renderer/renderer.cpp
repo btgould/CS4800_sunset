@@ -5,8 +5,10 @@
 #include "util/memory.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
+
 #include <iterator>
 #include <stdexcept>
+#include <glm/gtc/type_ptr.hpp>
 
 VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
 	: m_swapChain(instance, device, window), m_device(device), m_pipeline(device, m_swapChain) {
@@ -92,6 +94,8 @@ void VulkanRenderer::draw(Model& model) {
 	m_pipeline.bindTexture(model.getTexture());
 	m_pipeline.bindDescriptorSets(m_commandBuffer, m_currentFrame);
 
+	updatePushConstant("modelTRS", glm::value_ptr(model.getTransform().getTRS()));
+
 	// Draw
 	vkCmdDrawIndexed(m_commandBuffer, model.numIndices(), 1, 0, 0, 0);
 }
@@ -126,7 +130,7 @@ void VulkanRenderer::updateUniform(std::string name, void* data) {
 	m_pipeline.writeUniform(uniformID->second, data, m_currentFrame);
 }
 
-void VulkanRenderer::updatePushConstant(const std::string& name, void* data) {
+void VulkanRenderer::updatePushConstant(const std::string& name, const void* data) {
 
 	auto pushConstantID = m_pushConstantIDs.find(name);
 

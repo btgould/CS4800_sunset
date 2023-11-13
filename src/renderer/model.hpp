@@ -1,5 +1,6 @@
 #pragma once
 
+#include "renderer/transform.hpp"
 #include "util/memory.hpp"
 
 #include "bootstrap/device.hpp"
@@ -24,9 +25,12 @@ class Model {
 	Ref<Texture> getTexture() { return m_texture; }
 
 	inline uint32_t numIndices() { return m_indices->size(); }
+	inline Transform& getTransform() { return m_transform; }
 
   private:
 	ScopedRef<VertexBuffer> m_vertices;
 	ScopedRef<IndexBuffer> m_indices;
 	Ref<Texture> m_texture;
+
+	Transform m_transform;
 };

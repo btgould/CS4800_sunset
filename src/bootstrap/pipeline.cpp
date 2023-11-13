@@ -115,7 +115,7 @@ uint32_t VulkanPipeline::pushPushConstant(VkShaderStageFlags stage, uint32_t siz
 }
 
 void VulkanPipeline::writePushConstant(VkCommandBuffer commandBuffer, uint32_t pushConstantId,
-                                       void* data, uint32_t currentFrame) {
+                                       const void* data, uint32_t currentFrame) {
 	VkPushConstantRange pushConstant = m_pushConstants[pushConstantId];
 
 	vkCmdPushConstants(commandBuffer, m_pipelineLayout, pushConstant.stageFlags,

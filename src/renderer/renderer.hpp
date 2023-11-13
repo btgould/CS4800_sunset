@@ -32,7 +32,7 @@ class VulkanRenderer {
 	void endScene();
 
 	void updateUniform(std::string name, void* data);
-	void updatePushConstant(const std::string& name, void* data);
+	void updatePushConstant(const std::string& name, const void* data);
 
   private:
 	/* The list attributes each vertex has */

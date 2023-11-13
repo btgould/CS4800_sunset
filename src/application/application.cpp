@@ -49,16 +49,10 @@ void Application::run() {
 
 		m_renderer.beginScene();
 
-		// Update push constants
-		// TODO: this should be managed within model class, as part of drawing model
+		// Update model rotation
 		static auto startTime = std::chrono::high_resolution_clock::now();
 		auto currentTime = std::chrono::high_resolution_clock::now();
-
-		m_modelRotation = glm::rotate(m_modelRotation, (float) dt * glm::radians(1.0f),
-		                              glm::vec3(0.0f, 0.0f, 1.0f));
-
-		glm::mat4 modelTRS = m_modelScale * m_modelRotation * m_modelTranslation;
-		m_renderer.updatePushConstant("modelTRS", &modelTRS);
+		model.getTransform().rotateAbout(glm::vec3(0.0f, 0.0f, 1.0f), dt * glm::radians(1.0f));
 
 		// Draw model
 		m_renderer.draw(model);
