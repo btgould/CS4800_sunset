@@ -6,6 +6,8 @@
 #include "util/profiler.hpp"
 
 #include <cstring>
+#include <glm/common.hpp>
+#include <glm/fwd.hpp>
 #include <vulkan/vulkan_core.h>
 #include <chrono>
 
@@ -97,6 +99,29 @@ void VulkanPipeline::pushTexture(const Ref<Texture> tex) {
 	m_textures.push_back(tex);
 }
 
+uint32_t VulkanPipeline::pushPushConstant(VkShaderStageFlags stage, uint32_t size) {
+	uint32_t pushConstantID = m_pushConstants.size();
+
+	VkPushConstantRange pushConstant;
+	pushConstant.stageFlags = stage;
+	pushConstant.offset = m_pushConstantOffset;
+	pushConstant.size = size;
+
+	m_pushConstants.push_back(pushConstant);
+	m_pushConstantSizes.push_back(size);
+	m_pushConstantOffset += size;
+
+	return pushConstantID;
+}
+
+void VulkanPipeline::writePushConstant(VkCommandBuffer commandBuffer, uint32_t pushConstantId,
+                                       void* data, uint32_t currentFrame) {
+	VkPushConstantRange pushConstant = m_pushConstants[pushConstantId];
+
+	vkCmdPushConstants(commandBuffer, m_pipelineLayout, pushConstant.stageFlags,
+	                   pushConstant.offset, pushConstant.size, data);
+}
+
 void VulkanPipeline::bind(VkCommandBuffer commandBuffer) {
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 }
@@ -171,8 +196,8 @@ void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bind
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
 	pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
-	pipelineLayoutInfo.pushConstantRangeCount = 0;
-	pipelineLayoutInfo.pPushConstantRanges = nullptr;
+	pipelineLayoutInfo.pushConstantRangeCount = m_pushConstants.size();
+	pipelineLayoutInfo.pPushConstantRanges = m_pushConstants.data();
 
 	if (vkCreatePipelineLayout(m_device.getLogicalDevice(), &pipelineLayoutInfo, nullptr,
 	                           &m_pipelineLayout) != VK_SUCCESS) {

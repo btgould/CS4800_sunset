@@ -55,6 +55,10 @@ class VulkanPipeline {
 	void pushTexture(const Ref<Texture> tex);
 	inline void setActiveTexture(const Ref<Texture> tex) { m_activeTex = tex; }
 
+	uint32_t pushPushConstant(VkShaderStageFlags stage, uint32_t size);
+	void writePushConstant(VkCommandBuffer commandBuffer, uint32_t pushConstantId, void* data,
+	                       uint32_t currentFrame);
+
 	void bind(VkCommandBuffer commandBuffer);
 	void bindTexture(Ref<Texture> tex);
 	void bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame);
@@ -114,6 +118,11 @@ class VulkanPipeline {
 	std::vector<VkDescriptorPoolSize> m_poolSizes;
 	/* A list of descriptor layouts, describing dynamic resources used by pipeline */
 	VkPipelineLayout m_pipelineLayout;
+
+	// Push constant resources
+	std::vector<VkPushConstantRange> m_pushConstants;
+	std::vector<uint32_t> m_pushConstantSizes;
+	uint32_t m_pushConstantOffset = 0;
 
 	VkPipeline m_pipeline;
 };

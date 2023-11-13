@@ -48,10 +48,9 @@ void Application::run() {
 		m_window.pollEvents();
 
 		m_renderer.beginScene();
-		m_renderer.draw(model);
-		m_renderer.draw(room);
 
-		// update uniforms
+		// Update push constants
+		// TODO: this should be managed within model class, as part of drawing model
 		static auto startTime = std::chrono::high_resolution_clock::now();
 		auto currentTime = std::chrono::high_resolution_clock::now();
 
@@ -59,13 +58,18 @@ void Application::run() {
 		                              glm::vec3(0.0f, 0.0f, 1.0f));
 
 		glm::mat4 modelTRS = m_modelScale * m_modelRotation * m_modelTranslation;
-		m_renderer.updateUniform("modelTRS", &modelTRS);
+		m_renderer.updatePushConstant("modelTRS", &modelTRS);
 
+		// Draw model
+		m_renderer.draw(model);
+		m_renderer.draw(room);
+
+		m_renderer.endScene();
+
+		// update uniforms
 		m_camController.OnUpdate(dt);
 		glm::mat4 camVP = m_camera.getVP();
 		m_renderer.updateUniform("camVP", &camVP);
-
-		m_renderer.endScene();
 	}
 
 	m_device.flush();

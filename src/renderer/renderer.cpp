@@ -5,6 +5,7 @@
 #include "util/memory.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
+#include <iterator>
 #include <stdexcept>
 
 VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
@@ -19,8 +20,8 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	m_vertexArray.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}); // uv
 	m_pipeline.setVertexArray(m_vertexArray);
 
-	m_uniformIDs["modelTRS"] =
-		m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
+	m_pushConstantIDs["modelTRS"] =
+		m_pipeline.pushPushConstant(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 	m_uniformIDs["camVP"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 
 	m_pipeline.pushTexture(TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"));
@@ -123,4 +124,16 @@ void VulkanRenderer::updateUniform(std::string name, void* data) {
 	}
 
 	m_pipeline.writeUniform(uniformID->second, data, m_currentFrame);
+}
+
+void VulkanRenderer::updatePushConstant(const std::string& name, void* data) {
+
+	auto pushConstantID = m_pushConstantIDs.find(name);
+
+	if (pushConstantID == m_pushConstantIDs.end()) {
+		// push constant name was not found
+		throw std::runtime_error("Unrecognized push constant name");
+	}
+
+	m_pipeline.writePushConstant(m_commandBuffer, pushConstantID->second, data, m_currentFrame);
 }

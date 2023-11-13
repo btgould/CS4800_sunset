@@ -32,6 +32,7 @@ class VulkanRenderer {
 	void endScene();
 
 	void updateUniform(std::string name, void* data);
+	void updatePushConstant(const std::string& name, void* data);
 
   private:
 	/* The list attributes each vertex has */
@@ -43,13 +44,11 @@ class VulkanRenderer {
 	/* Device to execute the rendering on */
 	VulkanDevice& m_device;
 
-	// FIXME: I'd like to find some way to decouple this from the renderer
-	Ref<Texture> m_texture;
-
 	/* The graphics pipeline used to render */
 	VulkanPipeline m_pipeline;
 
 	std::map<std::string, uint32_t> m_uniformIDs;
+	std::map<std::string, uint32_t> m_pushConstantIDs;
 
 	/* Buffer holding all the drawing commands for the current frame */
 	VkCommandBuffer m_commandBuffer;
