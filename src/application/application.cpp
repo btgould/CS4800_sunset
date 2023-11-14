@@ -44,8 +44,8 @@ void Application::run() {
 	skybox.getTransform().rotateAbout(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(-90.0f));
 
 	LightSource light;
-	light.pos = glm::vec3(-300.0f, -300.0f, 300.0f);
-	light.color = glm::vec3(1.0f, 1.0f, 1.0f);
+	light.pos = glm::vec3(-630.0f, -500.0f, 267.0f);
+	light.color = glm::vec3(0.988f, 0.415f, 0.227f);
 	light.ambientStrength = 0.1f;
 	light.diffuseStrength = 1.0f;
 
@@ -65,7 +65,8 @@ void Application::run() {
 		m_renderer.endScene();
 
 		// update uniforms
-		if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) { // HACK: this should be handled within camera controller 
+		if (Input::isMouseButtonPressed(
+				GLFW_MOUSE_BUTTON_1)) { // HACK: this should be handled within camera controller
 			m_camController.OnUpdate(dt);
 		}
 		glm::mat4 camVP = m_camera.getVP();

@@ -22,7 +22,9 @@ void main() {
     float diffuse = max(dot(norm, lightDir), 0.0) * light.diffuseStrength;
     vec3 lighting = (light.ambientStrength + diffuse) * light.color;
 
+	// ugly hack to not light skybox 
+	if (length(fragPos) > 500.0f) lighting = vec3(1.0f, 1.0, 1.0f); 
+
 	// combine lighting w/ texture albedo
     outColor = vec4(lighting * texture(texSampler, fragTexCoord).rgb, 1.0f);
-	outColor = texture(texSampler, fragTexCoord);
 }
