@@ -29,5 +29,5 @@ class CameraController {
 	float m_rotationSpeed = 0.8f;
 
 	glm::vec2 m_lastMousePos;
-	bool m_mouseOnScreen;
+	bool m_shouldRotate;
 };

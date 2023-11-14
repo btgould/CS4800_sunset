@@ -1,6 +1,7 @@
 #include "camera_controller.hpp"
 
 #include <GLFW/glfw3.h>
+#include <glm/fwd.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 #include "application/application.hpp"
@@ -35,20 +36,20 @@ void CameraController::checkForTranslation(double dt) {
 
 void CameraController::checkForRotation(double dt) {
 	glm::vec2 newMousePos = Input::getMousePos();
-	glm::vec2 displacement = newMousePos - m_lastMousePos;
+	glm::vec2 displacement =
+		m_shouldRotate ? newMousePos - m_lastMousePos
+					   : glm::vec2(0.0f, 0.0f); // if this is the first frame we can rotate, zero
+	                                            // displacement. Prevents initial "jump"
 	m_lastMousePos = newMousePos;
 
-	// don't rotate if mouse out of window
+	// don't rotate if mouse out of window or not pressed
 	VkExtent2D screenSize = Application::get().getWindow().getFramebufferSize();
-	if (newMousePos.x < 0 || newMousePos.x > screenSize.width || newMousePos.y < 0 ||
-	    newMousePos.y > screenSize.height) {
-		m_mouseOnScreen = false;
-		return;
-	}
+	bool mouseOnScreen = (newMousePos.x > 0 && newMousePos.x < screenSize.width &&
+	                      newMousePos.y > 0 && newMousePos.y < screenSize.height);
+	bool mouseDown = Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_1);
+	m_shouldRotate = mouseOnScreen && mouseDown;
 
-	if (!m_mouseOnScreen) {
-		// This is first frame back on screen. Don't do giant "jump"
-		m_mouseOnScreen = true;
+	if (!m_shouldRotate) {
 		return;
 	}
 

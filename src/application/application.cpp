@@ -65,10 +65,7 @@ void Application::run() {
 		m_renderer.endScene();
 
 		// update uniforms
-		if (Input::isMouseButtonPressed(
-				GLFW_MOUSE_BUTTON_1)) { // HACK: this should be handled within camera controller
-			m_camController.OnUpdate(dt);
-		}
+		m_camController.OnUpdate(dt);
 		glm::mat4 camVP = m_camera.getVP();
 		m_renderer.updateUniform("camVP", &camVP);
 		m_renderer.updateUniform("light", &light); // do this in loop b/c >1 framebuffers
