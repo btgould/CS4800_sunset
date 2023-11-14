@@ -46,8 +46,8 @@ void Application::run() {
 	LightSource light;
 	light.pos = glm::vec3(-630.0f, -500.0f, 267.0f);
 	light.color = glm::vec3(0.988f, 0.415f, 0.227f);
-	light.ambientStrength = 0.1f;
-	light.diffuseStrength = 1.0f;
+	light.ambientStrength = 0.2f;
+	light.diffuseStrength = 50.0f;
 
 	while (!m_window.shouldClose()) {
 		double newTime = glfwGetTime();
