@@ -2,6 +2,7 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/fwd.hpp>
+#include <glm/trigonometric.hpp>
 #include <stdexcept>
 #include <unordered_map>
 
@@ -19,7 +20,7 @@ Application* Application::s_instance = nullptr;
 Application::Application()
 	: m_window("Vulkan"), m_instance(m_window), m_device(m_instance),
 	  m_renderer(m_instance, m_device, m_window),
-	  m_camera(glm::radians(45.0f), m_renderer.getAspectRatio(), glm::vec3(300.0f, 300.0f, 300.0f),
+	  m_camera(glm::radians(45.0f), m_renderer.getAspectRatio(), glm::vec3(300.0f, 200.0f, 75.0f),
                1.0f, 10000.0f),
 	  m_camController(m_camera) {
 	if (s_instance) {
@@ -34,18 +35,13 @@ Application::Application()
 }
 
 void Application::run() {
-	const std::string modelPath = "res/model/mountain.obj";
-	const std::string texPath = "res/texture/mountain.png";
-
-	Ref<Texture> modelTex = TextureLibrary::get()->getTexture(m_device, texPath);
-	Model model(m_device, modelPath, modelTex);
-	Model room(m_device, "res/model/viking_room.obj",
-	           TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"));
+	Model model(m_device, "res/model/mountain.obj",
+	            TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"));
 	Model skybox(m_device, "res/skybox/skybox.obj",
 	             TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png"));
 	skybox.getTransform().setScale(glm::vec3(1000.0f, 1000.0f, 1000.0f));
-	skybox.getTransform().setTranslation(
-		glm::vec3(300.0f, 300.0f, 300.0f)); // TODO: tie this to camera pos
+	skybox.getTransform().setTranslation(glm::vec3(300.0f, -500.0f, -300.0f));
+	skybox.getTransform().rotateAbout(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(-90.0f));
 
 	LightSource light;
 	light.pos = glm::vec3(-300.0f, -300.0f, 300.0f);
@@ -64,13 +60,14 @@ void Application::run() {
 
 		// Draw model
 		m_renderer.draw(model);
-		// m_renderer.draw(room);
 		m_renderer.draw(skybox);
 
 		m_renderer.endScene();
 
 		// update uniforms
-		m_camController.OnUpdate(dt);
+		if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) { // HACK: this should be handled within camera controller 
+			m_camController.OnUpdate(dt);
+		}
 		glm::mat4 camVP = m_camera.getVP();
 		m_renderer.updateUniform("camVP", &camVP);
 		m_renderer.updateUniform("light", &light); // do this in loop b/c >1 framebuffers

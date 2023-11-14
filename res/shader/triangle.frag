@@ -24,5 +24,5 @@ void main() {
 
 	// combine lighting w/ texture albedo
     outColor = vec4(lighting * texture(texSampler, fragTexCoord).rgb, 1.0f);
-	outcolor = texture(texSampler, fragTexCoord);
+	outColor = texture(texSampler, fragTexCoord);
 }
