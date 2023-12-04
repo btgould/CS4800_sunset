@@ -7,6 +7,7 @@
 
 #include <stdexcept>
 #include <glm/gtc/type_ptr.hpp>
+#include <vulkan/vulkan_core.h>
 
 VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
 	: m_swapChain(instance, device, window), m_device(device), m_pipeline(device, m_swapChain) {
@@ -24,7 +25,7 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	m_pushConstantIDs["modelTRS"] =
 		m_pipeline.pushPushConstant(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 	m_uniformIDs["camVP"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
-	m_uniformIDs["camPos"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::vec3));
+	m_uniformIDs["cloud"] = m_pipeline.pushUniform(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Cloud));
 	m_uniformIDs["light"] =
 		m_pipeline.pushUniform(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(LightSource));
 

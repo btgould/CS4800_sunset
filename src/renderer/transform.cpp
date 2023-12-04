@@ -2,15 +2,17 @@
 #include <glm/ext/matrix_transform.hpp>
 
 Transform::Transform() {
-	m_scale = m_rotation = m_translation = glm::mat4(1.0f);
+	m_translation = glm::vec3(0.0f, 0.0f, 0.0f);
+	m_rotation = glm::mat4(1.0f);
+	m_scale = glm::vec3(1.0f, 1.0f, 1.0f);
 }
 
 void Transform::setTranslation(const glm::vec3& tr) {
-	m_translation = glm::translate(glm::mat4(1.0f), tr);
+	m_translation = tr;
 }
 
 void Transform::translate(const glm::vec3& tr) {
-	m_translation = glm::translate(m_translation, tr);
+	m_translation += tr;
 }
 
 void Transform::rotateAbout(const glm::vec3& about, float rad) {
@@ -18,15 +20,16 @@ void Transform::rotateAbout(const glm::vec3& about, float rad) {
 }
 
 void Transform::setScale(const glm::vec3& scale) {
-	m_scale = glm::scale(glm::mat4(1.0f), scale);
+	m_scale = scale;
 }
 
 void Transform::scale(const glm::vec3& scale) {
-	m_scale = glm::scale(m_scale, scale);
+	m_scale *= scale;
 }
 
 glm::mat4 Transform::getTRS() {
-	m_TRS = m_translation * m_rotation * m_scale;
+	m_TRS = glm::translate(glm::mat4(1.0f), m_translation) * m_rotation *
+	        glm::scale(glm::mat4(1.0f), m_scale);
 
 	return m_TRS;
 }

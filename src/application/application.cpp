@@ -32,11 +32,21 @@ Application::Application()
 void Application::run() {
 	Model model(m_device, "res/model/mountain.obj",
 	            TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"));
+
 	Model skybox(m_device, "res/skybox/skybox.obj",
 	             TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png"));
 	skybox.getTransform().setScale(glm::vec3(1000.0f, 1000.0f, 1000.0f));
 	skybox.getTransform().setTranslation(glm::vec3(300.0f, -500.0f, -300.0f));
 	skybox.getTransform().rotateAbout(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(-90.0f));
+
+	Model cloud(m_device, "res/model/cloud.obj",
+	            TextureLibrary::get()->getTexture(
+					m_device, "res/texture/mountain.png")); // TODO: texture with perlin noise
+	cloud.getTransform().setTranslation(glm::vec3(0.0f, 0.0f, 100.0f));
+	cloud.getTransform().setScale(glm::vec3(25.0f, 25.0f, 10.0f));
+	Cloud u_cloud {cloud.getTransform().getTranslation(), cloud.getTransform().getScale()};
+
+	LOG_INFO("Cloud model created");
 
 	LightSource light;
 	light.pos = glm::vec3(-630.0f, -500.0f, 267.0f);
@@ -56,15 +66,15 @@ void Application::run() {
 		// Draw model
 		m_renderer.draw(model);
 		m_renderer.draw(skybox);
+		m_renderer.draw(cloud);
 
 		m_renderer.endScene();
 
 		// update uniforms
 		m_camController.OnUpdate(dt);
 		glm::mat4 camVP = m_camera.getVP();
-		glm::vec3 camPos = m_camera.getPos();
 		m_renderer.updateUniform("camVP", &camVP);
-		m_renderer.updateUniform("camPos", &camPos);
+		m_renderer.updateUniform("cloud", &u_cloud);
 		m_renderer.updateUniform("light", &light); // do this in loop b/c >1 framebuffers
 	}
 

@@ -11,15 +11,18 @@
 #include "renderer/model.hpp"
 #include "renderer/vertex_buffer.hpp"
 #include "renderer/index_buffer.hpp"
-#include "renderer/texture.hpp"
 #include "renderer/vertex_array.hpp"
-#include "renderer/camera.hpp"
 
 struct LightSource {
 	alignas(16) glm::vec3 pos;
 	alignas(16) glm::vec3 color;
 	alignas(4) float ambientStrength;
 	alignas(4) float diffuseStrength;
+};
+
+struct Cloud {
+	alignas(16) glm::vec3 pos;
+	alignas(16) glm::vec3 scale;
 };
 
 class VulkanRenderer {
