@@ -26,6 +26,7 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 		m_pipeline.pushPushConstant(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 	m_uniformIDs["camVP"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 	m_uniformIDs["cloud"] = m_pipeline.pushUniform(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Cloud));
+	m_uniformIDs["cloud2"] = m_pipeline.pushUniform(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Cloud));
 	m_uniformIDs["light"] =
 		m_pipeline.pushUniform(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(LightSource));
 

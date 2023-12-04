@@ -42,9 +42,15 @@ void Application::run() {
 	Model cloud(m_device, "res/model/cloud.obj",
 	            TextureLibrary::get()->getTexture(
 					m_device, "res/texture/mountain.png")); // TODO: texture with perlin noise
-	cloud.getTransform().setTranslation(glm::vec3(0.0f, 0.0f, 100.0f));
-	cloud.getTransform().setScale(glm::vec3(25.0f, 25.0f, 10.0f));
+	cloud.getTransform().setTranslation(glm::vec3(-30.0f, -250.0f, 75.0f));
+	cloud.getTransform().setScale(glm::vec3(100.0f, 150.0f, 50.0f));
 	Cloud u_cloud {cloud.getTransform().getTranslation(), cloud.getTransform().getScale()};
+	Model cloud2(m_device, "res/model/cloud.obj",
+	             TextureLibrary::get()->getTexture(
+					 m_device, "res/texture/mountain.png")); // TODO: texture with perlin noise
+	cloud2.getTransform().setTranslation(glm::vec3(-30.0f, 100.0f, 100.0f));
+	cloud2.getTransform().setScale(glm::vec3(100.0f, 150.0f, 50.0f));
+	Cloud u_cloud2 {cloud2.getTransform().getTranslation(), cloud2.getTransform().getScale()};
 
 	LOG_INFO("Cloud model created");
 
@@ -67,6 +73,7 @@ void Application::run() {
 		m_renderer.draw(model);
 		m_renderer.draw(skybox);
 		m_renderer.draw(cloud);
+		m_renderer.draw(cloud2);
 
 		m_renderer.endScene();
 
@@ -75,6 +82,7 @@ void Application::run() {
 		glm::mat4 camVP = m_camera.getVP();
 		m_renderer.updateUniform("camVP", &camVP);
 		m_renderer.updateUniform("cloud", &u_cloud);
+		m_renderer.updateUniform("cloud2", &u_cloud2);
 		m_renderer.updateUniform("light", &light); // do this in loop b/c >1 framebuffers
 	}
 
