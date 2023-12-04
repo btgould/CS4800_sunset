@@ -2,11 +2,9 @@
 
 #include "renderer/texture_lib.hpp"
 #include "renderer/vertex_array.hpp"
-#include "util/memory.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
 
-#include <iterator>
 #include <stdexcept>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -26,6 +24,7 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	m_pushConstantIDs["modelTRS"] =
 		m_pipeline.pushPushConstant(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
 	m_uniformIDs["camVP"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4));
+	m_uniformIDs["camPos"] = m_pipeline.pushUniform(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::vec3));
 	m_uniformIDs["light"] =
 		m_pipeline.pushUniform(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(LightSource));
 

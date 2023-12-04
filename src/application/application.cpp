@@ -4,16 +4,11 @@
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
 #include <stdexcept>
-#include <unordered_map>
 
 #include "renderer/renderer.hpp"
 #include "renderer/texture_lib.hpp"
-#include "spdlog/common.h"
 
 #include "util/log.hpp"
-#include "util/memory.hpp"
-#include "util/profiler.hpp"
-#include "input.hpp"
 
 Application* Application::s_instance = nullptr;
 
@@ -67,7 +62,9 @@ void Application::run() {
 		// update uniforms
 		m_camController.OnUpdate(dt);
 		glm::mat4 camVP = m_camera.getVP();
+		glm::vec3 camPos = m_camera.getPos();
 		m_renderer.updateUniform("camVP", &camVP);
+		m_renderer.updateUniform("camPos", &camPos);
 		m_renderer.updateUniform("light", &light); // do this in loop b/c >1 framebuffers
 	}
 

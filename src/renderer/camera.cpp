@@ -26,7 +26,8 @@ const glm::mat4 Camera::getVP() {
 		glm::mat4_cast(glm::conjugate(m_orientation)) * glm::translate(glm::mat4(1.0f), -m_pos);
 
 	// Return computed result
-	return m_proj * m_view;
+	glm::mat4 VP = m_proj * m_view;
+	return VP;
 }
 
 void Camera::translate(const glm::vec3& tr) {

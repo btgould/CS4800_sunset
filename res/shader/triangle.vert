@@ -8,6 +8,10 @@ layout(set = 0, binding = 0) uniform VP {
     mat4 vp;
 } camVP;
 
+layout(set = 0, binding = 1) uniform POS {
+    vec3 pos;
+} inCamPos;
+
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inColor;
@@ -17,12 +21,14 @@ layout(location = 0) out vec3 fragPos;
 layout(location = 1) out vec3 fragNormal;
 layout(location = 2) out vec3 fragColor;
 layout(location = 3) out vec2 fragTexCoord;
+layout(location = 4) out vec3 camPos;
 
 void main() {
 	fragPos = vec3(trs.trs * vec4(inPosition, 1.0));
 	fragNormal = mat3(transpose(inverse(trs.trs))) * inNormal;
     fragColor = inColor;
     fragTexCoord = inTexCoord;
+	camPos = inCamPos.pos;
 
 	gl_Position = camVP.vp * vec4(fragPos, 1.0);
 }
