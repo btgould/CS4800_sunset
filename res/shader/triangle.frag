@@ -32,7 +32,7 @@ vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
 vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
 vec3 fade(vec3 t) {return t*t*t*(t*(t*6.0-15.0)+10.0);}
 
-float cnoise(vec3 P){
+float cnoise(vec3 P) {
 	vec3 Pi0 = floor(P); // Integer part for indexing
 	vec3 Pi1 = Pi0 + vec3(1.0); // Integer part + 1
 	Pi0 = mod(Pi0, 289.0);
@@ -115,7 +115,7 @@ void main() {
 
 	// ugly hack to extract clouds
 	vec3 fragDist = (fragPos - cloud.pos) / cloud.scale;
-	if (length(fragDist) < 1) {
+	if (length(fragDist) < 1.1) {
 		float normalizedHeight = (fragPos.z - cloud.pos.z) / cloud.scale.z;
 		normalizedHeight = (normalizedHeight + 1) / 2;
 		float intensity = pow(normalizedHeight, 0.5); // TODO: This can be faster
@@ -124,7 +124,7 @@ void main() {
 	}
 
 	fragDist = (fragPos - cloud2.pos) / cloud2.scale;
-	if (length(fragDist) < 1) {
+	if (length(fragDist) < 1.1) {
 		float normalizedHeight = (fragPos.z - cloud2.pos.z) / cloud2.scale.z;
 		normalizedHeight = (normalizedHeight + 1) / 2;
 		float intensity = pow(normalizedHeight, 0.5); // TODO: This can be faster
