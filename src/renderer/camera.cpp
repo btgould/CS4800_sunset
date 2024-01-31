@@ -13,7 +13,7 @@
 
 Camera::Camera(float fovY, float aspect, glm::vec3 pos, float nearClip, float farClip)
 	: m_fovY(fovY), m_aspect(aspect), m_nearClip(nearClip), m_farClip(farClip), m_pos(pos) {
-	lookAt(glm::vec3(50.0f, 0.0f, 0.0f));
+	lookAt(glm::vec3(0.0f, 0.0f, 0.0f));
 	m_proj = glm::perspective(m_fovY, m_aspect, m_nearClip, m_farClip);
 	m_proj[1][1] *= -1; // flip to account for OpenGL handedness
 }

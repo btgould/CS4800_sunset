@@ -23,10 +23,6 @@ Application::Application()
 	}
 
 	s_instance = this;
-
-	m_modelTranslation = glm::mat4(1.0f);
-	m_modelRotation = glm::mat4(1.0f);
-	m_modelScale = glm::mat4(1.0f);
 }
 
 void Application::run() {
@@ -40,19 +36,15 @@ void Application::run() {
 	skybox.getTransform().rotateAbout(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(-90.0f));
 
 	Model cloud(m_device, "res/model/cloud.obj",
-	            TextureLibrary::get()->getTexture(
-					m_device, "res/texture/mountain.png")); // TODO: texture with perlin noise
+	            TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"));
 	cloud.getTransform().setTranslation(glm::vec3(-100.0f, -250.0f, 100.0f));
 	cloud.getTransform().setScale(glm::vec3(100.0f, 150.0f, 50.0f));
 	Cloud u_cloud {cloud.getTransform().getTranslation(), cloud.getTransform().getScale()};
 	Model cloud2(m_device, "res/model/cloud.obj",
-	             TextureLibrary::get()->getTexture(
-					 m_device, "res/texture/mountain.png")); // TODO: texture with perlin noise
+	             TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"));
 	cloud2.getTransform().setTranslation(glm::vec3(-30.0f, 100.0f, 100.0f));
 	cloud2.getTransform().setScale(glm::vec3(100.0f, 150.0f, 50.0f));
 	Cloud u_cloud2 {cloud2.getTransform().getTranslation(), cloud2.getTransform().getScale()};
-
-	LOG_INFO("Cloud model created");
 
 	LightSource light;
 	light.pos = glm::vec3(-630.0f, -500.0f, 267.0f);

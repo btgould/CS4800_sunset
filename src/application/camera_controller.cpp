@@ -2,7 +2,9 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/fwd.hpp>
+#include <glm/geometric.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <vulkan/vulkan_core.h>
 
 #include "application/application.hpp"
 #include "input.hpp"
@@ -38,8 +40,9 @@ void CameraController::checkForRotation(double dt) {
 	glm::vec2 newMousePos = Input::getMousePos();
 	glm::vec2 displacement =
 		m_shouldRotate ? newMousePos - m_lastMousePos
-					   : glm::vec2(0.0f, 0.0f); // if this is the first frame we can rotate, zero
-	                                            // displacement. Prevents initial "jump"
+					   : glm::vec2(0.0f, 0.0f); // if this is the first frame we can rotate,
+	                                            // zero displacement. Prevents initial "jump"
+	displacement *= m_rotationSpeed * dt;
 	m_lastMousePos = newMousePos;
 
 	// don't rotate if mouse out of window or not pressed
@@ -53,9 +56,10 @@ void CameraController::checkForRotation(double dt) {
 		return;
 	}
 
-	// Apply displacement normal to look vector
-	glm::vec3 horizComp = m_cam.getRight() * displacement.x;
-	glm::vec3 vertComp = -m_cam.getUp() * displacement.y;
-	m_cam.lookAt(m_cam.getPos() + m_cam.getLook() +
-	             (m_rotationSpeed * (float) dt * (horizComp + vertComp)));
+	// Translate screen coordinates to world coords, focus camera
+	glm::vec4 mousePos4 = glm::vec4(2 * displacement.x / screenSize.width,
+	                                2 * displacement.y / screenSize.height, -1, 1);
+	mousePos4 = glm::inverse(m_cam.getVP()) * mousePos4;
+	mousePos4 /= mousePos4.w;
+	m_cam.lookAt(mousePos4);
 }

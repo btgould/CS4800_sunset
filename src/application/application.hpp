@@ -58,7 +58,5 @@ class Application {
 	Camera m_camera;
 	CameraController m_camController;
 
-	glm::mat4 m_modelTranslation, m_modelRotation, m_modelScale;
-
 	double m_time;
 };

@@ -118,7 +118,7 @@ void main() {
 	if (length(fragDist) < 1.1) {
 		float normalizedHeight = (fragPos.z - cloud.pos.z) / cloud.scale.z;
 		normalizedHeight = (normalizedHeight + 1) / 2;
-		float intensity = pow(normalizedHeight, 0.5); // TODO: This can be faster
+		float intensity = pow(normalizedHeight, 0.5); 
 		vec3 baseColor = intensity * vec3(0.9f, 0.9f, 0.9f) + 0.1 * cnoise(fragPos / 10);
 		outColor = vec4(baseColor, 0.8f);
 	}
@@ -127,7 +127,7 @@ void main() {
 	if (length(fragDist) < 1.1) {
 		float normalizedHeight = (fragPos.z - cloud2.pos.z) / cloud2.scale.z;
 		normalizedHeight = (normalizedHeight + 1) / 2;
-		float intensity = pow(normalizedHeight, 0.5); // TODO: This can be faster
+		float intensity = pow(normalizedHeight, 0.5); 
 		vec3 baseColor = intensity * vec3(0.9f, 0.9f, 0.9f) + 0.1 * cnoise(fragPos / 10);
 		outColor = vec4(baseColor, 0.8f);
 	}
