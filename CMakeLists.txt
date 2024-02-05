@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.8)
 
 project(CS4800_Sunset)
 
+# Useful vars 
+set(IMGUI_DIR  "${PROJECT_SOURCE_DIR}/vendor/imgui")
+
 # Global CMake config
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
@@ -18,10 +21,13 @@ add_subdirectory(vendor/tinyobjloader)
 file(GLOB_RECURSE SOURCE_FILES RELATIVE ${CMAKE_SOURCE_DIR} CONFIGURE_DEPENDS src/*.cpp) 
 add_executable(sunset ${SOURCE_FILES})
 
+target_sources(sunset PRIVATE ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp ${IMGUI_DIR}/backends/imgui_impl_vulkan.cpp ${IMGUI_DIR}/imgui.cpp ${IMGUI_DIR}/imgui_draw.cpp ${IMGUI_DIR}/imgui_demo.cpp ${IMGUI_DIR}/imgui_tables.cpp ${IMGUI_DIR}/imgui_widgets.cpp)
+
 target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/vendor/spdlog")
 target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/vendor/stb")
 target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/vendor/tinyobjloader")
+target_include_directories(sunset PRIVATE "${PROJECT_SOURCE_DIR}/vendor/imgui")
 
 target_link_libraries(sunset glfw vulkan dl pthread X11 Xxf86vm Xrandr Xi)
 target_link_libraries(sunset spdlog)

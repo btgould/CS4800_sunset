@@ -63,6 +63,9 @@ class VulkanPipeline {
 	void bindTexture(Ref<Texture> tex);
 	void bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame);
 
+	// HACK: this exists solely to satisfy ImGui
+	VkDescriptorPool getDescriptorPool() const { return m_descriptorPool; }
+
   private: // core interface
 	void createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
 	                            std::vector<VkVertexInputAttributeDescription> attrDesc,

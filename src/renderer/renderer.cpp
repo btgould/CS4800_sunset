@@ -1,13 +1,23 @@
 #include "renderer.hpp"
 
+#include <glm/gtc/type_ptr.hpp>
+
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_vulkan.h>
+
 #include "renderer/texture_lib.hpp"
 #include "renderer/vertex_array.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
 
-#include <stdexcept>
-#include <glm/gtc/type_ptr.hpp>
-#include <vulkan/vulkan_core.h>
+static void check_vk_result(VkResult err) {
+	if (err == 0)
+		return;
+	fprintf(stderr, "[vulkan] Error: VkResult = %d\n", err);
+	if (err < 0)
+		abort();
+}
 
 VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
 	: m_swapChain(instance, device, window), m_device(device), m_pipeline(device, m_swapChain) {
@@ -36,9 +46,41 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	m_pipeline.pushTexture(TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png"));
 
 	m_pipeline.create();
+
+	// Setup ImGui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+
+	ImGuiIO& io = ImGui::GetIO();
+	(void) io;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplGlfw_InitForVulkan(window.getNativeWindow(), true);
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = instance.getNativeInstance();
+	init_info.PhysicalDevice = m_device.getPhysicalDevice();
+	init_info.Device = m_device.getLogicalDevice();
+	init_info.QueueFamily = m_device.getQueueFamilyIndices().graphicsFamily.value();
+	init_info.Queue = m_device.getGraphicsQueue();
+	init_info.PipelineCache = VK_NULL_HANDLE; // FIXME: this is probably fine?
+	init_info.DescriptorPool = m_pipeline.getDescriptorPool();
+	init_info.Subpass = 0;
+	init_info.MinImageCount = 2; // Just choosing the minimum here for simplicity
+	init_info.ImageCount = 2;
+	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	init_info.Allocator = nullptr; // Use default allocation mechanism
+	init_info.CheckVkResultFn = check_vk_result;
+	ImGui_ImplVulkan_Init(&init_info, m_swapChain.getRenderPass());
 }
 
-VulkanRenderer::~VulkanRenderer() {}
+VulkanRenderer::~VulkanRenderer() {
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+}
 
 void VulkanRenderer::beginScene() {
 	PROFILE_FUNC();
@@ -81,6 +123,11 @@ void VulkanRenderer::beginScene() {
 
 	// Bind pipeline
 	m_pipeline.bind(m_commandBuffer);
+
+	// New ImGui Frame
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
 }
 
 void VulkanRenderer::draw(VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer) {
@@ -106,6 +153,11 @@ void VulkanRenderer::draw(Model& model) {
 }
 
 void VulkanRenderer::endScene() {
+	// Record ImGui Frame
+	ImGui::Render();
+	ImDrawData* draw_data = ImGui::GetDrawData();
+	ImGui_ImplVulkan_RenderDrawData(draw_data, m_commandBuffer);
+
 	// End render pass, stop recording
 	vkCmdEndRenderPass(m_commandBuffer);
 	if (vkEndCommandBuffer(m_commandBuffer) != VK_SUCCESS) {

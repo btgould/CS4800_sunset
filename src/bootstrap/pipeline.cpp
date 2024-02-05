@@ -352,14 +352,19 @@ void VulkanPipeline::createDescriptorPool() {
 		2 * m_textures.size() * static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 	m_poolSizes.push_back(imageSamplerPoolSize);
 
+	// Create descriptor for ImGui
+	m_poolSizes.push_back({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1});
+
 	VkDescriptorPoolCreateInfo poolInfo {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(m_poolSizes.size());
 	poolInfo.pPoolSizes = m_poolSizes.data(); // describes number and type of different descriptors
 	poolInfo.maxSets =
-		(m_textures.size() + 1) *
-		static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT); // max number of descriptor sets allocated at a
-	                                                 // time (num textures + 1 for uniforms)
+		(m_textures.size() + 2) *
+		static_cast<uint32_t>(
+			MAX_FRAMES_IN_FLIGHT); // max number of descriptor sets allocated at a
+	                               // time (num textures + 1 for uniforms + 1 for ImGui)
 
 	if (vkCreateDescriptorPool(m_device.getLogicalDevice(), &poolInfo, nullptr,
 	                           &m_descriptorPool) != VK_SUCCESS) {

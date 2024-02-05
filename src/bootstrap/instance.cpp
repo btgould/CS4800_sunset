@@ -2,11 +2,7 @@
 
 #include <cstring>
 #include <GLFW/glfw3.h>
-#include <type_traits>
 #include <vector>
-#include <set>
-#include <limits>
-#include <algorithm>
 
 #include "util/log.hpp"
 
@@ -14,8 +10,9 @@
 // Core Interface
 // ================================================================================
 
-VulkanInstance::VulkanInstance(GLFWWindow& window)
-	: m_window(window) {init();}
+VulkanInstance::VulkanInstance(GLFWWindow& window) : m_window(window) {
+	init();
+}
 
 VulkanInstance::~VulkanInstance() {
 	if (enableValidationLayers) {

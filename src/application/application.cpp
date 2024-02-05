@@ -3,7 +3,8 @@
 #include <GLFW/glfw3.h>
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
-#include <stdexcept>
+
+#include "imgui.h"
 
 #include "renderer/renderer.hpp"
 #include "renderer/texture_lib.hpp"
@@ -66,6 +67,8 @@ void Application::run() {
 		m_renderer.draw(skybox);
 		m_renderer.draw(cloud);
 		m_renderer.draw(cloud2);
+
+		ImGui::ShowDemoWindow();
 
 		m_renderer.endScene();
 

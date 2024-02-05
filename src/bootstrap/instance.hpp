@@ -16,10 +16,15 @@ class VulkanInstance {
 	VulkanInstance(const VulkanInstance&) = delete;
 	VulkanInstance& operator=(const VulkanInstance&) = delete;
 
+	/**
+	 * @brief Gets a list of physical devices available for use with this instance
+	 */
 	std::vector<VkPhysicalDevice> getPhysicalDevices() const;
 
 	/* inline VulkanDevice& getDevice() { return m_device; } */
 	inline VkSurfaceKHR getSurface() const { return m_surface; }
+	// HACK: this exists only to satisfy ImGui
+	inline VkInstance getNativeInstance() const { return m_instance; }
 
   private: // core interface
 	void init();

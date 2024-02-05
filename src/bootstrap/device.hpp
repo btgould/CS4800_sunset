@@ -113,6 +113,8 @@ class VulkanDevice {
 		return querySwapChainSupport(m_physicalDevice, surface);
 	}
 	inline const QueueFamilyIndices& getQueueFamilyIndices() const { return m_queueFamilyIndices; }
+	// HACK: this exists solely to satisfy ImGui
+	inline const VkPhysicalDevice getPhysicalDevice() const { return m_physicalDevice; }
 	inline const VkDevice getLogicalDevice() const { return m_logicalDevice; }
 	inline const VkQueue getGraphicsQueue() const { return m_graphicsQueue; }
 	inline const VkQueue getPresentQueue() const { return m_presentQueue; }
