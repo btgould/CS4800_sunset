@@ -55,8 +55,8 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	(void) io;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	// io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	// io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 	ImGui::StyleColorsDark();
 
@@ -67,7 +67,7 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	init_info.Device = m_device.getLogicalDevice();
 	init_info.QueueFamily = m_device.getQueueFamilyIndices().graphicsFamily.value();
 	init_info.Queue = m_device.getGraphicsQueue();
-	init_info.PipelineCache = VK_NULL_HANDLE; // FIXME: this is probably fine?
+	init_info.PipelineCache = VK_NULL_HANDLE; 
 	init_info.DescriptorPool = m_pipeline.getDescriptorPool();
 	init_info.Subpass = 0;
 	init_info.MinImageCount = 2; // Just choosing the minimum here for simplicity
@@ -160,8 +160,8 @@ void VulkanRenderer::endScene() {
 	ImDrawData* draw_data = ImGui::GetDrawData();
 	ImGui_ImplVulkan_RenderDrawData(draw_data, m_commandBuffer);
 
-	ImGui::UpdatePlatformWindows();
-	ImGui::RenderPlatformWindowsDefault();
+	// ImGui::UpdatePlatformWindows();
+	// ImGui::RenderPlatformWindowsDefault();
 
 	// End render pass, stop recording
 	vkCmdEndRenderPass(m_commandBuffer);
