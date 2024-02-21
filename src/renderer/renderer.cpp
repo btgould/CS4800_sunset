@@ -7,7 +7,6 @@
 #include <backends/imgui_impl_vulkan.h>
 
 #include "renderer/texture_lib.hpp"
-#include "renderer/vertex_array.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
 
@@ -67,7 +66,7 @@ VulkanRenderer::VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, G
 	init_info.Device = m_device.getLogicalDevice();
 	init_info.QueueFamily = m_device.getQueueFamilyIndices().graphicsFamily.value();
 	init_info.Queue = m_device.getGraphicsQueue();
-	init_info.PipelineCache = VK_NULL_HANDLE; 
+	init_info.PipelineCache = VK_NULL_HANDLE;
 	init_info.DescriptorPool = m_pipeline.getDescriptorPool();
 	init_info.Subpass = 0;
 	init_info.MinImageCount = 2; // Just choosing the minimum here for simplicity

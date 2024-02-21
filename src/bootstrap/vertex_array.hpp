@@ -1,7 +1,5 @@
 #pragma once
 
-#include <algorithm>
-#include <exception>
 #include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -27,9 +25,11 @@ struct VertexAtrribute {
 				return VK_FORMAT_R32G32B32_SFLOAT;
 			case 4:
 				return VK_FORMAT_R32G32B32A32_SFLOAT;
+			default:
+				throw std::runtime_error("Invalid count for vertex attribute");
 			}
 		default:
-			throw std::runtime_error("Invalid count for vertex attribute");
+			throw std::runtime_error("Unrecognized vertex attribute type!");
 		}
 	}
 

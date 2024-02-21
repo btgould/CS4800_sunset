@@ -2,21 +2,17 @@
 
 #include <unordered_map>
 #include <vulkan/vulkan_core.h>
-#include <fstream>
 #include <vector>
 
 #include "renderer/texture.hpp"
 #include "util/constants.hpp"
 
 #include "device.hpp"
-#include "instance.hpp"
 
-#include "renderer/index_buffer.hpp"
 #include "renderer/vertex_buffer.hpp"
-#include "renderer/vertex_array.hpp"
+#include "vertex_array.hpp"
 #include "swapchain.hpp"
 #include "util/memory.hpp"
-#include "window.hpp"
 
 struct PipelineConfigInfo {
 	VkViewport viewport;
@@ -30,6 +26,13 @@ struct PipelineConfigInfo {
 	VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
 };
 
+/**
+ * @class VulkanPipeline
+ * @brief Class describing a rendering pipeline to be used for a specific set of resources
+ *
+ * Should NOT be instantiated directly, instead use the PipelineBuilder class
+ *
+ */
 class VulkanPipeline {
   public:
 	VulkanPipeline(VulkanDevice& device, const VulkanSwapChain& swapChain);

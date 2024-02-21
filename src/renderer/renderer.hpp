@@ -7,11 +7,11 @@
 #include "bootstrap/device.hpp"
 #include "bootstrap/pipeline.hpp"
 #include "bootstrap/swapchain.hpp"
+#include "bootstrap/vertex_array.hpp"
 
 #include "renderer/model.hpp"
 #include "renderer/vertex_buffer.hpp"
 #include "renderer/index_buffer.hpp"
-#include "renderer/vertex_array.hpp"
 
 struct LightSource {
 	alignas(16) glm::vec3 pos;

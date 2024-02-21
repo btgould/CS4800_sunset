@@ -1,18 +1,14 @@
 #include "pipeline.hpp"
 
-#include "instance.hpp"
 #include "renderer/texture_lib.hpp"
 #include "util/constants.hpp"
 #include "util/memory.hpp"
-#include "util/profiler.hpp"
 
 #include <array>
 #include <cstring>
 #include <glm/common.hpp>
 #include <glm/fwd.hpp>
-#include <utility>
 #include <vulkan/vulkan_core.h>
-#include <chrono>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
