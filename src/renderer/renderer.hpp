@@ -1,6 +1,5 @@
 #pragma once
 
-#include <map>
 #include <string>
 #include <vulkan/vulkan_core.h>
 
@@ -32,17 +31,21 @@ class VulkanRenderer {
 	void updatePushConstant(const std::string& name, const void* data);
 
   private:
+	void findOrBuildPipeline(const Model& model);
+
+  private:
 	/* The swapchain the render images to */
-	Ref<VulkanSwapChain>m_swapChain;
+	Ref<VulkanSwapChain> m_swapChain;
 
 	/* Device to execute the rendering on */
 	Ref<VulkanDevice> m_device;
 
 	PipelineBuilder m_pipelineBuilder;
-	Ref<VulkanPipeline> m_pipeline;
+	std::vector<Ref<VulkanPipeline>> m_pipelines;
+	Ref<VulkanPipeline> m_activePipeline;
 
-	std::map<std::string, uint32_t> m_uniformIDs;
-	std::map<std::string, uint32_t> m_pushConstantIDs;
+	const VertexArray m_defaultVA;
+	const std::vector<Ref<Texture>> m_textures;
 
 	/* Buffer holding all the drawing commands for the current frame */
 	VkCommandBuffer m_commandBuffer;

@@ -47,6 +47,7 @@ struct VertexAtrribute {
 class VertexArray {
   public:
 	VertexArray();
+	VertexArray(std::vector<VertexAtrribute>&& attribs);
 	~VertexArray();
 
   public:

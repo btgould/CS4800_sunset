@@ -11,6 +11,7 @@
 #include "renderer/texture_lib.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
+#include "util/log.hpp"
 
 static void check_vk_result(VkResult err) {
 	if (err == 0)
@@ -23,23 +24,18 @@ static void check_vk_result(VkResult err) {
 VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> device,
                                Ref<GLFWWindow> window)
 	: m_swapChain(CreateRef<VulkanSwapChain>(instance, device, window)), m_device(device),
-	  m_pipelineBuilder(device, m_swapChain) {
-
-	// Configure and create pipeline
-	VertexArray defaultVA;
-	defaultVA.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}); // pos
-	defaultVA.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}); // normal
-	defaultVA.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}); // color
-	defaultVA.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}); // uv
-
+	  m_pipelineBuilder(device, m_swapChain),
+	  m_defaultVA({{VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}, // pos
+                   {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}, // normal
+                   {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}, // color
+                   {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}} // uv
+                  ),
+	  m_textures({TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
+                  TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"),
+                  TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png")}) {
 	auto shader = ShaderLibrary::get()->getShader(m_device, "triangle");
-
-	const std::vector<Ref<Texture>> textures = {
-		TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
-		TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"),
-		TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png")};
-
-	m_pipeline = m_pipelineBuilder.buildPipeline(defaultVA, shader, textures);
+	m_pipelines.push_back(m_pipelineBuilder.buildPipeline(m_defaultVA, shader, m_textures));
+	m_activePipeline = m_pipelines[0];
 
 	// Setup ImGui
 	IMGUI_CHECKVERSION();
@@ -62,7 +58,7 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	init_info.QueueFamily = m_device->getQueueFamilyIndices().graphicsFamily.value();
 	init_info.Queue = m_device->getGraphicsQueue();
 	init_info.PipelineCache = VK_NULL_HANDLE;
-	init_info.DescriptorPool = m_pipeline->getDescriptorPool();
+	init_info.DescriptorPool = m_pipelines[0]->getDescriptorPool();
 	init_info.Subpass = 0;
 	init_info.MinImageCount = 2; // Just choosing the minimum here for simplicity
 	init_info.ImageCount = 2;
@@ -118,7 +114,7 @@ void VulkanRenderer::beginScene() {
 	vkCmdBeginRenderPass(m_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	// Bind pipeline
-	m_pipeline->bind(m_commandBuffer);
+	m_pipelines[0]->bind(m_commandBuffer);
 
 	// New ImGui Frame
 	ImGui_ImplVulkan_NewFrame();
@@ -130,17 +126,22 @@ void VulkanRenderer::draw(VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer) 
 	vertexBuffer.bind(m_commandBuffer);
 	indexBuffer.bind(m_commandBuffer);
 
-	m_pipeline->bindDescriptorSets(m_commandBuffer, m_currentFrame);
+	m_pipelines[0]->bindDescriptorSets(m_commandBuffer, m_currentFrame);
 
 	// Draw
+	// TODO: check here if pipeline's shader is compatible with vertex buffer. May not be
 	vkCmdDrawIndexed(m_commandBuffer, indexBuffer.size(), 1, 0, 0, 0);
 }
 
 void VulkanRenderer::draw(Model& model) {
+	if (!m_activePipeline->canRender(model)) {
+		findOrBuildPipeline(model);
+	}
+
 	model.bind(m_commandBuffer);
 
-	m_pipeline->bindTexture(model.getTexture());
-	m_pipeline->bindDescriptorSets(m_commandBuffer, m_currentFrame);
+	m_activePipeline->bindTexture(model.getTexture());
+	m_activePipeline->bindDescriptorSets(m_commandBuffer, m_currentFrame);
 
 	updatePushConstant("modelTRS", glm::value_ptr(model.getTransform().getTRS()));
 
@@ -150,6 +151,9 @@ void VulkanRenderer::draw(Model& model) {
 
 void VulkanRenderer::endScene() {
 	// Record ImGui Frame
+	m_activePipeline = m_pipelines[0];
+	m_activePipeline->bind(m_commandBuffer);
+
 	ImGui::Render();
 	ImDrawData* draw_data = ImGui::GetDrawData();
 	ImGui_ImplVulkan_RenderDrawData(draw_data, m_commandBuffer);
@@ -176,9 +180,34 @@ void VulkanRenderer::endScene() {
 }
 
 void VulkanRenderer::updateUniform(std::string name, void* data) {
-	m_pipeline->writeUniform(name, data, m_currentFrame);
+	for (auto pipeline : m_pipelines) {
+		pipeline->writeUniform(name, data, m_currentFrame);
+	}
 }
 
 void VulkanRenderer::updatePushConstant(const std::string& name, const void* data) {
-	m_pipeline->writePushConstant(m_commandBuffer, name, data, m_currentFrame);
+	for (auto pipeline : m_pipelines) {
+		pipeline->writePushConstant(m_commandBuffer, name, data, m_currentFrame);
+	}
+}
+
+void VulkanRenderer::findOrBuildPipeline(const Model& model) {
+	bool compatiblePipeline = false;
+	for (const auto pipeline : m_pipelines) {
+		if (pipeline->canRender(model)) {
+			m_activePipeline = pipeline;
+			pipeline->bind(m_commandBuffer);
+			compatiblePipeline = true;
+			break;
+		}
+	}
+
+	if (!compatiblePipeline) {
+		LOG_WARN("Pipeline-model mismatch!");
+		LOG_INFO("Constructing new pipeline");
+		auto pipeline = m_pipelineBuilder.buildPipeline(m_defaultVA, model.getShader(), m_textures);
+		m_activePipeline = pipeline;
+		pipeline->bind(m_commandBuffer);
+		m_pipelines.push_back(pipeline);
+	}
 }

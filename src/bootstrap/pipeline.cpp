@@ -2,17 +2,17 @@
 
 #include <array>
 #include <cstring>
-#include <fstream>
+#include <stdexcept>
 #include <glm/common.hpp>
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 #include "renderer/texture_lib.hpp"
 #include "util/constants.hpp"
 #include "util/memory.hpp"
+#include "util/log.hpp"
 
 VulkanPipeline::VulkanPipeline(Ref<VulkanDevice> device, const Ref<VulkanSwapChain> swapChain)
 	: m_device(device), m_swapChain(swapChain) {}
@@ -144,7 +144,8 @@ void VulkanPipeline::writePushConstant(VkCommandBuffer commandBuffer, const std:
 
 	if (pushConstantID == m_pushConstantIDs.end()) {
 		// push constant name was not found
-		throw std::runtime_error("Unrecognized push constant name: " + name);
+		LOG_TRACE("Truing to write unrecognized push constant {0}", name);
+		return;
 	}
 	VkPushConstantRange pushConstant = m_pushConstants[pushConstantID->second];
 
@@ -176,7 +177,8 @@ void VulkanPipeline::writeUniform(const std::string& name, void* data, uint32_t 
 
 	if (uniformID == m_uniformIDs.end()) {
 		// uniform name was not found
-		throw std::runtime_error("Unrecognized uniform name: " + name);
+		LOG_TRACE("Trying to write unrecognized uniform: {0}", name);
+		return;
 	}
 
 	memcpy(m_uniformBuffersMapped[uniformID->second][currentFrame], data,
@@ -293,8 +295,7 @@ void VulkanPipeline::createTextureSampler() {
 	}
 }
 
-bool VulkanPipeline::canRender(const Model& model)
-{
+bool VulkanPipeline::canRender(const Model& model) {
 	return model.getShader() == m_shader;
 }
 

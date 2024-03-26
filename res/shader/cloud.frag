@@ -11,7 +11,7 @@ layout(set = 0, binding = 2) uniform CLOUD2 {
 } cloud2;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
-layout(set = 1, binding = 1) uniform sampler2D normSampler;
+layout(set = 1, binding = 1) uniform sampler2D normSampler; // TODO: Don't need this
 
 layout(location = 0) in vec3 fragPos;
 
@@ -109,4 +109,6 @@ void main() {
 		vec3 baseColor = intensity * vec3(0.9f, 0.9f, 0.9f) + 0.1 * cnoise(fragPos / 10);
 		outColor = vec4(baseColor, 0.8f);
 	}
+
+	// outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 }

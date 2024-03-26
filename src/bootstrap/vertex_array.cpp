@@ -4,6 +4,8 @@
 
 VertexArray::VertexArray() {}
 
+VertexArray::VertexArray(std::vector<VertexAtrribute>&& attribs) : m_attribs(std::move(attribs)) {}
+
 VertexArray::~VertexArray() {}
 
 void VertexArray::push(VertexAtrribute attr) {

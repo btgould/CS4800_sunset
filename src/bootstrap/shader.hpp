@@ -1,12 +1,13 @@
 #pragma once
 
-#include "bootstrap/device.hpp"
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include <array>
-#include <vulkan/vulkan_core.h>
 #include <glm/glm.hpp>
+#include <vulkan/vulkan_core.h>
+
+#include "bootstrap/device.hpp"
 
 struct PipelineDescriptor {
 	VkShaderStageFlagBits stage;
