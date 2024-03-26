@@ -13,6 +13,7 @@
 
 class Model {
   public:
+	// PERF: I should memos this, so I don't duplicate vertex data in CPU memory
 	Model(Ref<VulkanDevice> device, const std::string& modelPath, Ref<Texture> tex,
 	      Ref<Shader> shader);
 	~Model() = default;

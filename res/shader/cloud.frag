@@ -1,19 +1,11 @@
 #version 450
 
-layout(set = 0, binding = 1) uniform CLOUD {
-    vec3 pos;
-	vec3 scale;
-} cloud;
-
-layout(set = 0, binding = 2) uniform CLOUD2 {
-    vec3 pos;
-	vec3 scale;
-} cloud2;
-
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
 layout(set = 1, binding = 1) uniform sampler2D normSampler; // TODO: Don't need this
 
 layout(location = 0) in vec3 fragPos;
+layout(location = 1) in vec3 cloudPos;
+layout(location = 2) in vec3 cloudScale;
 
 layout(location = 0) out vec4 outColor;
 
@@ -91,24 +83,11 @@ float cnoise(vec3 P) {
 }
 
 void main() {
-	// Still ugly hack - need to rework this to use model TRS
-	vec3 fragDist = (fragPos - cloud.pos) / cloud.scale;
-	if (length(fragDist) < 1.1) {
-		float normalizedHeight = (fragPos.z - cloud.pos.z) / cloud.scale.z;
-		normalizedHeight = (normalizedHeight + 1) / 2;
-		float intensity = pow(normalizedHeight, 0.5); 
-		vec3 baseColor = intensity * vec3(0.9f, 0.9f, 0.9f) + 0.1 * cnoise(fragPos / 10);
-		outColor = vec4(baseColor, 0.8f);
-	}
-
-	fragDist = (fragPos - cloud2.pos) / cloud2.scale;
-	if (length(fragDist) < 1.1) {
-		float normalizedHeight = (fragPos.z - cloud2.pos.z) / cloud2.scale.z;
-		normalizedHeight = (normalizedHeight + 1) / 2;
-		float intensity = pow(normalizedHeight, 0.5); 
-		vec3 baseColor = intensity * vec3(0.9f, 0.9f, 0.9f) + 0.1 * cnoise(fragPos / 10);
-		outColor = vec4(baseColor, 0.8f);
-	}
+	float normalizedHeight = (fragPos.z - cloudPos.z) / cloudScale.z;
+	normalizedHeight = (normalizedHeight + 1) / 2;
+	float intensity = pow(normalizedHeight, 0.5); 
+	vec3 baseColor = intensity * vec3(0.9f, 0.9f, 0.9f) + 0.1 * cnoise(fragPos / 10);
+	outColor = vec4(baseColor, 0.8f);
 
 	// outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 }

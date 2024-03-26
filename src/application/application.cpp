@@ -46,13 +46,11 @@ void Application::run() {
 	            ShaderLibrary::get()->getShader(m_device, "cloud"));
 	cloud.getTransform().setTranslation(glm::vec3(-100.0f, -250.0f, 100.0f));
 	cloud.getTransform().setScale(glm::vec3(100.0f, 150.0f, 50.0f));
-	Cloud u_cloud {cloud.getTransform().getTranslation(), cloud.getTransform().getScale()};
 	Model cloud2(m_device, "res/model/cloud.obj",
 	             TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
 	             ShaderLibrary::get()->getShader(m_device, "cloud"));
 	cloud2.getTransform().setTranslation(glm::vec3(-30.0f, 100.0f, 100.0f));
 	cloud2.getTransform().setScale(glm::vec3(100.0f, 150.0f, 50.0f));
-	Cloud u_cloud2 {cloud2.getTransform().getTranslation(), cloud2.getTransform().getScale()};
 
 	LightSource light;
 	light.pos = glm::vec3(-630.0f, -500.0f, 267.0f);
@@ -83,8 +81,6 @@ void Application::run() {
 		m_camController->OnUpdate(dt);
 		glm::mat4 camVP = m_camera->getVP();
 		m_renderer->updateUniform("camVP", &camVP);
-		m_renderer->updateUniform("cloud", &u_cloud);
-		m_renderer->updateUniform("cloud2", &u_cloud2);
 		m_renderer->updateUniform("light", &light); // do this in loop b/c >1 framebuffers
 	}
 

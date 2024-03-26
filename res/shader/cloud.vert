@@ -14,6 +14,8 @@ layout(location = 2) in vec3 inColor;
 layout(location = 3) in vec2 inTexCoord;
 
 layout(location = 0) out vec3 fragPos;
+layout(location = 1) out vec3 cloudPos;
+layout(location = 2) out vec3 cloudScale;
 
 // Generic noise from https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83 
 float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
@@ -46,4 +48,10 @@ void main() {
 	fragPos = vec3(trs.trs * vec4(inPosition, 1.0));
 	gl_Position = camVP.vp * vec4(fragPos, 1.0);
 	gl_Position = gl_Position + 30 * noise(fragPos / 10); // random cloud geometry
+
+	cloudPos = vec3(trs.trs[3]);
+	cloudScale = vec3(0);
+	cloudScale.x = sign(trs.trs[0][0]) * length(vec3(trs.trs[0]));
+	cloudScale.y = sign(trs.trs[1][1]) * length(vec3(trs.trs[1]));
+	cloudScale.z = sign(trs.trs[2][2]) * length(vec3(trs.trs[2]));
 }
