@@ -7,6 +7,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "bootstrap/shader.hpp"
+#include "renderer/model.hpp"
 #include "renderer/texture.hpp"
 #include "util/constants.hpp"
 
@@ -39,12 +40,26 @@ class VulkanPipeline {
 	friend class PipelineBuilder;
 
   private:
-
   public:
 	VulkanPipeline(Ref<VulkanDevice> device, const Ref<VulkanSwapChain> swapChain);
 	~VulkanPipeline();
 
   public:
+	void writeUniform(const std::string& name, void* data, uint32_t currentFrame);
+	inline void setActiveTexture(const Ref<Texture> tex) { m_activeTex = tex; }
+	void writePushConstant(VkCommandBuffer commandBuffer, const std::string& name, const void* data,
+	                       uint32_t currentFrame);
+
+	void bind(VkCommandBuffer commandBuffer);
+	void bindTexture(Ref<Texture> tex);
+	void bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame);
+
+	bool canRender(const Model& model);
+
+	// HACK: this exists solely to satisfy ImGui
+	VkDescriptorPool getDescriptorPool() const { return m_descriptorPool; }
+
+  private: // core interface
 	/**
 	 * @brief Creates the pipeline object on the GPU
 	 *
@@ -54,35 +69,17 @@ class VulkanPipeline {
 	void create();
 
 	void setVertexArray(const VertexArray& vertexArray);
-
 	void setShader(const Ref<Shader> shader);
-
-	uint32_t pushUniform(const PipelineDescriptor& uniform);
-	void writeUniform(const std::string& name, void* data, uint32_t currentFrame);
-
-	void pushTexture(const Ref<Texture> tex);
-	inline void setActiveTexture(const Ref<Texture> tex) { m_activeTex = tex; }
-
 	uint32_t setPushConstant(const PipelineDescriptor& pushConstant);
-	void writePushConstant(VkCommandBuffer commandBuffer, const std::string& name, const void* data,
-	                       uint32_t currentFrame);
+	uint32_t pushUniform(const PipelineDescriptor& uniform);
+	void pushTexture(const Ref<Texture> tex);
 
-	void bind(VkCommandBuffer commandBuffer);
-	void bindTexture(Ref<Texture> tex);
-	void bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame);
-
-	// HACK: this exists solely to satisfy ImGui
-	VkDescriptorPool getDescriptorPool() const { return m_descriptorPool; }
-
-  private: // core interface
 	void createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
 	                            std::vector<VkVertexInputAttributeDescription> attrDesc,
 	                            VkRenderPass renderPass);
 	void createTextureSampler();
 
   private: // helper
-	static std::vector<char> readFile(const std::string& filename);
-	VkShaderModule createShaderModule(const std::vector<char>& code);
 	void createDescriptorSetLayout();
 	void createDescriptorPool();
 	void createDescriptorSets();
