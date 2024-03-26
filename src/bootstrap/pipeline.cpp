@@ -41,7 +41,6 @@ void VulkanPipeline::create() {
 		throw(std::runtime_error("Tried to instantiate a pipeline without a shader!"));
 	}
 
-
 	setPushConstant(m_shader->getPushConstant());
 	for (const auto& uniform : m_shader->getUniforms()) {
 		pushUniform(uniform);

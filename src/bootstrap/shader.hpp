@@ -51,11 +51,13 @@ class Shader {
 	const inline PipelineDescriptor& getPushConstant() const { return m_pushConstant; }
 
 	/**
-	 * @brief Gets the set of uniforms available for this shader 
+	 * @brief Gets the set of uniforms available for this shader
 	 *
-	 * An uniform is a block of variable data used by the shader. Shaders can have many uniforms, of many different types. Any change to uniform values is not synchronized with the rendering pipeline. Thus, uniforms should only be changed between frames, never during rendering. 
+	 * An uniform is a block of variable data used by the shader. Shaders can have many uniforms, of
+	 * many different types. Any change to uniform values is not synchronized with the rendering
+	 * pipeline. Thus, uniforms should only be changed between frames, never during rendering.
 	 *
-	 * @return A vector of structs describing the uniforms used by this shader. 
+	 * @return A vector of structs describing the uniforms used by this shader.
 	 */
 	const inline std::vector<PipelineDescriptor>& getUniforms() const { return m_uniforms; }
 	const inline std::array<VkPipelineShaderStageCreateInfo, 2> getShaderStages() const {

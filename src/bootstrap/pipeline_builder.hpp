@@ -11,7 +11,8 @@
 
 /**
  * @class PipelineBuilder
- * @brief Instantiates VulkanPipeline objects, performing all needed setup so that the obtained objects are ready to use
+ * @brief Instantiates VulkanPipeline objects, performing all needed setup so that the obtained
+ * objects are ready to use
  *
  */
 class PipelineBuilder {
