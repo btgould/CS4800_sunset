@@ -25,9 +25,6 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	: m_swapChain(CreateRef<VulkanSwapChain>(instance, device, window)), m_device(device),
 	  m_pipelineBuilder(device, m_swapChain) {
 
-	// TODO: It would be nice to have a PipelineBuilder class, separate from the Pipeline class for
-	// better RAII
-
 	// Configure and create pipeline
 	VertexArray defaultVA;
 	defaultVA.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}); // pos

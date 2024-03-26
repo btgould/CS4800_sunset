@@ -9,6 +9,11 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+/**
+ * @class PipelineBuilder
+ * @brief Instantiates VulkanPipeline objects, performing all needed setup so that the obtained objects are ready to use
+ *
+ */
 class PipelineBuilder {
   public:
 	PipelineBuilder(Ref<VulkanDevice> device, const Ref<VulkanSwapChain> swapchain);

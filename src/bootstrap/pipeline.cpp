@@ -7,6 +7,7 @@
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 #include "renderer/texture_lib.hpp"
@@ -36,7 +37,11 @@ VulkanPipeline::~VulkanPipeline() {
 
 void VulkanPipeline::create() {
 	// Get uniforms + push constant from shader
-	// TODO: validate shader is non-null
+	if (!m_shader) {
+		throw(std::runtime_error("Tried to instantiate a pipeline without a shader!"));
+	}
+
+
 	setPushConstant(m_shader->getPushConstant());
 	for (const auto& uniform : m_shader->getUniforms()) {
 		pushUniform(uniform);

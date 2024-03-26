@@ -26,15 +26,39 @@ struct Cloud {
 	alignas(16) glm::vec3 scale;
 };
 
+/**
+ * @class Shader
+ * @brief Describes how pixels of a particular object are colored.
+ *
+ */
 class Shader {
   public:
 	Shader(Ref<VulkanDevice> device, const std::string& shaderName);
 	~Shader();
 
   public:
-	const inline PipelineDescriptor& getPushConstant() { return m_pushConstant; }
-	const inline std::vector<PipelineDescriptor>& getUniforms() { return m_uniforms; }
-	const inline std::array<VkPipelineShaderStageCreateInfo, 2> getShaderStages() {
+	/**
+	 * @brief Gets the push constant available for this shader
+	 *
+	 * A push constant is a block of variable data used by the shader. This data can be interpreted
+	 * as many types, and the chosen type is controlled by the shader source code. Each shader can
+	 * have only one push constant.
+	 *
+	 * Unlike uniforms, push constants can be changed in the middle of a frame.
+	 *
+	 * @return A struct describing the push constant used by this shader
+	 */
+	const inline PipelineDescriptor& getPushConstant() const { return m_pushConstant; }
+
+	/**
+	 * @brief Gets the set of uniforms available for this shader 
+	 *
+	 * An uniform is a block of variable data used by the shader. Shaders can have many uniforms, of many different types. Any change to uniform values is not synchronized with the rendering pipeline. Thus, uniforms should only be changed between frames, never during rendering. 
+	 *
+	 * @return A vector of structs describing the uniforms used by this shader. 
+	 */
+	const inline std::vector<PipelineDescriptor>& getUniforms() const { return m_uniforms; }
+	const inline std::array<VkPipelineShaderStageCreateInfo, 2> getShaderStages() const {
 		return m_shaderStages;
 	}
 
