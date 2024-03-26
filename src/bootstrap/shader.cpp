@@ -8,10 +8,24 @@
 
 // HACK: both of these maps can theoretically be generated at runtime by parsing the shader source
 // code. However, I really don't want to do that.
-std::unordered_map<std::string, PipelineDescriptor> Shader::s_pushConstantMap = {{
-	"triangle",
-	{VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "modelTRS"},
-}};
+std::unordered_map<std::string, PipelineDescriptor> Shader::s_pushConstantMap = {
+	{
+		"triangle",
+		{VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "modelTRS"},
+	},
+	{
+		"model",
+		{VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "modelTRS"},
+	},
+	{
+		"cloud",
+		{VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "modelTRS"},
+	},
+	{
+		"skybox",
+		{VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "modelTRS"},
+	},
+};
 
 std::unordered_map<std::string, std::vector<PipelineDescriptor>> Shader::s_uniformMap = {
 	{"triangle",
@@ -20,6 +34,21 @@ std::unordered_map<std::string, std::vector<PipelineDescriptor>> Shader::s_unifo
 		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Cloud), "cloud"},
 		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Cloud), "cloud2"},
 		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(LightSource), "light"},
+	 }},
+	{"model",
+     {
+		 {VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "camVP"},
+		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(LightSource), "light"},
+	 }},
+	{"cloud",
+     {
+		 {VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "camVP"},
+		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Cloud), "cloud"},
+		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Cloud), "cloud2"},
+	 }},
+	{"skybox",
+     {
+		 {VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "camVP"},
 	 }},
 };
 

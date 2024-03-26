@@ -7,7 +7,7 @@
 #include <backends/imgui_impl_vulkan.h>
 
 #include "bootstrap/pipeline.hpp"
-#include "bootstrap/shader.hpp"
+#include "bootstrap/shader_lib.hpp"
 #include "renderer/texture_lib.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
@@ -32,7 +32,7 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	defaultVA.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}); // color
 	defaultVA.push({VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}); // uv
 
-	auto shader = CreateRef<Shader>(m_device, "triangle");
+	auto shader = ShaderLibrary::get()->getShader(m_device, "triangle");
 
 	const std::vector<Ref<Texture>> textures = {
 		TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),

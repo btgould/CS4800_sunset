@@ -4,6 +4,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "bootstrap/device.hpp"
+#include "bootstrap/shader.hpp"
 #include "renderer/transform.hpp"
 #include "renderer/index_buffer.hpp"
 #include "renderer/texture.hpp"
@@ -12,7 +13,8 @@
 
 class Model {
   public:
-	Model(Ref<VulkanDevice> device, const std::string& modelPath, Ref<Texture> tex);
+	Model(Ref<VulkanDevice> device, const std::string& modelPath, Ref<Texture> tex,
+	      Ref<Shader> shader);
 	~Model() = default;
 
 	Model(const Model&) = delete;
@@ -24,11 +26,13 @@ class Model {
 
 	inline uint32_t numIndices() { return m_indices->size(); }
 	inline Transform& getTransform() { return m_transform; }
+	inline const Ref<Shader> getShader() const { return m_shader; }
 
   private:
 	ScopedRef<VertexBuffer> m_vertices;
 	ScopedRef<IndexBuffer> m_indices;
 	Ref<Texture> m_texture;
+	Ref<Shader> m_shader;
 
 	Transform m_transform;
 };

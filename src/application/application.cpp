@@ -4,6 +4,7 @@
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
 
+#include "bootstrap/shader_lib.hpp"
 #include "imgui.h"
 
 #include "renderer/renderer.hpp"
@@ -30,21 +31,25 @@ Application::Application()
 
 void Application::run() {
 	Model model(m_device, "res/model/mountain.obj",
-	            TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"));
+	            TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
+	            ShaderLibrary::get()->getShader(m_device, "model"));
 
 	Model skybox(m_device, "res/skybox/skybox.obj",
-	             TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png"));
+	             TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png"),
+	             ShaderLibrary::get()->getShader(m_device, "skybox"));
 	skybox.getTransform().setScale(glm::vec3(1000.0f, 1000.0f, 1000.0f));
 	skybox.getTransform().setTranslation(glm::vec3(300.0f, -500.0f, -300.0f));
 	skybox.getTransform().rotateAbout(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(-90.0f));
 
 	Model cloud(m_device, "res/model/cloud.obj",
-	            TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"));
+	            TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
+	            ShaderLibrary::get()->getShader(m_device, "cloud"));
 	cloud.getTransform().setTranslation(glm::vec3(-100.0f, -250.0f, 100.0f));
 	cloud.getTransform().setScale(glm::vec3(100.0f, 150.0f, 50.0f));
 	Cloud u_cloud {cloud.getTransform().getTranslation(), cloud.getTransform().getScale()};
 	Model cloud2(m_device, "res/model/cloud.obj",
-	             TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"));
+	             TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
+	             ShaderLibrary::get()->getShader(m_device, "cloud"));
 	cloud2.getTransform().setTranslation(glm::vec3(-30.0f, 100.0f, 100.0f));
 	cloud2.getTransform().setScale(glm::vec3(100.0f, 150.0f, 50.0f));
 	Cloud u_cloud2 {cloud2.getTransform().getTranslation(), cloud2.getTransform().getScale()};
@@ -88,4 +93,5 @@ void Application::run() {
 
 void Application::shutdown() {
 	TextureLibrary::get()->cleanup();
+	ShaderLibrary::get()->cleanup();
 }

@@ -11,8 +11,9 @@
 #include <stdexcept>
 #include <unordered_map>
 
-Model::Model(Ref<VulkanDevice> device, const std::string& modelPath, Ref<Texture> tex)
-	: m_texture(tex) {
+Model::Model(Ref<VulkanDevice> device, const std::string& modelPath, Ref<Texture> tex,
+             Ref<Shader> shader)
+	: m_texture(tex), m_shader(shader) {
 	// Load model data
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -27,6 +28,10 @@ Model::Model(Ref<VulkanDevice> device, const std::string& modelPath, Ref<Texture
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
 
+	// TODO: I think I can generalize this if I pass a VertexArray to the Model constructor.
+	// I will have to add a "name" field to the VertexArray struct, and do some funky math with
+	// offsetof. However, this should help with not loading unnecessary data and with checking
+	// pipeline / model compatibility. VertexBuffer class is already general enough
 	for (const auto& shape : shapes) {
 		for (const auto& index : shape.mesh.indices) {
 			Vertex vertex {};
@@ -39,9 +44,9 @@ Model::Model(Ref<VulkanDevice> device, const std::string& modelPath, Ref<Texture
 			                 attrib.normals[3 * index.vertex_index + 1],
 			                 attrib.normals[3 * index.vertex_index + 2]};
 
+			vertex.color = {1.0f, 1.0f, 1.0f};
 			vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
 			                   1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
-			vertex.color = {1.0f, 1.0f, 1.0f};
 
 			if (uniqueVertices.count(vertex) == 0) {
 				uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());

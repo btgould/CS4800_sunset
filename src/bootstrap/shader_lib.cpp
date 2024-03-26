@@ -17,7 +17,7 @@ Ref<Shader> ShaderLibrary::getShader(Ref<VulkanDevice> device, const std::string
 	if (m_shaderMap.find(name) != m_shaderMap.end()) {
 		return m_shaderMap[name];
 	} else {
-		auto shader = CreateRef<Shader>(name, device);
+		auto shader = CreateRef<Shader>(device, name);
 		m_shaderMap[name] = shader;
 		return shader;
 	}
