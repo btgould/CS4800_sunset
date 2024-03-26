@@ -1,8 +1,6 @@
 #pragma once
 
-#include <array>
 #include <glm/glm.hpp>
-#include <vector>
 #include <vulkan/vulkan_core.h>
 
 #include "bootstrap/device.hpp"
@@ -21,7 +19,7 @@ class VertexBuffer {
 	 * @param vertices Array of vertices, each of which must have the same set and order of
 	 * attributes
 	 */
-	VertexBuffer(VulkanDevice& device, void* data, uint32_t vertexSize, uint32_t count);
+	VertexBuffer(Ref<VulkanDevice> device, void* data, uint32_t vertexSize, uint32_t count);
 
 	/**
 	 * @brief Frees memory allocated on the GPU for this buffer
@@ -29,7 +27,6 @@ class VertexBuffer {
 	~VertexBuffer();
 
 	VertexBuffer(const VertexBuffer&) = delete;
-	VertexBuffer& operator=(const VertexBuffer&) = delete;
 
 	/**
 	 * @brief "Activates" this buffer, causing it to be used for the next draw call
@@ -42,7 +39,7 @@ class VertexBuffer {
 
   private:
 	/* Device to store this buffer on */
-	VulkanDevice& m_device;
+	Ref<VulkanDevice> m_device;
 
 	void* m_data;
 	uint32_t m_vertexSize;

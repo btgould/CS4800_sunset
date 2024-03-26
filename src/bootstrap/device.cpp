@@ -9,7 +9,7 @@
 #include <set>
 #include <vulkan/vulkan_core.h>
 
-VulkanDevice::VulkanDevice(const VulkanInstance& instance) {
+VulkanDevice::VulkanDevice(const Ref<VulkanInstance> instance) {
 	pickPhysicalDevice(instance);
 	createLogicalDevice();
 	createCommandPool();
@@ -212,13 +212,13 @@ void VulkanDevice::flush() {
 	vkDeviceWaitIdle(m_logicalDevice);
 }
 
-void VulkanDevice::pickPhysicalDevice(const VulkanInstance& instance) {
+void VulkanDevice::pickPhysicalDevice(const Ref<VulkanInstance> instance) {
 	m_physicalDevice = VK_NULL_HANDLE;
 
 	// select first suitable physical device
-	auto surface = instance.getSurface();
+	auto surface = instance->getSurface();
 
-	for (const auto& device : instance.getPhysicalDevices()) {
+	for (const auto& device : instance->getPhysicalDevices()) {
 		if (isDeviceSuitable(device, surface)) {
 			m_physicalDevice = device;
 			m_queueFamilyIndices = findQueueFamilies(device, surface);

@@ -2,7 +2,6 @@
 
 #include <map>
 #include <string>
-#include <unordered_map>
 
 #include "bootstrap/device.hpp"
 #include "renderer/texture.hpp"
@@ -16,11 +15,10 @@ class TextureLibrary {
 	~TextureLibrary() = default;
 
 	TextureLibrary(const TextureLibrary&) = delete;
-	TextureLibrary& operator=(const TextureLibrary&) = delete;
 
   public:
 	static TextureLibrary* get();
-	Ref<Texture> getTexture(VulkanDevice& device, const std::string& filepath);
+	Ref<Texture> getTexture(Ref<VulkanDevice> device, const std::string& filepath);
 	void cleanup();
 
   private:

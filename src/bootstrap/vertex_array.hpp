@@ -49,9 +49,6 @@ class VertexArray {
 	VertexArray();
 	~VertexArray();
 
-	VertexArray(const VertexArray&) = delete;
-	VertexArray& operator=(const VertexArray&) = delete;
-
   public:
 	void push(VertexAtrribute attr);
 

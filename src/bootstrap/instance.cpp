@@ -10,7 +10,7 @@
 // Core Interface
 // ================================================================================
 
-VulkanInstance::VulkanInstance(GLFWWindow& window) : m_window(window) {
+VulkanInstance::VulkanInstance(Ref<GLFWWindow> window) : m_window(window) {
 	init();
 }
 
@@ -137,7 +137,7 @@ void VulkanInstance::setupDebugMessenger() {
 }
 
 void VulkanInstance::createSurface() {
-	m_window.createSurface(m_instance, &m_surface);
+	m_window->createSurface(m_instance, &m_surface);
 }
 
 // ================================================================================

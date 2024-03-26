@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -10,8 +9,6 @@
 #include "bootstrap/device.hpp"
 #include "bootstrap/instance.hpp"
 #include "bootstrap/window.hpp"
-#include "renderer/index_buffer.hpp"
-#include "renderer/vertex_buffer.hpp"
 #include "renderer/renderer.hpp"
 #include "renderer/camera.hpp"
 
@@ -46,17 +43,17 @@ class Application {
   public:
 	void run();
 	void shutdown();
-	inline const GLFWWindow& getWindow() const { return m_window; }
+	inline const Ref<GLFWWindow> getWindow() const { return m_window; }
 
   private:
 	static Application* s_instance;
 
-	GLFWWindow m_window;
-	VulkanInstance m_instance;
-	VulkanDevice m_device;
-	VulkanRenderer m_renderer;
-	Camera m_camera;
-	CameraController m_camController;
+	Ref<GLFWWindow> m_window;
+	Ref<VulkanInstance> m_instance;
+	Ref<VulkanDevice> m_device;
+	Ref<VulkanRenderer> m_renderer;
+	Ref<Camera> m_camera;
+	Ref<CameraController> m_camController;
 
 	double m_time;
 };

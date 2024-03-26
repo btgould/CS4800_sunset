@@ -10,7 +10,7 @@
 #include "input.hpp"
 #include "util/log.hpp"
 
-CameraController::CameraController(Camera& cam) : m_cam(cam) {}
+CameraController::CameraController(Ref<Camera> cam) : m_cam(cam) {}
 
 CameraController::~CameraController() {}
 
@@ -33,7 +33,7 @@ void CameraController::checkForTranslation(double dt) {
 		translation += glm::vec3(-1.0f, 0.0f, 0.0f);
 	}
 
-	m_cam.translate(translation * m_translationSpeed * (float) dt);
+	m_cam->translate(translation * m_translationSpeed * (float) dt);
 }
 
 void CameraController::checkForRotation(double dt) {
@@ -46,7 +46,7 @@ void CameraController::checkForRotation(double dt) {
 	m_lastMousePos = newMousePos;
 
 	// don't rotate if mouse out of window or not pressed
-	VkExtent2D screenSize = Application::get().getWindow().getFramebufferSize();
+	VkExtent2D screenSize = Application::get().getWindow()->getFramebufferSize();
 	bool mouseOnScreen = (newMousePos.x > 0 && newMousePos.x < screenSize.width &&
 	                      newMousePos.y > 0 && newMousePos.y < screenSize.height);
 	bool mouseDown = Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_1);
@@ -59,7 +59,7 @@ void CameraController::checkForRotation(double dt) {
 	// Translate screen coordinates to world coords, focus camera
 	glm::vec4 mousePos4 = glm::vec4(2 * displacement.x / screenSize.width,
 	                                2 * displacement.y / screenSize.height, -1, 1);
-	mousePos4 = glm::inverse(m_cam.getVP()) * mousePos4;
+	mousePos4 = glm::inverse(m_cam->getVP()) * mousePos4;
 	mousePos4 /= mousePos4.w;
-	m_cam.lookAt(mousePos4);
+	m_cam->lookAt(mousePos4);
 }

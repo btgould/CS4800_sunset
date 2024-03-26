@@ -10,11 +10,10 @@
 
 class VulkanSwapChain {
   public:
-	VulkanSwapChain(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window);
+	VulkanSwapChain(Ref<VulkanInstance> instance, Ref<VulkanDevice> device, Ref<GLFWWindow> window);
 	~VulkanSwapChain();
 
 	VulkanSwapChain(const VulkanSwapChain&) = delete;
-	VulkanSwapChain& operator=(const VulkanSwapChain&) = delete;
 
 	std::optional<uint32_t> aquireNextFrame(uint32_t currentFrame);
 	void submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages, uint32_t currentFrame);
@@ -31,8 +30,8 @@ class VulkanSwapChain {
 	inline float getAspectRatio() const { return m_extent.width / (float) m_extent.height; }
 
   private:
-	void createSwapChain(const VulkanDevice& device, const GLFWWindow& window,
-	                     const VkSurfaceKHR& surface);
+	void createSwapChain(const Ref<VulkanDevice> device, const Ref<GLFWWindow> window,
+	                     const VkSurfaceKHR surface);
 	void createImageViews();
 	void createRenderPass();
 	void createFramebuffers();
@@ -55,17 +54,17 @@ class VulkanSwapChain {
 	 * @return Extent (in pixels) of the render region
 	 */
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
-	                            const GLFWWindow& window);
+	                            const Ref<GLFWWindow> window);
 	VkFormat findDepthFormat();
 	inline bool hasStencilComponent(VkFormat format) {
 		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
 
   private:
-	VulkanDevice& m_device;
+	Ref<VulkanDevice> m_device;
 
 	// TODO: this is kinda hacky, but I have to save these handles to recreate
-	GLFWWindow& m_window;
+	Ref<GLFWWindow> m_window;
 	const VkSurfaceKHR m_surface;
 
 	VkSwapchainKHR m_swapChain;

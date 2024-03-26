@@ -6,34 +6,21 @@
 
 #include "bootstrap/device.hpp"
 #include "bootstrap/pipeline.hpp"
+#include "bootstrap/pipeline_builder.hpp"
 #include "bootstrap/swapchain.hpp"
-#include "bootstrap/vertex_array.hpp"
 
 #include "renderer/model.hpp"
 #include "renderer/vertex_buffer.hpp"
 #include "renderer/index_buffer.hpp"
 
-struct LightSource {
-	alignas(16) glm::vec3 pos;
-	alignas(16) glm::vec3 color;
-	alignas(4) float ambientStrength;
-	alignas(4) float diffuseStrength;
-};
-
-struct Cloud {
-	alignas(16) glm::vec3 pos;
-	alignas(16) glm::vec3 scale;
-};
-
 class VulkanRenderer {
   public:
-	VulkanRenderer(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window);
+	VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> device, Ref<GLFWWindow> window);
 	~VulkanRenderer();
 
 	VulkanRenderer(const VulkanRenderer&) = delete;
-	VulkanRenderer& operator=(const VulkanRenderer&) = delete;
 
-	inline float getAspectRatio() const { return m_swapChain.getAspectRatio(); }
+	inline float getAspectRatio() const { return m_swapChain->getAspectRatio(); }
 
   public:
 	void beginScene();
@@ -45,17 +32,14 @@ class VulkanRenderer {
 	void updatePushConstant(const std::string& name, const void* data);
 
   private:
-	/* The list attributes each vertex has */
-	VertexArray m_vertexArray;
-
 	/* The swapchain the render images to */
-	VulkanSwapChain m_swapChain;
+	Ref<VulkanSwapChain>m_swapChain;
 
 	/* Device to execute the rendering on */
-	VulkanDevice& m_device;
+	Ref<VulkanDevice> m_device;
 
-	/* The graphics pipeline used to render */
-	VulkanPipeline m_pipeline;
+	PipelineBuilder m_pipelineBuilder;
+	Ref<VulkanPipeline> m_pipeline;
 
 	std::map<std::string, uint32_t> m_uniformIDs;
 	std::map<std::string, uint32_t> m_pushConstantIDs;

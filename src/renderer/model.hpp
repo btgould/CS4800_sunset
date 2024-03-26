@@ -1,20 +1,18 @@
 #pragma once
 
-#include "renderer/transform.hpp"
-#include "util/memory.hpp"
-
-#include "bootstrap/device.hpp"
-
-#include "renderer/index_buffer.hpp"
-#include "renderer/texture.hpp"
-#include "renderer/vertex_buffer.hpp"
-
 #include <string>
 #include <vulkan/vulkan_core.h>
 
+#include "bootstrap/device.hpp"
+#include "renderer/transform.hpp"
+#include "renderer/index_buffer.hpp"
+#include "renderer/texture.hpp"
+#include "renderer/vertex_buffer.hpp"
+#include "util/memory.hpp"
+
 class Model {
   public:
-	Model(VulkanDevice& device, const std::string& modelPath, Ref<Texture> tex);
+	Model(Ref<VulkanDevice> device, const std::string& modelPath, Ref<Texture> tex);
 	~Model() = default;
 
 	Model(const Model&) = delete;

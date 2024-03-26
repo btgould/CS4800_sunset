@@ -10,7 +10,6 @@ class GLFWWindow {
 	~GLFWWindow();
 
 	GLFWWindow(const GLFWWindow&) = delete;
-	GLFWWindow& operator=(const GLFWWindow&) = delete;
 
 	void pollEvents();
 

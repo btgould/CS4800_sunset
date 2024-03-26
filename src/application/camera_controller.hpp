@@ -1,14 +1,12 @@
 #pragma once
 
 #include "renderer/camera.hpp"
+#include "util/memory.hpp"
 
 class CameraController {
   public:
-	CameraController(Camera& cam);
+	CameraController(Ref<Camera> cam);
 	~CameraController();
-
-	CameraController(const CameraController&) = delete;
-	CameraController& operator=(const CameraController&) = delete;
 
   public:
 	/**
@@ -23,7 +21,7 @@ class CameraController {
 	void checkForRotation(double dt);
 
   private:
-	Camera& m_cam;
+	Ref<Camera> m_cam;
 
 	float m_translationSpeed = 8.0f;
 	float m_rotationSpeed = 20.0f;

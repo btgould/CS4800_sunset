@@ -5,17 +5,17 @@
 #include <stdexcept>
 #include <vulkan/vulkan.h>
 
-Texture::Texture(std::string path, VulkanDevice& device) : m_device(device) {
+Texture::Texture(std::string path, Ref<VulkanDevice> device) : m_device(device) {
 	createTextureImage(path);
-	m_textureImageView = m_device.createImageView(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB,
-	                                              VK_IMAGE_ASPECT_COLOR_BIT);
+	m_textureImageView = m_device->createImageView(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB,
+	                                               VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 Texture::~Texture() {
-	vkDestroyImageView(m_device.getLogicalDevice(), m_textureImageView, nullptr);
+	vkDestroyImageView(m_device->getLogicalDevice(), m_textureImageView, nullptr);
 
-	vkDestroyImage(m_device.getLogicalDevice(), m_textureImage, nullptr);
-	vkFreeMemory(m_device.getLogicalDevice(), m_textureImageMemory, nullptr);
+	vkDestroyImage(m_device->getLogicalDevice(), m_textureImage, nullptr);
+	vkFreeMemory(m_device->getLogicalDevice(), m_textureImageMemory, nullptr);
 }
 
 void Texture::createTextureImage(std::string path) {
@@ -31,22 +31,23 @@ void Texture::createTextureImage(std::string path) {
 	// save image to GPU memory
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	m_device.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-	                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-	                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-	                      stagingBuffer, stagingBufferMemory);
+	m_device->createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+	                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+	                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+	                       stagingBuffer, stagingBufferMemory);
 	void* data;
-	vkMapMemory(m_device.getLogicalDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
+	vkMapMemory(m_device->getLogicalDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
 	memcpy(data, pixels, static_cast<size_t>(imageSize));
-	vkUnmapMemory(m_device.getLogicalDevice(), stagingBufferMemory);
+	vkUnmapMemory(m_device->getLogicalDevice(), stagingBufferMemory);
 
 	// Free CPU memory
 	stbi_image_free(pixels);
 
 	// Create image object from buffer (optimized for shading)
-	m_device.createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-	                     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-	                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage, m_textureImageMemory);
+	m_device->createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+	                      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage,
+	                      m_textureImageMemory);
 	// Copy buffer data into image object
 	transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
 	                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -59,13 +60,13 @@ void Texture::createTextureImage(std::string path) {
 	                      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	// Free staging buffer
-	vkDestroyBuffer(m_device.getLogicalDevice(), stagingBuffer, nullptr);
-	vkFreeMemory(m_device.getLogicalDevice(), stagingBufferMemory, nullptr);
+	vkDestroyBuffer(m_device->getLogicalDevice(), stagingBuffer, nullptr);
+	vkFreeMemory(m_device->getLogicalDevice(), stagingBufferMemory, nullptr);
 }
 
 void Texture::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout,
                                     VkImageLayout newLayout) {
-	VkCommandBuffer commandBuffer = m_device.beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = m_device->beginSingleTimeCommands();
 
 	VkImageMemoryBarrier barrier {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -106,11 +107,11 @@ void Texture::transitionImageLayout(VkImage image, VkFormat format, VkImageLayou
 	vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1,
 	                     &barrier);
 
-	m_device.endSingleTimeCommands(commandBuffer);
+	m_device->endSingleTimeCommands(commandBuffer);
 }
 
 void Texture::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-	VkCommandBuffer commandBuffer = m_device.beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = m_device->beginSingleTimeCommands();
 
 	VkBufferImageCopy region {};
 	region.bufferOffset = 0;
@@ -128,5 +129,5 @@ void Texture::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, 
 	vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
 	                       &region);
 
-	m_device.endSingleTimeCommands(commandBuffer);
+	m_device->endSingleTimeCommands(commandBuffer);
 }

@@ -1,22 +1,22 @@
 #include "swapchain.hpp"
 
+#include <algorithm>
+#include <limits>
+#include <stdexcept>
+#include <GLFW/glfw3.h>
+#include <vulkan/vulkan_core.h>
+
 #include "device.hpp"
 #include "instance.hpp"
-#include "pipeline.hpp"
-#include "util/profiler.hpp"
 #include "window.hpp"
+#include "util/profiler.hpp"
 
 #include "util/log.hpp"
 #include "util/constants.hpp"
 
-#include <GLFW/glfw3.h>
-#include <algorithm>
-#include <limits>
-#include <stdexcept>
-#include <vulkan/vulkan_core.h>
-
-VulkanSwapChain::VulkanSwapChain(VulkanInstance& instance, VulkanDevice& device, GLFWWindow& window)
-	: m_device(device), m_window(window), m_surface(instance.getSurface()) {
+VulkanSwapChain::VulkanSwapChain(Ref<VulkanInstance> instance, Ref<VulkanDevice> device,
+                                 Ref<GLFWWindow> window)
+	: m_device(device), m_window(window), m_surface(instance->getSurface()) {
 	createSwapChain(m_device, m_window, m_surface);
 	createImageViews();
 	createRenderPass();
@@ -30,20 +30,20 @@ VulkanSwapChain::~VulkanSwapChain() {
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		// Destroy sync objects
-		vkDestroySemaphore(m_device.getLogicalDevice(), m_imageAvailableSemaphores[i], nullptr);
-		vkDestroySemaphore(m_device.getLogicalDevice(), m_renderFinishedSemaphores[i], nullptr);
-		vkDestroyFence(m_device.getLogicalDevice(), m_inFlightFences[i], nullptr);
+		vkDestroySemaphore(m_device->getLogicalDevice(), m_imageAvailableSemaphores[i], nullptr);
+		vkDestroySemaphore(m_device->getLogicalDevice(), m_renderFinishedSemaphores[i], nullptr);
+		vkDestroyFence(m_device->getLogicalDevice(), m_inFlightFences[i], nullptr);
 	}
 
-	vkDestroyRenderPass(m_device.getLogicalDevice(), m_renderPass, nullptr);
+	vkDestroyRenderPass(m_device->getLogicalDevice(), m_renderPass, nullptr);
 }
 
-void VulkanSwapChain::createSwapChain(const VulkanDevice& device, const GLFWWindow& window,
-                                      const VkSurfaceKHR& surface) {
+void VulkanSwapChain::createSwapChain(const Ref<VulkanDevice> device, const Ref<GLFWWindow> window,
+                                      const VkSurfaceKHR surface) {
 
 	// Get swap chain features supported by GPU
 	// TODO: when allowing resizes, queried extant becomes out of date before recreation
-	SwapChainSupportDetails swapChainSupport = m_device.querySwapChainSupportDetails(surface);
+	SwapChainSupportDetails swapChainSupport = m_device->querySwapChainSupportDetails(surface);
 
 	VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
 	VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -73,7 +73,7 @@ void VulkanSwapChain::createSwapChain(const VulkanDevice& device, const GLFWWind
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
 	// Attach queues to swap chain
-	QueueFamilyIndices queueFamilyIndices = m_device.getQueueFamilyIndices();
+	QueueFamilyIndices queueFamilyIndices = m_device->getQueueFamilyIndices();
 	uint32_t queueFamilyIndicesArr[] = {queueFamilyIndices.graphicsFamily.value(),
 	                                    queueFamilyIndices.presentFamily.value()};
 
@@ -89,14 +89,15 @@ void VulkanSwapChain::createSwapChain(const VulkanDevice& device, const GLFWWind
 	}
 
 	// Save handles to relevant objects
-	if (vkCreateSwapchainKHR(m_device.getLogicalDevice(), &createInfo, nullptr, &m_swapChain) !=
+	if (vkCreateSwapchainKHR(m_device->getLogicalDevice(), &createInfo, nullptr, &m_swapChain) !=
 	    VK_SUCCESS) {
 		throw std::runtime_error("failed to create swap chain!");
 	}
 
-	vkGetSwapchainImagesKHR(m_device.getLogicalDevice(), m_swapChain, &imageCount, nullptr);
+	vkGetSwapchainImagesKHR(m_device->getLogicalDevice(), m_swapChain, &imageCount, nullptr);
 	m_images.resize(imageCount);
-	vkGetSwapchainImagesKHR(m_device.getLogicalDevice(), m_swapChain, &imageCount, m_images.data());
+	vkGetSwapchainImagesKHR(m_device->getLogicalDevice(), m_swapChain, &imageCount,
+	                        m_images.data());
 
 	m_imageFormat = surfaceFormat.format;
 	m_extent = extent;
@@ -104,12 +105,12 @@ void VulkanSwapChain::createSwapChain(const VulkanDevice& device, const GLFWWind
 
 std::optional<uint32_t> VulkanSwapChain::aquireNextFrame(uint32_t currentFrame) {
 	// Wait for previous frame to finish
-	vkWaitForFences(m_device.getLogicalDevice(), 1, &m_inFlightFences[currentFrame], VK_TRUE,
+	vkWaitForFences(m_device->getLogicalDevice(), 1, &m_inFlightFences[currentFrame], VK_TRUE,
 	                UINT64_MAX);
 
 	// Get image from swap chain
 	uint32_t imageIndex;
-	VkResult result = vkAcquireNextImageKHR(m_device.getLogicalDevice(), m_swapChain, UINT64_MAX,
+	VkResult result = vkAcquireNextImageKHR(m_device->getLogicalDevice(), m_swapChain, UINT64_MAX,
 	                                        m_imageAvailableSemaphores[currentFrame],
 	                                        VK_NULL_HANDLE, &imageIndex);
 
@@ -117,7 +118,7 @@ std::optional<uint32_t> VulkanSwapChain::aquireNextFrame(uint32_t currentFrame) 
 	case VK_SUCCESS:
 	case VK_SUBOPTIMAL_KHR:
 		// Don't reset fence unless we're going to submit another set of rendering work
-		vkResetFences(m_device.getLogicalDevice(), 1, &m_inFlightFences[currentFrame]);
+		vkResetFences(m_device->getLogicalDevice(), 1, &m_inFlightFences[currentFrame]);
 		return imageIndex;
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		LOG_INFO("Swap chain out of date; recreating");
@@ -145,7 +146,7 @@ void VulkanSwapChain::submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitS
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &cmdBuf; // command buffers to execute
 
-	if (vkQueueSubmit(m_device.getGraphicsQueue(), 1, &submitInfo,
+	if (vkQueueSubmit(m_device->getGraphicsQueue(), 1, &submitInfo,
 	                  m_inFlightFences[currentFrame]) != VK_SUCCESS) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
@@ -169,10 +170,10 @@ void VulkanSwapChain::present(uint32_t imageIndex, uint32_t currentFrame) {
 	VkResult result;
 	{
 		PROFILE_SCOPE("Presenting to queue");
-		result = vkQueuePresentKHR(m_device.getPresentQueue(), &presentInfo);
+		result = vkQueuePresentKHR(m_device->getPresentQueue(), &presentInfo);
 	}
 
-	if (m_window.isResized())
+	if (m_window->isResized())
 		result = VK_SUBOPTIMAL_KHR; // explicitly recreate on resize
 
 	switch (result) {
@@ -181,7 +182,7 @@ void VulkanSwapChain::present(uint32_t imageIndex, uint32_t currentFrame) {
 	case VK_SUBOPTIMAL_KHR:
 	case VK_ERROR_OUT_OF_DATE_KHR:
 		LOG_INFO("Swap chain out of date; recreating");
-		m_window.clearResize();
+		m_window->clearResize();
 		recreate();
 		break;
 	default:
@@ -192,14 +193,14 @@ void VulkanSwapChain::present(uint32_t imageIndex, uint32_t currentFrame) {
 
 void VulkanSwapChain::recreate() {
 	// don't actually do work until there is something to create
-	VkExtent2D framebufferExtant = m_window.getFramebufferSize();
+	VkExtent2D framebufferExtant = m_window->getFramebufferSize();
 	while (framebufferExtant.width == 0 && framebufferExtant.height == 0) {
-		framebufferExtant = m_window.getFramebufferSize();
+		framebufferExtant = m_window->getFramebufferSize();
 		glfwWaitEvents();
 	}
 
 	// Wait until rendering is finished
-	vkDeviceWaitIdle(m_device.getLogicalDevice());
+	vkDeviceWaitIdle(m_device->getLogicalDevice());
 
 	// Cleanup resources to be recreated
 	cleanup();
@@ -212,19 +213,19 @@ void VulkanSwapChain::recreate() {
 }
 
 void VulkanSwapChain::cleanup() {
-	vkDestroyImageView(m_device.getLogicalDevice(), m_depthImageView, nullptr);
-	vkDestroyImage(m_device.getLogicalDevice(), m_depthImage, nullptr);
-	vkFreeMemory(m_device.getLogicalDevice(), m_depthImageMemory, nullptr);
+	vkDestroyImageView(m_device->getLogicalDevice(), m_depthImageView, nullptr);
+	vkDestroyImage(m_device->getLogicalDevice(), m_depthImage, nullptr);
+	vkFreeMemory(m_device->getLogicalDevice(), m_depthImageMemory, nullptr);
 
 	for (auto framebuffer : m_framebuffers) {
-		vkDestroyFramebuffer(m_device.getLogicalDevice(), framebuffer, nullptr);
+		vkDestroyFramebuffer(m_device->getLogicalDevice(), framebuffer, nullptr);
 	}
 
 	for (auto imageView : m_imageViews) {
-		vkDestroyImageView(m_device.getLogicalDevice(), imageView, nullptr);
+		vkDestroyImageView(m_device->getLogicalDevice(), imageView, nullptr);
 	}
 
-	vkDestroySwapchainKHR(m_device.getLogicalDevice(), m_swapChain, nullptr);
+	vkDestroySwapchainKHR(m_device->getLogicalDevice(), m_swapChain, nullptr);
 }
 
 VkSurfaceFormatKHR
@@ -258,11 +259,11 @@ VulkanSwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& avai
 }
 
 VkExtent2D VulkanSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
-                                             const GLFWWindow& window) {
+                                             const Ref<GLFWWindow> window) {
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		return capabilities.currentExtent;
 	} else {
-		VkExtent2D actualExtent = window.getFramebufferSize();
+		VkExtent2D actualExtent = window->getFramebufferSize();
 
 		actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width,
 		                                capabilities.maxImageExtent.width);
@@ -274,7 +275,7 @@ VkExtent2D VulkanSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& cap
 }
 
 VkFormat VulkanSwapChain::findDepthFormat() {
-	return m_device.findSupportedFormat(
+	return m_device->findSupportedFormat(
 		{VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
 		VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
@@ -284,7 +285,7 @@ void VulkanSwapChain::createImageViews() {
 
 	for (size_t i = 0; i < m_images.size(); i++) {
 		m_imageViews[i] =
-			m_device.createImageView(m_images[i], m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+			m_device->createImageView(m_images[i], m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 	}
 }
 
@@ -355,7 +356,7 @@ void VulkanSwapChain::createRenderPass() {
 	renderPassInfo.pDependencies = &dependency;
 
 	// Construct render pass
-	if (vkCreateRenderPass(m_device.getLogicalDevice(), &renderPassInfo, nullptr, &m_renderPass) !=
+	if (vkCreateRenderPass(m_device->getLogicalDevice(), &renderPassInfo, nullptr, &m_renderPass) !=
 	    VK_SUCCESS) {
 		throw std::runtime_error("failed to create render pass!");
 	}
@@ -376,7 +377,7 @@ void VulkanSwapChain::createFramebuffers() {
 		framebufferInfo.height = m_extent.height;
 		framebufferInfo.layers = 1;
 
-		if (vkCreateFramebuffer(m_device.getLogicalDevice(), &framebufferInfo, nullptr,
+		if (vkCreateFramebuffer(m_device->getLogicalDevice(), &framebufferInfo, nullptr,
 		                        &m_framebuffers[i]) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create framebuffer!");
 		}
@@ -398,12 +399,12 @@ void VulkanSwapChain::createSyncObjects() {
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
-		if (vkCreateSemaphore(m_device.getLogicalDevice(), &semaphoreInfo, nullptr,
+		if (vkCreateSemaphore(m_device->getLogicalDevice(), &semaphoreInfo, nullptr,
 		                      &m_imageAvailableSemaphores[i]) != VK_SUCCESS ||
-		    vkCreateSemaphore(m_device.getLogicalDevice(), &semaphoreInfo, nullptr,
+		    vkCreateSemaphore(m_device->getLogicalDevice(), &semaphoreInfo, nullptr,
 		                      &m_renderFinishedSemaphores[i]) != VK_SUCCESS ||
-		    vkCreateFence(m_device.getLogicalDevice(), &fenceInfo, nullptr, &m_inFlightFences[i]) !=
-		        VK_SUCCESS) {
+		    vkCreateFence(m_device->getLogicalDevice(), &fenceInfo, nullptr,
+		                  &m_inFlightFences[i]) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create synchronization objects!");
 		}
 	}
@@ -411,9 +412,9 @@ void VulkanSwapChain::createSyncObjects() {
 
 void VulkanSwapChain::createDepthResources() {
 	VkFormat depthFormat = findDepthFormat();
-	m_device.createImage(m_extent.width, m_extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-	                     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-	                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depthImage, m_depthImageMemory);
+	m_device->createImage(m_extent.width, m_extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+	                      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depthImage, m_depthImageMemory);
 	m_depthImageView =
-		m_device.createImageView(m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+		m_device->createImageView(m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 }

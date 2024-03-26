@@ -31,7 +31,7 @@ class VulkanDevice {
 	 *
 	 * @param instance The instance to run on the device
 	 */
-	VulkanDevice(const VulkanInstance& instance);
+	VulkanDevice(const Ref<VulkanInstance> instance);
 
 	/**
 	 * @brief Cleans up all resources used by this device
@@ -39,7 +39,6 @@ class VulkanDevice {
 	~VulkanDevice();
 
 	VulkanDevice(const VulkanDevice&) = delete;
-	VulkanDevice& operator=(const VulkanDevice&) = delete;
 
 	/**
 	 * @brief Gets a command buffer from this device. The buffer is guaranteed to be blank and ready
@@ -121,7 +120,7 @@ class VulkanDevice {
 	inline const float getMaxAnistropy() const { return m_deviceProps.limits.maxSamplerAnisotropy; }
 
   private:
-	void pickPhysicalDevice(const VulkanInstance& instance);
+	void pickPhysicalDevice(const Ref<VulkanInstance> instance);
 
 	/**
 	 * @brief Creates and initializes a logical device

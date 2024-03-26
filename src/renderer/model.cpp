@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
-Model::Model(VulkanDevice& device, const std::string& modelPath, Ref<Texture> tex)
+Model::Model(Ref<VulkanDevice> device, const std::string& modelPath, Ref<Texture> tex)
 	: m_texture(tex) {
 	// Load model data
 	tinyobj::attrib_t attrib;

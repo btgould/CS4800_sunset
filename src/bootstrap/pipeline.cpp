@@ -1,47 +1,52 @@
 #include "pipeline.hpp"
 
+#include <array>
+#include <cstring>
+#include <fstream>
+#include <glm/common.hpp>
+#include <glm/fwd.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <vulkan/vulkan_core.h>
+
 #include "renderer/texture_lib.hpp"
 #include "util/constants.hpp"
 #include "util/memory.hpp"
 
-#include <array>
-#include <cstring>
-#include <glm/common.hpp>
-#include <glm/fwd.hpp>
-#include <vulkan/vulkan_core.h>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
-VulkanPipeline::VulkanPipeline(VulkanDevice& device, const VulkanSwapChain& swapChain)
-	: m_device(device), m_swapChain(swapChain) {
-	// FIXME: set up reasonable default vertex attributes, descriptors
-}
+VulkanPipeline::VulkanPipeline(Ref<VulkanDevice> device, const Ref<VulkanSwapChain> swapChain)
+	: m_device(device), m_swapChain(swapChain) {}
 
 VulkanPipeline::~VulkanPipeline() {
-	vkDestroySampler(m_device.getLogicalDevice(), m_textureSampler, nullptr);
+	vkDestroySampler(m_device->getLogicalDevice(), m_textureSampler, nullptr);
 
 	for (uint32_t i = 0; i < m_uniformBuffers.size(); i++) {
 		for (uint32_t j = 0; j < MAX_FRAMES_IN_FLIGHT; j++) {
 			// Destroy uniform buffers
-			vkDestroyBuffer(m_device.getLogicalDevice(), m_uniformBuffers[i][j], nullptr);
-			vkFreeMemory(m_device.getLogicalDevice(), m_uniformBuffersMemory[i][j], nullptr);
+			vkDestroyBuffer(m_device->getLogicalDevice(), m_uniformBuffers[i][j], nullptr);
+			vkFreeMemory(m_device->getLogicalDevice(), m_uniformBuffersMemory[i][j], nullptr);
 		}
 	}
 
-	vkDestroyDescriptorPool(m_device.getLogicalDevice(), m_descriptorPool, nullptr);
-	vkDestroyDescriptorSetLayout(m_device.getLogicalDevice(), m_uniformLayout, nullptr);
-	vkDestroyDescriptorSetLayout(m_device.getLogicalDevice(), m_textureLayout, nullptr);
-	vkDestroyPipeline(m_device.getLogicalDevice(), m_pipeline, nullptr);
-	vkDestroyPipelineLayout(m_device.getLogicalDevice(), m_pipelineLayout, nullptr);
+	vkDestroyDescriptorPool(m_device->getLogicalDevice(), m_descriptorPool, nullptr);
+	vkDestroyDescriptorSetLayout(m_device->getLogicalDevice(), m_uniformLayout, nullptr);
+	vkDestroyDescriptorSetLayout(m_device->getLogicalDevice(), m_textureLayout, nullptr);
+	vkDestroyPipeline(m_device->getLogicalDevice(), m_pipeline, nullptr);
+	vkDestroyPipelineLayout(m_device->getLogicalDevice(), m_pipelineLayout, nullptr);
 }
 
 void VulkanPipeline::create() {
+	// Get uniforms + push constant from shader
+	// TODO: validate shader is non-null
+	setPushConstant(m_shader->getPushConstant());
+	for (const auto& uniform : m_shader->getUniforms()) {
+		pushUniform(uniform);
+	}
+
 	createDescriptorSetLayout();
 	createTextureSampler();
 	createDescriptorPool();
 	createDescriptorSets();
-	createGraphicsPipeline(m_vertexAttrBindings, m_vertexAttr, m_swapChain.getRenderPass());
+	createGraphicsPipeline(m_vertexAttrBindings, m_vertexAttr, m_swapChain->getRenderPass());
 }
 
 void VulkanPipeline::setVertexArray(const VertexArray& vertexArray) {
@@ -49,18 +54,29 @@ void VulkanPipeline::setVertexArray(const VertexArray& vertexArray) {
 	m_vertexAttr = vertexArray.getAttributeDescriptions();
 }
 
-uint32_t VulkanPipeline::pushUniform(VkShaderStageFlags stage, uint32_t size) {
+void VulkanPipeline::setShader(Ref<Shader> shader) {
+	m_shader = shader;
+}
+
+// PERF: There are several things that could be optimized here.
+// 1. I should really be taking in a vector of uniforms, rather than doing them one at a time
+// 2. I'm not sure if I really need the uniformBindings or uniformSizes vectors anymore. I think
+// they go away if I do it all at once
+// 3. Instead of allocating a buffer for each uniform, all uniforms should be stored in one buffer,
+// which offset specifying which one
+uint32_t VulkanPipeline::pushUniform(const PipelineDescriptor& uniform) {
 	uint32_t uniformID = m_uniformBindings.size();
+	m_uniformIDs[uniform.name] = uniformID;
 
 	VkDescriptorSetLayoutBinding binding {};
 	binding.binding = uniformID; // index of binding, order specified in shader code
 	binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	binding.descriptorCount = 1;
-	binding.stageFlags = stage;
+	binding.stageFlags = uniform.stage;
 	binding.pImmutableSamplers = nullptr; // don't need samplers for uniforms
 
 	m_uniformBindings.push_back(binding);
-	m_uniformSizes.push_back(size);
+	m_uniformSizes.push_back(uniform.size);
 
 	// Allocate memory on GPU to store uniform
 	// TODO: I should be able to do this with one giant buffer for all uniforms
@@ -69,12 +85,12 @@ uint32_t VulkanPipeline::pushUniform(VkShaderStageFlags stage, uint32_t size) {
 	Frames<void*> uniformBuffersMapped;
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		m_device.createBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-		                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		                      uniformBuffers[i], uniformBufferDeviceMemory[i]);
+		m_device->createBuffer(uniform.size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		                       uniformBuffers[i], uniformBufferDeviceMemory[i]);
 
-		vkMapMemory(m_device.getLogicalDevice(), uniformBufferDeviceMemory[i], 0, size, 0,
+		vkMapMemory(m_device->getLogicalDevice(), uniformBufferDeviceMemory[i], 0, uniform.size, 0,
 		            &uniformBuffersMapped[i]);
 	}
 
@@ -98,24 +114,35 @@ void VulkanPipeline::pushTexture(const Ref<Texture> tex) {
 	m_textures.push_back(tex);
 }
 
-uint32_t VulkanPipeline::pushPushConstant(VkShaderStageFlags stage, uint32_t size) {
+uint32_t VulkanPipeline::setPushConstant(const PipelineDescriptor& pushConstant) {
 	uint32_t pushConstantID = m_pushConstants.size();
+	m_pushConstantIDs[pushConstant.name] = pushConstantID;
 
-	VkPushConstantRange pushConstant;
-	pushConstant.stageFlags = stage;
-	pushConstant.offset = m_pushConstantOffset;
-	pushConstant.size = size;
+	VkPushConstantRange pushConstantRange;
+	pushConstantRange.stageFlags = pushConstant.stage;
+	pushConstantRange.offset = m_pushConstantOffset;
+	pushConstantRange.size = pushConstant.size;
 
-	m_pushConstants.push_back(pushConstant);
-	m_pushConstantSizes.push_back(size);
-	m_pushConstantOffset += size;
+	// TODO: I can only have one push constant object per pipeline. I could simulate multiple by
+	// using offsets, but there is a relatively small max size. I don't remember if I was clever
+	// enough to account for all this when I wrote this initially. If I wasn't, these vectors need
+	// to go, as they are misleading
+	m_pushConstants.push_back(pushConstantRange);
+	m_pushConstantSizes.push_back(pushConstant.size);
+	m_pushConstantOffset += pushConstant.size;
 
 	return pushConstantID;
 }
 
-void VulkanPipeline::writePushConstant(VkCommandBuffer commandBuffer, uint32_t pushConstantId,
+void VulkanPipeline::writePushConstant(VkCommandBuffer commandBuffer, const std::string& name,
                                        const void* data, uint32_t currentFrame) {
-	VkPushConstantRange pushConstant = m_pushConstants[pushConstantId];
+	const auto pushConstantID = m_pushConstantIDs.find(name);
+
+	if (pushConstantID == m_pushConstantIDs.end()) {
+		// push constant name was not found
+		throw std::runtime_error("Unrecognized push constant name: " + name);
+	}
+	VkPushConstantRange pushConstant = m_pushConstants[pushConstantID->second];
 
 	vkCmdPushConstants(commandBuffer, m_pipelineLayout, pushConstant.stageFlags,
 	                   pushConstant.offset, pushConstant.size, data);
@@ -140,14 +167,22 @@ void VulkanPipeline::bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t 
 	                        m_activeDescriptorSets.data(), 0, nullptr);
 }
 
-void VulkanPipeline::writeUniform(uint32_t uniformID, void* data, uint32_t currentFrame) {
-	memcpy(m_uniformBuffersMapped[uniformID][currentFrame], data, m_uniformSizes[uniformID]);
+void VulkanPipeline::writeUniform(const std::string& name, void* data, uint32_t currentFrame) {
+	const auto uniformID = m_uniformIDs.find(name);
+
+	if (uniformID == m_uniformIDs.end()) {
+		// uniform name was not found
+		throw std::runtime_error("Unrecognized uniform name: " + name);
+	}
+
+	memcpy(m_uniformBuffersMapped[uniformID->second][currentFrame], data,
+	       m_uniformSizes[uniformID->second]);
 }
 
 void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
                                             std::vector<VkVertexInputAttributeDescription> attrDesc,
                                             VkRenderPass renderPass) {
-	auto vertShaderCode = readFile("res/shaderc/triangle.vert.spv");
+	/* auto vertShaderCode = readFile("res/shaderc/triangle.vert.spv");
 	auto fragShaderCode = readFile("res/shaderc/triangle.frag.spv");
 
 	VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
@@ -166,7 +201,7 @@ void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bind
 	fragShaderStageInfo.module = fragShaderModule;
 	fragShaderStageInfo.pName = "main";
 
-	VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+	VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo}; */
 
 	// Specify this pipelines dynamic state (i.e. vars that can be changed w/o recreation)
 	/* std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
@@ -198,7 +233,7 @@ void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bind
 	pipelineLayoutInfo.pushConstantRangeCount = m_pushConstants.size();
 	pipelineLayoutInfo.pPushConstantRanges = m_pushConstants.data();
 
-	if (vkCreatePipelineLayout(m_device.getLogicalDevice(), &pipelineLayoutInfo, nullptr,
+	if (vkCreatePipelineLayout(m_device->getLogicalDevice(), &pipelineLayoutInfo, nullptr,
 	                           &m_pipelineLayout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
@@ -207,7 +242,7 @@ void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bind
 	VkGraphicsPipelineCreateInfo pipelineInfo {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.stageCount = 2;
-	pipelineInfo.pStages = shaderStages;
+	pipelineInfo.pStages = m_shader->getShaderStages().data();
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &pi.inputAssemblyInfo;
 	pipelineInfo.pViewportState = &pi.viewportInfo;
@@ -223,14 +258,10 @@ void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bind
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // We aren't inheriting from another pipeline
 	pipelineInfo.basePipelineIndex = -1;              // We aren't inheriting from another pipeline
 
-	if (vkCreateGraphicsPipelines(m_device.getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo,
+	if (vkCreateGraphicsPipelines(m_device->getLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo,
 	                              nullptr, &m_pipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
-
-	// shader modules linked to GPU, can destroy local copy
-	vkDestroyShaderModule(m_device.getLogicalDevice(), fragShaderModule, nullptr);
-	vkDestroyShaderModule(m_device.getLogicalDevice(), vertShaderModule, nullptr);
 }
 
 void VulkanPipeline::createTextureSampler() {
@@ -242,7 +273,7 @@ void VulkanPipeline::createTextureSampler() {
 	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	samplerInfo.anisotropyEnable = VK_TRUE;
-	samplerInfo.maxAnisotropy = m_device.getMaxAnistropy();
+	samplerInfo.maxAnisotropy = m_device->getMaxAnistropy();
 	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;
 	samplerInfo.compareEnable = VK_FALSE;
@@ -252,7 +283,7 @@ void VulkanPipeline::createTextureSampler() {
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = 0.0f;
 
-	if (vkCreateSampler(m_device.getLogicalDevice(), &samplerInfo, nullptr, &m_textureSampler) !=
+	if (vkCreateSampler(m_device->getLogicalDevice(), &samplerInfo, nullptr, &m_textureSampler) !=
 	    VK_SUCCESS) {
 		throw std::runtime_error("failed to create texture sampler!");
 	}
@@ -283,7 +314,7 @@ VkShaderModule VulkanPipeline::createShaderModule(const std::vector<char>& code)
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
 	VkShaderModule shaderModule;
-	if (vkCreateShaderModule(m_device.getLogicalDevice(), &createInfo, nullptr, &shaderModule) !=
+	if (vkCreateShaderModule(m_device->getLogicalDevice(), &createInfo, nullptr, &shaderModule) !=
 	    VK_SUCCESS) {
 		throw std::runtime_error("failed to create shader module!");
 	}
@@ -301,7 +332,7 @@ void VulkanPipeline::createDescriptorSetLayout() {
 	uniformLayoutInfo.bindingCount = static_cast<uint32_t>(m_uniformBindings.size());
 	uniformLayoutInfo.pBindings = m_uniformBindings.data();
 
-	if (vkCreateDescriptorSetLayout(m_device.getLogicalDevice(), &uniformLayoutInfo, nullptr,
+	if (vkCreateDescriptorSetLayout(m_device->getLogicalDevice(), &uniformLayoutInfo, nullptr,
 	                                &m_uniformLayout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create descriptor set layout!");
 	}
@@ -326,7 +357,7 @@ void VulkanPipeline::createDescriptorSetLayout() {
 	textureLayoutInfo.bindingCount = textureBindings.size();
 	textureLayoutInfo.pBindings = textureBindings.data();
 
-	if (vkCreateDescriptorSetLayout(m_device.getLogicalDevice(), &textureLayoutInfo, nullptr,
+	if (vkCreateDescriptorSetLayout(m_device->getLogicalDevice(), &textureLayoutInfo, nullptr,
 	                                &m_textureLayout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create descriptor set layout!");
 	}
@@ -362,7 +393,7 @@ void VulkanPipeline::createDescriptorPool() {
 			MAX_FRAMES_IN_FLIGHT); // max number of descriptor sets allocated at a
 	                               // time (num textures + 1 for uniforms + 1 for ImGui)
 
-	if (vkCreateDescriptorPool(m_device.getLogicalDevice(), &poolInfo, nullptr,
+	if (vkCreateDescriptorPool(m_device->getLogicalDevice(), &poolInfo, nullptr,
 	                           &m_descriptorPool) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create descriptor pool!");
 	}
@@ -378,7 +409,7 @@ void VulkanPipeline::createDescriptorSets() {
 	uniformAllocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 	uniformAllocInfo.pSetLayouts = uniformLayouts.data();
 
-	if (vkAllocateDescriptorSets(m_device.getLogicalDevice(), &uniformAllocInfo,
+	if (vkAllocateDescriptorSets(m_device->getLogicalDevice(), &uniformAllocInfo,
 	                             m_uniformDescriptorSets.data()) != VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate uniform descriptor sets!");
 	}
@@ -394,7 +425,7 @@ void VulkanPipeline::createDescriptorSets() {
 		textureAllocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 		textureAllocInfo.pSetLayouts = textureLayouts.data();
 
-		if (vkAllocateDescriptorSets(m_device.getLogicalDevice(), &textureAllocInfo,
+		if (vkAllocateDescriptorSets(m_device->getLogicalDevice(), &textureAllocInfo,
 		                             m_textureDescriptorSets[i].data()) != VK_SUCCESS) {
 			throw std::runtime_error("failed to allocate texture descriptor sets!");
 		}
@@ -475,11 +506,11 @@ void VulkanPipeline::createDescriptorSets() {
 
 		// Write to descriptor sets
 		// Uniforms
-		vkUpdateDescriptorSets(m_device.getLogicalDevice(),
+		vkUpdateDescriptorSets(m_device->getLogicalDevice(),
 		                       static_cast<uint32_t>(uniformDescriptorWrites.size()),
 		                       uniformDescriptorWrites.data(), 0, nullptr);
 		// Textures
-		vkUpdateDescriptorSets(m_device.getLogicalDevice(),
+		vkUpdateDescriptorSets(m_device->getLogicalDevice(),
 		                       static_cast<uint32_t>(textureDescriptorWrites.size()),
 		                       textureDescriptorWrites.data(), 0, nullptr);
 	}
@@ -497,15 +528,15 @@ PipelineConfigInfo VulkanPipeline::defaultPipelineConfigInfo() {
 	// Screen coordinate locations to render to
 	configInfo.viewport.x = 0.0f;
 	configInfo.viewport.y = 0.0f;
-	configInfo.viewport.width = m_swapChain.getExtent().width;
-	configInfo.viewport.height = m_swapChain.getExtent().height;
+	configInfo.viewport.width = m_swapChain->getExtent().width;
+	configInfo.viewport.height = m_swapChain->getExtent().height;
 	configInfo.viewport.minDepth = 0.0f;
 	configInfo.viewport.maxDepth = 1.0f;
 
 	// Pixels outside of this screen coordinate region are simply discarded
 	// Does nothing if this region is larger than the viewport
 	configInfo.scissor.offset = {0, 0};
-	configInfo.scissor.extent = {m_swapChain.getExtent().width, m_swapChain.getExtent().height};
+	configInfo.scissor.extent = {m_swapChain->getExtent().width, m_swapChain->getExtent().height};
 
 	// Known issue: this creates a self-referencing structure. Fixed in tutorial 05
 	configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

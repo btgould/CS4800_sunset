@@ -6,11 +6,10 @@
 
 class Texture {
   public:
-	Texture(std::string path, VulkanDevice& device);
+	Texture(std::string path, Ref<VulkanDevice> device);
 	~Texture();
 
 	Texture(const Texture&) = delete;
-	Texture& operator=(const Texture&) = delete;
 
 	inline VkImageView getImageView() const { return m_textureImageView; }
 
@@ -40,7 +39,7 @@ class Texture {
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
   private:
-	VulkanDevice& m_device;
+	Ref<VulkanDevice> m_device;
 
 	VkImage m_textureImage;
 	VkImageView m_textureImageView;

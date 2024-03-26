@@ -1,20 +1,19 @@
 #pragma once
 
-#include <cstdint>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
 #include <vector>
 
+#include "util/memory.hpp"
 #include "window.hpp"
 
 class VulkanInstance {
   public:
-	VulkanInstance(GLFWWindow& window);
+	VulkanInstance(Ref<GLFWWindow> window);
 	~VulkanInstance();
 
 	VulkanInstance(const VulkanInstance&) = delete;
-	VulkanInstance& operator=(const VulkanInstance&) = delete;
 
 	/**
 	 * @brief Gets a list of physical devices available for use with this instance
@@ -48,7 +47,7 @@ class VulkanInstance {
 	                              void* pUserData);
 
   private:
-	GLFWWindow& m_window;
+	Ref<GLFWWindow> m_window;
 
 	VkInstance m_instance;
 	VkSurfaceKHR m_surface;

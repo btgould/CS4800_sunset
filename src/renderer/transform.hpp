@@ -7,9 +7,6 @@ class Transform {
 	Transform();
 	~Transform() = default;
 
-	Transform(const Transform&) = delete;
-	Transform& operator=(const Transform&) = delete;
-
   public:
 	inline const glm::vec3& getTranslation() { return m_translation; }
 	void setTranslation(const glm::vec3& tr);

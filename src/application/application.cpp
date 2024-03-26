@@ -10,15 +10,17 @@
 #include "renderer/texture_lib.hpp"
 
 #include "util/log.hpp"
+#include "util/memory.hpp"
 
 Application* Application::s_instance = nullptr;
 
 Application::Application()
-	: m_window("Vulkan"), m_instance(m_window), m_device(m_instance),
-	  m_renderer(m_instance, m_device, m_window),
-	  m_camera(glm::radians(45.0f), m_renderer.getAspectRatio(), glm::vec3(300.0f, 200.0f, 75.0f),
-               1.0f, 10000.0f),
-	  m_camController(m_camera) {
+	: m_window(CreateRef<GLFWWindow>("Vulkan")), m_instance(CreateRef<VulkanInstance>(m_window)),
+	  m_device(CreateRef<VulkanDevice>(m_instance)),
+	  m_renderer(CreateRef<VulkanRenderer>(m_instance, m_device, m_window)),
+	  m_camera(CreateRef<Camera>(glm::radians(45.0f), m_renderer->getAspectRatio(),
+                                 glm::vec3(300.0f, 200.0f, 75.0f), 1.0f, 10000.0f)),
+	  m_camController(CreateRef<CameraController>(m_camera)) {
 	if (s_instance) {
 		throw std::runtime_error("Tried to create multiple application instances");
 	}
@@ -53,35 +55,35 @@ void Application::run() {
 	light.ambientStrength = 0.2f;
 	light.diffuseStrength = 50.0f;
 
-	while (!m_window.shouldClose()) {
+	while (!m_window->shouldClose()) {
 		double newTime = glfwGetTime();
 		double dt = (newTime - m_time) / 0.0166666;
 		m_time = newTime;
 
-		m_window.pollEvents();
+		m_window->pollEvents();
 
-		m_renderer.beginScene();
+		m_renderer->beginScene();
 
 		// Draw model
-		m_renderer.draw(model);
-		m_renderer.draw(skybox);
-		m_renderer.draw(cloud);
-		m_renderer.draw(cloud2);
+		m_renderer->draw(model);
+		m_renderer->draw(skybox);
+		m_renderer->draw(cloud);
+		m_renderer->draw(cloud2);
 
 		ImGui::ShowDemoWindow();
 
-		m_renderer.endScene();
+		m_renderer->endScene();
 
 		// update uniforms
-		m_camController.OnUpdate(dt);
-		glm::mat4 camVP = m_camera.getVP();
-		m_renderer.updateUniform("camVP", &camVP);
-		m_renderer.updateUniform("cloud", &u_cloud);
-		m_renderer.updateUniform("cloud2", &u_cloud2);
-		m_renderer.updateUniform("light", &light); // do this in loop b/c >1 framebuffers
+		m_camController->OnUpdate(dt);
+		glm::mat4 camVP = m_camera->getVP();
+		m_renderer->updateUniform("camVP", &camVP);
+		m_renderer->updateUniform("cloud", &u_cloud);
+		m_renderer->updateUniform("cloud2", &u_cloud2);
+		m_renderer->updateUniform("light", &light); // do this in loop b/c >1 framebuffers
 	}
 
-	m_device.flush();
+	m_device->flush();
 }
 
 void Application::shutdown() {

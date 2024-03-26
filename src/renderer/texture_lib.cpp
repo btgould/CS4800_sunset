@@ -14,7 +14,7 @@ TextureLibrary* TextureLibrary::get() {
 	return s_instance;
 }
 
-Ref<Texture> TextureLibrary::getTexture(VulkanDevice& device, const std::string& filepath) {
+Ref<Texture> TextureLibrary::getTexture(Ref<VulkanDevice> device, const std::string& filepath) {
 	if (m_texMap.find(filepath) != m_texMap.end()) {
 		return m_texMap[filepath];
 	} else {

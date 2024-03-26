@@ -1,14 +1,23 @@
 #include "pipeline_builder.hpp"
 
-PipelineBuilder::PipelineBuilder(VulkanDevice& device, const VulkanSwapChain& swapchain)
+PipelineBuilder::PipelineBuilder(Ref<VulkanDevice> device, const Ref<VulkanSwapChain> swapchain)
 	: m_device(device), m_swapChain(swapchain) {}
+
 PipelineBuilder::~PipelineBuilder() {}
 
-VulkanPipeline
-PipelineBuilder::buildPipeline(VertexArray vertexArray,
-                               const std::vector<const PipelineDescriptor>& pushConstants,
-                               const std::vector<const PipelineDescriptor>& uniforms,
-                               const std::vector<const Ref<Texture>>& textures) {
+Ref<VulkanPipeline> PipelineBuilder::buildPipeline(VertexArray vertexArray,
+                                                   const Ref<Shader> shader,
+                                                   const std::vector<Ref<Texture>>& textures) {
 
-	return VulkanPipeline(m_device, m_swapChain);
+	auto pipeline = CreateRef<VulkanPipeline>(m_device, m_swapChain);
+
+	pipeline->setVertexArray(vertexArray);
+	pipeline->setShader(shader);
+	for (const auto texture : textures) {
+		pipeline->pushTexture(texture);
+	}
+
+	pipeline->create();
+
+	return pipeline;
 }

@@ -11,27 +11,24 @@
 
 class PipelineBuilder {
   public:
-	PipelineBuilder(VulkanDevice& device, const VulkanSwapChain& swapchain);
+	PipelineBuilder(Ref<VulkanDevice> device, const Ref<VulkanSwapChain> swapchain);
 	~PipelineBuilder();
 
 	PipelineBuilder(const PipelineBuilder&) = delete;
-	PipelineBuilder& operator=(const PipelineBuilder&) = delete;
 
 	/**
 	 * @brief Creates a new graphics pipeline that expects the given inputs / resources
 	 *
 	 * @param vertexArray Describes the layout of vertex data rendered with this model
-	 * @param pushConstants List of push constants needed by this pipeline
-	 *  FIXME: I think I can only use one push constant
-	 * @param uniforms List of uniforms needed by this pipeline
+	 * @param shader The shader used by this pipeline to render data
 	 * @param textures List of Textures available to this pipeline
 	 *
 	 * @return A VulkanPipeline to render objects with the given structure
 	 */
-	VulkanPipeline buildPipeline(VertexArray vertexArray, Shader shader,
-	                             const std::vector<const Ref<Texture>>& textures);
+	Ref<VulkanPipeline> buildPipeline(VertexArray vertexArray, const Ref<Shader> shader,
+	                                  const std::vector<Ref<Texture>>& textures);
 
   private:
-	VulkanDevice& m_device;
-	const VulkanSwapChain& m_swapChain;
+	Ref<VulkanDevice> m_device;
+	const Ref<VulkanSwapChain> m_swapChain;
 };

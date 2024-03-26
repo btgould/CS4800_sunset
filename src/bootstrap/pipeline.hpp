@@ -1,15 +1,17 @@
 #pragma once
 
+#include <map>
 #include <unordered_map>
-#include <vulkan/vulkan_core.h>
 #include <vector>
+#include <array>
+#include <vulkan/vulkan_core.h>
 
+#include "bootstrap/shader.hpp"
 #include "renderer/texture.hpp"
 #include "util/constants.hpp"
 
 #include "device.hpp"
 
-#include "renderer/vertex_buffer.hpp"
 #include "vertex_array.hpp"
 #include "swapchain.hpp"
 #include "util/memory.hpp"
@@ -30,16 +32,17 @@ struct PipelineConfigInfo {
  * @class VulkanPipeline
  * @brief Class describing a rendering pipeline to be used for a specific set of resources
  *
- * Should NOT be instantiated directly, instead use the PipelineBuilder class
+ * Cannot be instantiated directly, instead use the PipelineBuilder class
  *
  */
 class VulkanPipeline {
-  public:
-	VulkanPipeline(VulkanDevice& device, const VulkanSwapChain& swapChain);
-	~VulkanPipeline();
+	friend class PipelineBuilder;
 
-	VulkanPipeline(const VulkanPipeline&) = delete;
-	VulkanPipeline& operator=(const VulkanPipeline&) = delete;
+  private:
+
+  public:
+	VulkanPipeline(Ref<VulkanDevice> device, const Ref<VulkanSwapChain> swapChain);
+	~VulkanPipeline();
 
   public:
 	/**
@@ -52,14 +55,16 @@ class VulkanPipeline {
 
 	void setVertexArray(const VertexArray& vertexArray);
 
-	uint32_t pushUniform(VkShaderStageFlags stage, uint32_t size);
-	void writeUniform(uint32_t uniformID, void* data, uint32_t currentFrame);
+	void setShader(const Ref<Shader> shader);
+
+	uint32_t pushUniform(const PipelineDescriptor& uniform);
+	void writeUniform(const std::string& name, void* data, uint32_t currentFrame);
 
 	void pushTexture(const Ref<Texture> tex);
 	inline void setActiveTexture(const Ref<Texture> tex) { m_activeTex = tex; }
 
-	uint32_t pushPushConstant(VkShaderStageFlags stage, uint32_t size);
-	void writePushConstant(VkCommandBuffer commandBuffer, uint32_t pushConstantId, const void* data,
+	uint32_t setPushConstant(const PipelineDescriptor& pushConstant);
+	void writePushConstant(VkCommandBuffer commandBuffer, const std::string& name, const void* data,
 	                       uint32_t currentFrame);
 
 	void bind(VkCommandBuffer commandBuffer);
@@ -84,8 +89,8 @@ class VulkanPipeline {
 	PipelineConfigInfo defaultPipelineConfigInfo();
 
   private:
-	VulkanDevice& m_device;
-	const VulkanSwapChain& m_swapChain;
+	Ref<VulkanDevice> m_device;
+	const Ref<VulkanSwapChain> m_swapChain;
 
 	VkVertexInputBindingDescription m_vertexAttrBindings;
 	std::vector<VkVertexInputAttributeDescription> m_vertexAttr;
@@ -93,6 +98,8 @@ class VulkanPipeline {
 
 	template <typename T> using Frames = std::array<T, MAX_FRAMES_IN_FLIGHT>;
 	std::array<VkDescriptorSet, 2> m_activeDescriptorSets;
+
+	Ref<Shader> m_shader;
 
 	// Texture resources
 	Ref<Texture> m_activeTex;
@@ -105,6 +112,10 @@ class VulkanPipeline {
 	std::vector<Frames<VkDescriptorSet>> m_textureDescriptorSets;
 
 	// Uniform resources
+	std::map<std::string, uint32_t> m_uniformIDs;
+	std::map<std::string, uint32_t>
+		m_pushConstantIDs; // HACK: I can really only have one push
+	                       // constant, having a map is redundant. See comment in writePushConstant
 	std::vector<uint32_t> m_uniformSizes;
 	/* Buffer to store uniforms data in */
 	std::vector<Frames<VkBuffer>> m_uniformBuffers;

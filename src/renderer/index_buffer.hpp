@@ -17,7 +17,7 @@ class IndexBuffer {
 	 * @param device A VulkanDevice to create the buffer on
 	 * @param indices The "connect the dots" ordering to render the vertices in
 	 */
-	IndexBuffer(VulkanDevice& device, const std::vector<uint32_t>& indices);
+	IndexBuffer(Ref<VulkanDevice> device, const std::vector<uint32_t>& indices);
 
 	/**
 	 * @brief Frees memory allocated on the GPU for this buffer
@@ -25,7 +25,6 @@ class IndexBuffer {
 	~IndexBuffer();
 
 	IndexBuffer(const IndexBuffer&) = delete;
-	IndexBuffer& operator=(const IndexBuffer&) = delete;
 
 	/**
 	 * @brief "Activates" this index buffer, causing its indices to be used for the next draw call
@@ -40,7 +39,7 @@ class IndexBuffer {
 	inline uint32_t size() const { return m_indices.size(); }
 
   private:
-	VulkanDevice& m_device;
+	Ref<VulkanDevice> m_device;
 
 	const std::vector<uint32_t> m_indices;
 
