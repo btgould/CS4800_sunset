@@ -33,7 +33,7 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	  m_textures({TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
                   TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"),
                   TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png")}) {
-	auto shader = ShaderLibrary::get()->getShader(m_device, "triangle");
+	auto shader = ShaderLibrary::get()->getShader(m_device, "model");
 	m_pipelines.push_back(m_pipelineBuilder.buildPipeline(m_defaultVA, shader, m_textures));
 	m_activePipeline = m_pipelines[0];
 
