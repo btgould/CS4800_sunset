@@ -62,9 +62,10 @@ class Shader {
 	 * @return A vector of structs describing the uniforms used by this shader.
 	 */
 	const inline std::vector<PipelineDescriptor>& getUniforms() const { return m_uniforms; }
-	const inline std::array<VkPipelineShaderStageCreateInfo, 2> getShaderStages() const {
+	const inline std::array<VkPipelineShaderStageCreateInfo, 2>& getShaderStages() const {
 		return m_shaderStages;
 	}
+	const inline std::string& getName() const { return m_name; }
 
   private:
 	std::vector<char> readFile(const std::string& filename);
@@ -75,6 +76,7 @@ class Shader {
 
 	PipelineDescriptor m_pushConstant;
 	std::vector<PipelineDescriptor> m_uniforms;
+	const std::string m_name;
 
 	std::array<VkPipelineShaderStageCreateInfo, 2> m_shaderStages;
 	VkShaderModule m_vertShaderModule, m_fragShaderModule;

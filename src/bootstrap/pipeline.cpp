@@ -247,7 +247,7 @@ void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bind
 	// Create graphics pipeline
 	VkGraphicsPipelineCreateInfo pipelineInfo {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipelineInfo.stageCount = 2;
+	pipelineInfo.stageCount = m_shader->getShaderStages().size();
 	pipelineInfo.pStages = m_shader->getShaderStages().data();
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &pi.inputAssemblyInfo;

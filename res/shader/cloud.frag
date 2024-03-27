@@ -94,6 +94,4 @@ void main() {
 	float intensity = pow(normalizedHeight, 0.5); 
 	vec3 baseColor = intensity * cloud.baseIntensity * vec3(1.0f, 1.0f, 1.0f) + (1 - cloud.baseIntensity) * cnoise(fragPos / cloud.noiseFreq);
 	outColor = vec4(baseColor, cloud.opacity);
-
-	// outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 }

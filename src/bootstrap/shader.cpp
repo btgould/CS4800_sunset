@@ -51,7 +51,8 @@ std::unordered_map<std::string, std::vector<PipelineDescriptor>> Shader::s_unifo
 	 }},
 };
 
-Shader::Shader(Ref<VulkanDevice> device, const std::string& shaderName) : m_device(device) {
+Shader::Shader(Ref<VulkanDevice> device, const std::string& shaderName)
+	: m_device(device), m_name(shaderName) {
 	// Check if we have descriptor data for the given shader
 	auto pushConstant = s_pushConstantMap.find(shaderName);
 	auto uniforms = s_uniformMap.find(shaderName);
