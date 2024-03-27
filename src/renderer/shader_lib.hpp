@@ -3,7 +3,7 @@
 #include <map>
 #include <string>
 
-#include "bootstrap/shader.hpp"
+#include "renderer/shader.hpp"
 
 class ShaderLibrary {
 

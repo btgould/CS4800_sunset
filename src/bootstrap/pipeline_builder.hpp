@@ -1,13 +1,14 @@
 #pragma once
 
-#include "bootstrap/device.hpp"
-#include "bootstrap/shader.hpp"
-#include "bootstrap/swapchain.hpp"
-#include "pipeline.hpp"
-#include "util/memory.hpp"
-#include "vertex_array.hpp"
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#include "pipeline.hpp"
+#include "vertex_array.hpp"
+#include "bootstrap/device.hpp"
+#include "bootstrap/swapchain.hpp"
+#include "renderer/shader.hpp"
+#include "util/memory.hpp"
 
 /**
  * @class PipelineBuilder

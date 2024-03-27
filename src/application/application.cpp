@@ -5,10 +5,10 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
 
-#include "bootstrap/shader_lib.hpp"
 #include "imgui.h"
 
 #include "renderer/renderer.hpp"
+#include "renderer/shader_lib.hpp"
 #include "renderer/texture_lib.hpp"
 
 #include "util/log.hpp"
@@ -77,6 +77,7 @@ void Application::run() {
 		m_renderer->draw(cloud2);
 
 		// Draw GUI
+		ImGui::ShowDemoWindow();
 		ImGui::Begin("Demo");
 
 		ImGui::SeparatorText("Light Settings: ");

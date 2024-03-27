@@ -4,7 +4,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "bootstrap/device.hpp"
-#include "bootstrap/shader.hpp"
+#include "renderer/shader.hpp"
 #include "renderer/transform.hpp"
 #include "renderer/index_buffer.hpp"
 #include "renderer/texture.hpp"

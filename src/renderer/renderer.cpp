@@ -7,7 +7,7 @@
 #include <backends/imgui_impl_vulkan.h>
 
 #include "bootstrap/pipeline.hpp"
-#include "bootstrap/shader_lib.hpp"
+#include "renderer/shader_lib.hpp"
 #include "renderer/texture_lib.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"

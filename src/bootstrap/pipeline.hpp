@@ -6,7 +6,7 @@
 #include <array>
 #include <vulkan/vulkan_core.h>
 
-#include "bootstrap/shader.hpp"
+#include "renderer/shader.hpp"
 #include "renderer/model.hpp"
 #include "renderer/texture.hpp"
 #include "util/constants.hpp"
