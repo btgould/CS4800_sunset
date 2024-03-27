@@ -22,9 +22,10 @@ struct LightSource {
 	alignas(4) float diffuseStrength;
 };
 
-struct Cloud {
-	alignas(16) glm::vec3 pos;
-	alignas(16) glm::vec3 scale;
+struct CloudSettings {
+	alignas(4) float noiseFreq = 10.0f;
+	alignas(4) float baseIntensity = 0.9f;
+	alignas(4) float opacity = 0.8f;
 };
 
 /**

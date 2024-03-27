@@ -8,6 +8,12 @@ layout(set = 0, binding = 0) uniform VP {
     mat4 vp;
 } camVP;
 
+layout(set = 0, binding = 1) uniform CloudSettings {
+	float noiseFreq;
+	float baseIntensity; 
+	float opacity;
+} cloud;
+
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec3 inColor;
@@ -47,7 +53,7 @@ float noise(vec3 p) {
 void main() {
 	fragPos = vec3(trs.trs * vec4(inPosition, 1.0));
 	gl_Position = camVP.vp * vec4(fragPos, 1.0);
-	gl_Position = gl_Position + 30 * noise(fragPos / 10); // random cloud geometry
+	gl_Position = gl_Position + 30 * noise(fragPos / cloud.noiseFreq); // random cloud geometry
 
 	cloudPos = vec3(trs.trs[3]);
 	cloudScale = vec3(0);

@@ -1,5 +1,11 @@
 #version 450
 
+layout(set = 0, binding = 1) uniform CloudSettings {
+	float noiseFreq;
+	float baseIntensity; 
+	float opacity;
+} cloud;
+
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
 layout(set = 1, binding = 1) uniform sampler2D normSampler; // TODO: Don't need this
 
@@ -86,8 +92,8 @@ void main() {
 	float normalizedHeight = (fragPos.z - cloudPos.z) / cloudScale.z;
 	normalizedHeight = (normalizedHeight + 1) / 2;
 	float intensity = pow(normalizedHeight, 0.5); 
-	vec3 baseColor = intensity * vec3(0.9f, 0.9f, 0.9f) + 0.1 * cnoise(fragPos / 10);
-	outColor = vec4(baseColor, 0.8f);
+	vec3 baseColor = intensity * cloud.baseIntensity * vec3(1.0f, 1.0f, 1.0f) + (1 - cloud.baseIntensity) * cnoise(fragPos / cloud.noiseFreq);
+	outColor = vec4(baseColor, cloud.opacity);
 
 	// outColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 }

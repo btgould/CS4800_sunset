@@ -2,6 +2,7 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/fwd.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
 
 #include "bootstrap/shader_lib.hpp"
@@ -30,9 +31,9 @@ Application::Application()
 }
 
 void Application::run() {
-	Model model(m_device, "res/model/mountain.obj",
-	            TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
-	            ShaderLibrary::get()->getShader(m_device, "model"));
+	Model mountain(m_device, "res/model/mountain.obj",
+	               TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
+	               ShaderLibrary::get()->getShader(m_device, "model"));
 
 	Model skybox(m_device, "res/skybox/skybox.obj",
 	             TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png"),
@@ -52,6 +53,8 @@ void Application::run() {
 	cloud2.getTransform().setTranslation(glm::vec3(-30.0f, 100.0f, 100.0f));
 	cloud2.getTransform().setScale(glm::vec3(100.0f, 150.0f, 50.0f));
 
+	CloudSettings cloudSettings;
+
 	LightSource light;
 	light.pos = glm::vec3(-630.0f, -500.0f, 267.0f);
 	light.color = glm::vec3(0.988f, 0.415f, 0.227f);
@@ -67,13 +70,35 @@ void Application::run() {
 
 		m_renderer->beginScene();
 
-		// Draw model
-		m_renderer->draw(model);
+		// Draw models
+		m_renderer->draw(mountain);
 		m_renderer->draw(skybox);
 		m_renderer->draw(cloud);
 		m_renderer->draw(cloud2);
 
-		ImGui::ShowDemoWindow();
+		// Draw GUI
+		ImGui::Begin("Demo");
+
+		ImGui::SeparatorText("Light Settings: ");
+		ImGui::DragFloat("Ambient Intensity", &light.ambientStrength, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Diffuse Intensity", &light.diffuseStrength, 1.0f, 0.0f, 100.0f);
+		ImGui::DragFloat3("Position", glm::value_ptr(light.pos), 1.0f, -600.0f, 600.0f);
+		ImGui::ColorEdit3("Color", glm::value_ptr(light.color));
+
+		ImGui::SeparatorText("Mountain Settings: ");
+		glm::vec3 pos = mountain.getTransform().getTranslation();
+		ImGui::DragFloat3("Position", glm::value_ptr(pos), 1.0f, -300.0f, 300.0f);
+		mountain.getTransform().setTranslation(pos);
+		glm::vec3 scale = mountain.getTransform().getScale();
+		ImGui::DragFloat3("Scale", glm::value_ptr(scale), 0.1f, 0.1f, 3.0f);
+		mountain.getTransform().setScale(scale);
+
+		ImGui::SeparatorText("Cloud Settings: ");
+		ImGui::DragFloat("Noise Frequency", &cloudSettings.noiseFreq, 0.1f, 1.0f, 50.0f);
+		ImGui::DragFloat("Base intensity", &cloudSettings.baseIntensity, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Opacity", &cloudSettings.opacity, 0.01f, 0.0f, 1.0f);
+
+		ImGui::End();
 
 		m_renderer->endScene();
 
@@ -82,6 +107,7 @@ void Application::run() {
 		glm::mat4 camVP = m_camera->getVP();
 		m_renderer->updateUniform("camVP", &camVP);
 		m_renderer->updateUniform("light", &light); // do this in loop b/c >1 framebuffers
+		m_renderer->updateUniform("cloudSettings", &cloudSettings);
 	}
 
 	m_device->flush();

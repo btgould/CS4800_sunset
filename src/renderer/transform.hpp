@@ -22,7 +22,7 @@ class Transform {
 
   private:
 	glm::vec3 m_translation;
-	glm::mat4 m_rotation;
+	glm::mat4 m_rotation; // TODO: really should be using quaternions for rotation
 	glm::vec3 m_scale;
 
 	glm::mat4 m_TRS;
