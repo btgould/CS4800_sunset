@@ -5,7 +5,6 @@
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtx/hash.hpp>
 
-#include "application/camera_controller.hpp"
 #include "bootstrap/device.hpp"
 #include "bootstrap/instance.hpp"
 #include "bootstrap/window.hpp"
@@ -53,7 +52,6 @@ class Application {
 	Ref<VulkanDevice> m_device;
 	Ref<VulkanRenderer> m_renderer;
 	Ref<Camera> m_camera;
-	Ref<CameraController> m_camController;
 
 	double m_time;
 };

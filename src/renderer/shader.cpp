@@ -25,6 +25,10 @@ std::unordered_map<std::string, PipelineDescriptor> Shader::s_pushConstantMap = 
 		"skybox",
 		{VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "modelTRS"},
 	},
+	{
+		"grid",
+		{VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "modelTRS"},
+	},
 };
 
 std::unordered_map<std::string, std::vector<PipelineDescriptor>> Shader::s_uniformMap = {
@@ -46,6 +50,10 @@ std::unordered_map<std::string, std::vector<PipelineDescriptor>> Shader::s_unifo
 		 {VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(CloudSettings), "cloudSettings"},
 	 }},
 	{"skybox",
+     {
+		 {VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "camVP"},
+	 }},
+	{"grid",
      {
 		 {VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "camVP"},
 	 }},
