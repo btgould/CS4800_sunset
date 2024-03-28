@@ -8,22 +8,23 @@
 #include <glm/fwd.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/matrix.hpp>
+#include <glm/trigonometric.hpp>
 
 #include "util/log.hpp"
 
 Camera::Camera(float fovY, float aspect, glm::vec3 pos, float nearClip, float farClip)
 	: m_fovY(fovY), m_aspect(aspect), m_nearClip(nearClip), m_farClip(farClip), m_pos(pos) {
-	lookAt(glm::vec3(0.0f, 0.0f, 0.0f));
+	lookAt(glm::vec3(0.0f, 0.0f, -1.0f));
 	m_proj = glm::perspective(m_fovY, m_aspect, m_nearClip, m_farClip);
-	m_proj[1][1] *= -1; // flip to account for OpenGL handedness
+	m_proj[1][1] *= -1; // flip to account for OpenGL inverting y-axis
 }
 
 Camera::~Camera() {}
 
 const glm::mat4 Camera::getVP() {
 	// Update data members
-	m_view =
-		glm::mat4_cast(glm::conjugate(m_orientation)) * glm::translate(glm::mat4(1.0f), -m_pos);
+	m_view = glm::translate(glm::mat4(1.0f), -m_pos) * glm::mat4_cast(glm::inverse(m_orientation));
 
 	// Return computed result
 	glm::mat4 VP = m_proj * m_view;
@@ -47,7 +48,7 @@ void Camera::lookAt(const glm::vec3& target) {
 
 	// prevent needing to change up direction
 	if (glm::abs(glm::dot(m_look, m_up)) > m_upThreshold) {
-		m_look.z = m_upThreshold * glm::sign(m_look.z);
+		m_look.y = m_upThreshold * glm::sign(m_look.y); // HACK: this is coordinate system dependent
 		m_look = glm::normalize(m_look);
 	}
 
@@ -57,4 +58,17 @@ void Camera::lookAt(const glm::vec3& target) {
 void Camera::setRotation(const glm::quat& rot) {
 	// TODO: keep look vector updated here
 	m_orientation = rot;
+}
+
+glm::vec3 Camera::getMouseRay(const glm::vec2& screenCoords, const glm::vec2& screenSize) {
+	// Screen -> normalized device -> clip space (all in one group for efficiency)
+	glm::vec4 coords = glm::vec4(screenCoords.x, screenCoords.y, -1.0f, 1.0f);
+	coords.x = (2.0f * coords.x) / screenSize.x - 1.0f;
+	coords.y = 1.0f - (2.0f * coords.y) / screenSize.y;
+
+	// clip space -> world space
+	coords = glm::inverse(getVP()) * coords;
+
+	glm::vec3 ray = glm::vec3(coords);
+	return ray;
 }

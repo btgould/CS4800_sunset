@@ -19,6 +19,7 @@ class VulkanRenderer {
 
 	VulkanRenderer(const VulkanRenderer&) = delete;
 
+	inline const VkExtent2D& getExtent() const { return m_swapChain->getExtent(); }
 	inline float getAspectRatio() const { return m_swapChain->getAspectRatio(); }
 
   public:

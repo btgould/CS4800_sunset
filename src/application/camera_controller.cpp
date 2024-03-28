@@ -57,9 +57,12 @@ void CameraController::checkForRotation(double dt) {
 	}
 
 	// Translate screen coordinates to world coords, focus camera
-	glm::vec4 mousePos4 = glm::vec4(2 * displacement.x / screenSize.width,
-	                                2 * displacement.y / screenSize.height, -1, 1);
-	mousePos4 = glm::inverse(m_cam->getVP()) * mousePos4;
-	mousePos4 /= mousePos4.w;
-	m_cam->lookAt(mousePos4);
+	// glm::vec4 mousePos4 = glm::vec4(2 * displacement.x / screenSize.width,
+	//                                 2 * displacement.y / screenSize.height, -1, 1);
+	// mousePos4 = glm::inverse(m_cam->getVP()) * mousePos4;
+	// mousePos4 /= mousePos4.w;
+
+	glm::vec3 mouseRay = m_cam->getMouseRay(newMousePos, {screenSize.width, screenSize.height});
+
+	// m_cam->lookAt(m_cam->getPos() + mouseRay);
 }
