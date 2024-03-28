@@ -1,9 +1,11 @@
 #include "shader.hpp"
+#include "cellular/grid.hpp"
 
 #include <fstream>
 #include <stdexcept>
 
 #include <glm/gtc/type_ptr.hpp>
+#include <sys/types.h>
 #include <vulkan/vulkan_core.h>
 
 // HACK: both of these maps can theoretically be generated at runtime by parsing the shader source
@@ -56,6 +58,7 @@ std::unordered_map<std::string, std::vector<PipelineDescriptor>> Shader::s_unifo
 	{"grid",
      {
 		 {VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "camVP"},
+		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(GridData), "gridData"},
 	 }},
 };
 

@@ -5,6 +5,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
 
+#include "cellular/grid.hpp"
 #include "imgui.h"
 
 #include "renderer/model.hpp"
@@ -35,29 +36,36 @@ Application::Application()
 void Application::run() {
 	m_camera->lookAt({1.0f, 0.0f, 0.0f});
 
-	Model grid(m_device, "res/model/plane.obj",
-	           TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"),
-	           ShaderLibrary::get()->getShader(m_device, "grid"));
-	grid.getTransform().setTranslation({9.0f, 0.0f, 0.0f});
-	grid.getTransform().scale({3.0f, 3.0f, 3.0f});
+	Model dispPlane(m_device, "res/model/plane.obj",
+	                TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"),
+	                ShaderLibrary::get()->getShader(m_device, "grid"));
+	dispPlane.getTransform().setTranslation({9.0f, 0.0f, 0.0f});
+	dispPlane.getTransform().scale({3.0f, 3.0f, 3.0f});
+
+	CellGrid grid;
+	GridData gridData;
 
 	while (!m_window->shouldClose()) {
 		double newTime = glfwGetTime();
 		double dt = (newTime - m_time) / 0.0166666;
 		m_time = newTime;
 
+		// Update window
 		m_window->pollEvents();
 
+		// Update sim
+		grid.step();
+		gridData = grid.getGridData();
+
+		// Render
 		m_renderer->beginScene();
-
-		// Draw grid
-		m_renderer->draw(grid);
-
+		m_renderer->draw(dispPlane);
 		m_renderer->endScene();
 
 		// update uniforms
 		glm::mat4 camVP = m_camera->getVP();
 		m_renderer->updateUniform("camVP", &camVP);
+		m_renderer->updateUniform("gridData", &gridData);
 	}
 
 	m_device->flush();
