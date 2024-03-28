@@ -15,10 +15,19 @@ layout(location = 2) in vec2 fragTexCoord;
 layout(location = 0) out vec4 outColor;
 
 void main() {
+	// map pixels to grid cells
 	vec2 cell = floor(gridData.cellCount * fragTexCoord);
 	float tmp = cell.x;
 	cell.x = gridData.cellCount - cell.y;
 	cell.y = tmp;
+	ivec2 icell = ivec2(cell);
 
-	outColor = vec4(cell / gridData.cellCount, 0.0f, 1.0f);
+	// get color for type of grid cell
+	if (gridData.cells[icell.x][icell.y] == 0) {
+		outColor = vec4(0.3f, 0.3f, 0.3f, 1.0f);
+	} else if (gridData.cells[icell.x][icell.y] == 0) {
+		outColor = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+	} else {
+		outColor = vec4(0.29f, 0.21f, 0.13f, 1.0f);
+	}
 }
