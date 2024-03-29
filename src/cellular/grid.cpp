@@ -51,27 +51,27 @@ void CellGrid::step(double dt) {
 				case CELL_TYPE_SAND:
 					// check if can fall
 					if (row < GRID_COUNT - 1 &&
-					    (m_grid[col][row + 1] == CellType::CELL_TYPE_EMPTY ||
-					     m_grid[col][row + 1] == CellType::CELL_TYPE_FLUID_LEFT ||
-					     m_grid[col][row + 1] == CellType::CELL_TYPE_FLUID_RIGHT)) {
+					    ((m_grid[col][row + 1] &
+					      (CellType::CELL_TYPE_EMPTY | CellType::CELL_TYPE_FLUID_LEFT |
+					       CellType::CELL_TYPE_FLUID_RIGHT)) != 0)) {
 						target = &m_grid[col][row + 1];
 						break;
 					}
 
 					// check if can move fall
 					if (row < GRID_COUNT - 1 && col > 0 &&
-					    (m_grid[col - 1][row + 1] == CellType::CELL_TYPE_EMPTY ||
-					     m_grid[col - 1][row + 1] == CellType::CELL_TYPE_FLUID_LEFT ||
-					     m_grid[col - 1][row + 1] == CellType::CELL_TYPE_FLUID_RIGHT)) {
+					    ((m_grid[col - 1][row + 1] &
+					      (CellType::CELL_TYPE_EMPTY | CellType::CELL_TYPE_FLUID_LEFT |
+					       CellType::CELL_TYPE_FLUID_RIGHT)) != 0)) {
 						target = &m_grid[col - 1][row + 1];
 					}
 					break;
 				case CELL_TYPE_FUNGI:
 					// check if can fall
 					if (row < GRID_COUNT - 1 &&
-					    (m_grid[col][row + 1] == CellType::CELL_TYPE_EMPTY ||
-					     m_grid[col][row + 1] == CellType::CELL_TYPE_FLUID_LEFT ||
-					     m_grid[col][row + 1] == CellType::CELL_TYPE_FLUID_RIGHT)) {
+					    ((m_grid[col][row + 1] &
+					      (CellType::CELL_TYPE_EMPTY | CellType::CELL_TYPE_FLUID_LEFT |
+					       CellType::CELL_TYPE_FLUID_RIGHT)) != 0)) {
 						target = &m_grid[col][row + 1];
 						break;
 					}
@@ -122,9 +122,9 @@ void CellGrid::step(double dt) {
 					break;
 				case CELL_TYPE_SAND:
 					if (row < GRID_COUNT - 1 && col < GRID_COUNT - 1 &&
-					    (m_grid[col + 1][row + 1] == CellType::CELL_TYPE_EMPTY ||
-					     m_grid[col + 1][row + 1] == CellType::CELL_TYPE_FLUID_LEFT ||
-					     m_grid[col + 1][row + 1] == CellType::CELL_TYPE_FLUID_RIGHT)) {
+					    ((m_grid[col + 1][row + 1] &
+					      (CellType::CELL_TYPE_EMPTY | CellType::CELL_TYPE_FLUID_LEFT |
+					       CellType::CELL_TYPE_FLUID_RIGHT)) != 0)) {
 						target = &m_grid[col + 1][row + 1];
 					}
 					break;

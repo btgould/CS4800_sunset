@@ -24,15 +24,15 @@ void main() {
 
 	// get color for type of grid cell
 	uint cellType = gridData.cells[icell.x][icell.y];
-	if (cellType == 0) {
+	if (cellType == 1) {
 		outColor = vec4(0.3f, 0.3f, 0.3f, 1.0f); // empty
-	} else if (cellType == 1) {
+	} else if (cellType == 2) {
 		outColor = vec4(0.29f, 0.21f, 0.13f, 1.0f); // solid
-	} else if (cellType == 2 || cellType == 3) {
+	} else if (cellType == 4 || cellType == 8) {
 		outColor = vec4(0.0f, 0.0f, 1.0f, 1.0f); // water
-	} else if (cellType == 4) {
+	} else if (cellType == 16) {
 		outColor = vec4(1.0f, 1.0f, 0.0f, 1.0f); // sand
-	} else if (cellType == 5) {
+	} else if (cellType == 32) {
 		outColor = vec4(1.0f, 0.0f, 1.0f, 1.0f); // fungi
 	}
 }
