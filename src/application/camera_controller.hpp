@@ -24,7 +24,7 @@ class CameraController {
 	Ref<Camera> m_cam;
 
 	float m_translationSpeed = 8.0f;
-	float m_rotationSpeed = 50.0f;
+	float m_rotationSpeed = 0.1f;
 
 	glm::vec2 m_lastMousePos;
 	bool m_shouldRotate;

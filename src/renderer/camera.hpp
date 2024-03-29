@@ -22,25 +22,25 @@ class Camera {
 	void setRotation(const glm::quat& rot);
 
 	/**
-	 * @brief Gets the direction of a ray coming from the camera pointing through the mouse.
+	 * @brief Gets a possible position of the mouse pointer in world coordinates.
 	 *
-	 * The origin of the ray is at the camera, so points on the ray have the form camera_pos + t *
-	 * ray_dir. No guarantees are made about the magnitude of this direction. If you need it
-	 * normalized, you should do so after calling this function.
+	 * Every mouse position corresponds to a ray in world coordinates originating at the camera.
+	 * This function returns a point on that ray, with unspecified distance from the camera. If a
+	 * specific distance is needed, you will have to compute it externally.
 	 *
 	 * @param screenCoords The screen space coordinates (in pixels) of the mouse
 	 * @param screenSize The size of the screen (in pixels)
 	 *
-	 * @return A 3-vector giving the direction of a ray through the given mouse coordinates in world
-	 * space
+	 * @return 3D world space coordinates of the mouse
 	 */
-	glm::vec3 getMouseRay(const glm::vec2& screenCoords, const glm::vec2& screenSize);
+	glm::vec3 getMousePos(const glm::vec2& screenCoords, const glm::vec2& screenSize);
 
   public:
 	inline const glm::vec3& getPos() const { return m_pos; }
 	inline const glm::vec3& getLook() const { return m_look; }
 	inline const glm::vec3& getUp() const { return m_up; }
 	inline const glm::vec3 getRight() const { return glm::cross(m_look, m_up); }
+	inline const glm::quat& getOrientation() const { return m_orientation; }
 
   private:
 	float m_nearClip, m_farClip;

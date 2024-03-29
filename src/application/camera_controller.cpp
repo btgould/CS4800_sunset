@@ -1,8 +1,11 @@
 #include "camera_controller.hpp"
 
 #include <GLFW/glfw3.h>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/quaternion_common.hpp>
 #include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <vulkan/vulkan_core.h>
 
@@ -57,12 +60,9 @@ void CameraController::checkForRotation(double dt) {
 	}
 
 	// Translate screen coordinates to world coords, focus camera
-	// glm::vec4 mousePos4 = glm::vec4(2 * displacement.x / screenSize.width,
-	//                                 2 * displacement.y / screenSize.height, -1, 1);
-	// mousePos4 = glm::inverse(m_cam->getVP()) * mousePos4;
-	// mousePos4 /= mousePos4.w;
-
-	glm::vec3 mouseRay = m_cam->getMouseRay(newMousePos, {screenSize.width, screenSize.height});
-
-	// m_cam->lookAt(m_cam->getPos() + mouseRay);
+	glm::vec3 mousePos = m_cam->getMousePos(newMousePos, {screenSize.width, screenSize.height});
+	glm::quat curr = m_cam->getOrientation();
+	glm::quat res = glm::slerp(curr, glm::quatLookAt(mousePos - m_cam->getPos(), m_cam->getUp()),
+	                           (float) dt * m_rotationSpeed);
+	m_cam->setRotation(res);
 }

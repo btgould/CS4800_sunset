@@ -2,6 +2,7 @@
 
 #include <glm/common.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_projection.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/quaternion_common.hpp>
 #include <glm/ext/quaternion_geometric.hpp>
@@ -24,7 +25,7 @@ Camera::~Camera() {}
 
 const glm::mat4 Camera::getVP() {
 	// Update data members
-	m_view = glm::translate(glm::mat4(1.0f), -m_pos) * glm::mat4_cast(glm::inverse(m_orientation));
+	m_view = glm::mat4_cast(glm::inverse(m_orientation)) * glm::translate(glm::mat4(1.0f), -m_pos);
 
 	// Return computed result
 	glm::mat4 VP = m_proj * m_view;
@@ -57,18 +58,20 @@ void Camera::lookAt(const glm::vec3& target) {
 
 void Camera::setRotation(const glm::quat& rot) {
 	// TODO: keep look vector updated here
-	m_orientation = rot;
+	m_orientation = glm::normalize(rot);
+	m_look = glm::normalize(m_orientation * glm::vec3(0.0f, 0.0f, -1.0f));
 }
 
-glm::vec3 Camera::getMouseRay(const glm::vec2& screenCoords, const glm::vec2& screenSize) {
+glm::vec3 Camera::getMousePos(const glm::vec2& screenCoords, const glm::vec2& screenSize) {
 	// Screen -> normalized device -> clip space (all in one group for efficiency)
-	glm::vec4 coords = glm::vec4(screenCoords.x, screenCoords.y, -1.0f, 1.0f);
+	glm::vec4 coords = glm::vec4(screenCoords.x, screenCoords.y, 0.0f, 1.0f);
 	coords.x = (2.0f * coords.x) / screenSize.x - 1.0f;
-	coords.y = 1.0f - (2.0f * coords.y) / screenSize.y;
+	coords.y = (2.0f * coords.y) / screenSize.y - 1.0f;
 
-	// clip space -> world space
+	// clip space -> world coords
 	coords = glm::inverse(getVP()) * coords;
+	coords /= coords.w;
 
-	glm::vec3 ray = glm::vec3(coords);
-	return ray;
+	// I could just use glm::unProject, but I wrote it out here for readability
+	return glm::vec3(coords);
 }
