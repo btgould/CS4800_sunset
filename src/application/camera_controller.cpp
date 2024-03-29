@@ -36,7 +36,7 @@ void CameraController::checkForTranslation(double dt) {
 		translation += glm::vec3(-1.0f, 0.0f, 0.0f);
 	}
 
-	m_cam->translate(translation * m_translationSpeed * (float) dt);
+	m_cam->getTransform().translateRelative(translation * m_translationSpeed * (float) dt);
 }
 
 void CameraController::checkForRotation(double dt) {
@@ -66,10 +66,11 @@ void CameraController::checkForRotation(double dt) {
 		// Translate screen coordinates to world coords, focus camera
 		glm::vec3 mousePos =
 			m_cam->getMousePos(displacement, {screenSize.width, screenSize.height});
-		m_target = glm::quatLookAt(mousePos - m_cam->getPos(), m_cam->getUp());
+		m_target =
+			glm::quatLookAt(mousePos - m_cam->getTransform().getTranslation(), m_cam->getUp());
 	}
 
-	glm::quat curr = m_cam->getOrientation();
+	glm::quat curr = m_cam->getTransform().getRotation();
 	glm::quat res = glm::slerp(curr, m_target, (float) dt * m_rotationFollow);
-	m_cam->setRotation(res);
+	m_cam->getTransform().setRotation(res);
 }

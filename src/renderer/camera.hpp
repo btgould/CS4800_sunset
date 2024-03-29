@@ -1,5 +1,6 @@
 #pragma once
 
+#include "renderer/transform.hpp"
 #include <glm/ext/quaternion_geometric.hpp>
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -14,12 +15,7 @@ class Camera {
   public:
 	const glm::mat4 getVP();
 
-	void translate(const glm::vec3& tr);
-	void translateAbsolute(const glm::vec3& tr);
-
-	void setTranslation(const glm::vec3& pos);
 	void lookAt(const glm::vec3& target);
-	void setRotation(const glm::quat& rot);
 
 	/**
 	 * @brief Gets a possible position of the mouse pointer in world coordinates.
@@ -36,11 +32,8 @@ class Camera {
 	glm::vec3 getMousePos(const glm::vec2& screenCoords, const glm::vec2& screenSize);
 
   public:
-	inline const glm::vec3& getPos() const { return m_pos; }
-	inline const glm::vec3& getLook() const { return m_look; }
 	inline const glm::vec3& getUp() const { return m_up; }
-	inline const glm::vec3 getRight() const { return glm::cross(m_look, m_up); }
-	inline const glm::quat& getOrientation() const { return m_orientation; }
+	inline Transform& getTransform() { return m_transform; }
 
   private:
 	float m_nearClip, m_farClip;
@@ -48,13 +41,10 @@ class Camera {
 	/* Width / height */
 	float m_aspect;
 
-	glm::vec3 m_pos;
-	glm::quat m_orientation;
+	Transform m_transform;
 
-	glm::vec3 m_look;
 	glm::vec3 m_up = glm::vec3(0.0f, 1.0f, 0.0f);
 	float m_upThreshold = 0.9f;
 
-	glm::mat4 m_view;
 	glm::mat4 m_proj;
 };
