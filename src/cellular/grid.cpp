@@ -20,6 +20,7 @@ void CellGrid::step(double dt) {
 				switch (m_grid[col][row]) {
 				case CELL_TYPE_EMPTY:
 				case CELL_TYPE_SOLID:
+				case CELL_TYPE_FLUID_RIGHT:
 					break;
 				case CELL_TYPE_FLUID_LEFT:
 					// check if can fall
@@ -46,8 +47,23 @@ void CellGrid::step(double dt) {
 						currentType = CellType::CELL_TYPE_FLUID_RIGHT;
 					}
 					break;
+				case CELL_TYPE_SAND:
+					// check if can fall
+					if (row < GRID_COUNT - 1 &&
+					    (m_grid[col][row + 1] == CellType::CELL_TYPE_EMPTY ||
+					     m_grid[col][row + 1] == CellType::CELL_TYPE_FLUID_LEFT ||
+					     m_grid[col][row + 1] == CellType::CELL_TYPE_FLUID_RIGHT)) {
+						target = &m_grid[col][row + 1];
+						break;
+					}
 
-				case CELL_TYPE_FLUID_RIGHT:
+					// check if can move fall
+					if (row < GRID_COUNT - 1 && col > 0 &&
+					    (m_grid[col - 1][row + 1] == CellType::CELL_TYPE_EMPTY ||
+					     m_grid[col - 1][row + 1] == CellType::CELL_TYPE_FLUID_LEFT ||
+					     m_grid[col - 1][row + 1] == CellType::CELL_TYPE_FLUID_RIGHT)) {
+						target = &m_grid[col - 1][row + 1];
+					}
 					break;
 				}
 
@@ -55,6 +71,7 @@ void CellGrid::step(double dt) {
 				*target = currentType;
 			}
 
+			// PERF: There has to be a better way to do this than doubling my iteration time
 			for (int col = GRID_COUNT - 1; col >= 0; col--) {
 				CellType currentType = m_grid[col][row];
 				CellType* target = &m_grid[col][row]; // default to staying still
@@ -90,13 +107,20 @@ void CellGrid::step(double dt) {
 						currentType = CellType::CELL_TYPE_FLUID_LEFT;
 					}
 					break;
+				case CELL_TYPE_SAND:
+					if (row < GRID_COUNT - 1 && col < GRID_COUNT - 1 &&
+					    (m_grid[col + 1][row + 1] == CellType::CELL_TYPE_EMPTY ||
+					     m_grid[col + 1][row + 1] == CellType::CELL_TYPE_FLUID_LEFT ||
+					     m_grid[col + 1][row + 1] == CellType::CELL_TYPE_FLUID_RIGHT)) {
+						target = &m_grid[col + 1][row + 1];
+					}
+					break;
 				}
 
 				m_grid[col][row] = CellType::CELL_TYPE_EMPTY;
 				*target = currentType;
 			}
 		}
-		LOG_INFO("grid tick");
 	}
 }
 

@@ -20,12 +20,17 @@ void main() {
 	vec2 cell = floor(gridData.cellCount * fragTexCoord);
 	ivec2 icell = ivec2(cell);
 
+	outColor = vec4(0.0f, 0.0f, 0.0f, 1.0f); // if unknown
+
 	// get color for type of grid cell
-	if (gridData.cells[icell.x][icell.y] == 0) {
+	uint cellType = gridData.cells[icell.x][icell.y];
+	if (cellType == 0) {
 		outColor = vec4(0.3f, 0.3f, 0.3f, 1.0f); // empty
-	} else if (gridData.cells[icell.x][icell.y] == 1) {
+	} else if (cellType == 1) {
 		outColor = vec4(0.29f, 0.21f, 0.13f, 1.0f); // solid
-	} else {
-		outColor = vec4(0.0f, 0.0f, 1.0f, 1.0f); // fluid
+	} else if (cellType == 2 || cellType == 3) {
+		outColor = vec4(0.0f, 0.0f, 1.0f, 1.0f); // water
+	} else if (cellType == 4) {
+		outColor = vec4(1.0f, 1.0f, 0.0f, 1.0f); // sand
 	}
 }
