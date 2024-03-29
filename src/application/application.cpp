@@ -78,6 +78,11 @@ void Application::run() {
 		m_renderer->draw(dispPlane);
 
 		ImGui::Begin("Options");
+
+		if (ImGui::Button("Clear")) {
+			grid.clear();
+		}
+
 		ImGui::SeparatorText("Pen");
 		if (ImGui::RadioButton("Empty", penType == CellType::CELL_TYPE_EMPTY)) {
 			penType = CellType::CELL_TYPE_EMPTY;
@@ -88,6 +93,7 @@ void Application::run() {
 		if (ImGui::RadioButton("Solid", penType == CellType::CELL_TYPE_SOLID)) {
 			penType = CellType::CELL_TYPE_SOLID;
 		}
+
 		ImGui::End();
 
 		m_renderer->endScene();

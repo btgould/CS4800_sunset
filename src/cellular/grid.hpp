@@ -22,6 +22,7 @@ class CellGrid {
 
 	void step();
 	void write(CellType type, uint32_t row, uint32_t col);
+	void clear();
 
 	GridData getGridData() {
 		GridData data;
