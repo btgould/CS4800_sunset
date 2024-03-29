@@ -42,6 +42,7 @@ void Application::run() {
 
 	CellGrid grid;
 	GridData gridData;
+	CellType penType;
 
 	while (!m_window->shouldClose()) {
 		double newTime = glfwGetTime();
@@ -65,7 +66,7 @@ void Application::run() {
 		// Write data to grid
 		if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_1) && mousePos.x >= 0 &&
 		    mousePos.x < GRID_COUNT && mousePos.y >= 0 && mousePos.y < GRID_COUNT) {
-			grid.write(CellType::CELL_TYPE_FLUID, mousePos.y, mousePos.x);
+			grid.write(penType, mousePos.y, mousePos.x);
 		}
 
 		// Update sim
@@ -75,6 +76,20 @@ void Application::run() {
 		// Render
 		m_renderer->beginScene();
 		m_renderer->draw(dispPlane);
+
+		ImGui::Begin("Options");
+		ImGui::SeparatorText("Pen");
+		if (ImGui::RadioButton("Empty", penType == CellType::CELL_TYPE_EMPTY)) {
+			penType = CellType::CELL_TYPE_EMPTY;
+		}
+		if (ImGui::RadioButton("Fluid", penType == CellType::CELL_TYPE_FLUID)) {
+			penType = CellType::CELL_TYPE_FLUID;
+		}
+		if (ImGui::RadioButton("Solid", penType == CellType::CELL_TYPE_SOLID)) {
+			penType = CellType::CELL_TYPE_SOLID;
+		}
+		ImGui::End();
+
 		m_renderer->endScene();
 
 		// update uniforms
