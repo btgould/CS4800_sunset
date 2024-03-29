@@ -96,6 +96,9 @@ void Application::run() {
 		if (ImGui::RadioButton("Sand", penType == CellType::CELL_TYPE_SAND)) {
 			penType = CellType::CELL_TYPE_SAND;
 		}
+		if (ImGui::RadioButton("Fungi", penType == CellType::CELL_TYPE_FUNGI)) {
+			penType = CellType::CELL_TYPE_FUNGI;
+		}
 
 		ImGui::End();
 

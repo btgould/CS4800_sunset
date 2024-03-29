@@ -17,7 +17,7 @@ void CellGrid::step(double dt) {
 				CellType currentType = m_grid[col][row];
 				CellType* target = &m_grid[col][row]; // default to staying still
 
-				switch (m_grid[col][row]) {
+				switch (currentType) {
 				case CELL_TYPE_EMPTY:
 				case CELL_TYPE_SOLID:
 				case CELL_TYPE_FLUID_RIGHT:
@@ -65,6 +65,16 @@ void CellGrid::step(double dt) {
 						target = &m_grid[col - 1][row + 1];
 					}
 					break;
+				case CELL_TYPE_FUNGI:
+					// check if can fall
+					if (row < GRID_COUNT - 1 &&
+					    (m_grid[col][row + 1] == CellType::CELL_TYPE_EMPTY ||
+					     m_grid[col][row + 1] == CellType::CELL_TYPE_FLUID_LEFT ||
+					     m_grid[col][row + 1] == CellType::CELL_TYPE_FLUID_RIGHT)) {
+						target = &m_grid[col][row + 1];
+						break;
+					}
+					break;
 				}
 
 				m_grid[col][row] = CellType::CELL_TYPE_EMPTY;
@@ -81,6 +91,7 @@ void CellGrid::step(double dt) {
 				case CELL_TYPE_EMPTY:
 				case CELL_TYPE_SOLID:
 				case CELL_TYPE_FLUID_LEFT:
+				case CELL_TYPE_FUNGI:
 					break;
 				case CELL_TYPE_FLUID_RIGHT:
 					// check if can fall
@@ -114,6 +125,7 @@ void CellGrid::step(double dt) {
 					     m_grid[col + 1][row + 1] == CellType::CELL_TYPE_FLUID_RIGHT)) {
 						target = &m_grid[col + 1][row + 1];
 					}
+					break;
 					break;
 				}
 
