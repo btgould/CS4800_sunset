@@ -1,10 +1,12 @@
 #include "application.hpp"
 
 #include <GLFW/glfw3.h>
+#include <glm/common.hpp>
 #include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
 
+#include "application/input.hpp"
 #include "cellular/grid.hpp"
 #include "imgui.h"
 
@@ -29,17 +31,13 @@ Application::Application()
 	}
 
 	s_instance = this;
-
-	// m_camera->lookAt(glm::vec3());
 }
 
 void Application::run() {
-	m_camera->lookAt({1.0f, 0.0f, 0.0f});
-
 	Model dispPlane(m_device, "res/model/plane.obj",
 	                TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"),
 	                ShaderLibrary::get()->getShader(m_device, "grid"));
-	dispPlane.getTransform().setTranslation({9.0f, 0.0f, 0.0f});
+	dispPlane.getTransform().setTranslation({1.5f, 0.0f, -9.0f});
 	dispPlane.getTransform().scale({3.0f, 3.0f, 3.0f});
 
 	CellGrid grid;
@@ -52,6 +50,23 @@ void Application::run() {
 
 		// Update window
 		m_window->pollEvents();
+
+		// Map mouse position onto grid
+		auto screenSize = m_renderer->getExtent();
+		auto mousePos =
+			m_camera->getMousePos(Input::getMousePos(), {screenSize.width, screenSize.height});
+		mousePos *= (dispPlane.getTransform().getTranslation().z / mousePos.z);
+
+		auto corner = dispPlane.getTransform().getTRS() * glm::vec4(-1.0f, 1.0f, 0.0f, 1.0f);
+		mousePos.x = (mousePos.x - corner.x) / (2 * dispPlane.getTransform().getScale().x);
+		mousePos.y = (corner.y - mousePos.y) / (2 * dispPlane.getTransform().getScale().y);
+		mousePos = glm::floor((float) GRID_COUNT * mousePos);
+
+		// Write data to grid
+		if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_1) && mousePos.x >= 0 &&
+		    mousePos.x < GRID_COUNT && mousePos.y >= 0 && mousePos.y < GRID_COUNT) {
+			grid.write(CellType::CELL_TYPE_FLUID, mousePos.y, mousePos.x);
+		}
 
 		// Update sim
 		grid.step();
