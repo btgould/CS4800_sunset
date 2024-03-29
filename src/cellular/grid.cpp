@@ -31,7 +31,8 @@ void CellGrid::step(double dt) {
 
 					// check if can move fall
 					if (row < GRID_COUNT - 1 && col > 0 &&
-					    m_grid[col - 1][row + 1] == CellType::CELL_TYPE_EMPTY) {
+					    m_grid[col - 1][row + 1] == CellType::CELL_TYPE_EMPTY &&
+					    m_grid[col - 1][row] == CellType::CELL_TYPE_EMPTY) {
 						target = &m_grid[col - 1][row + 1];
 						break;
 					}
@@ -102,7 +103,8 @@ void CellGrid::step(double dt) {
 
 					// check if can move fall
 					if (row < GRID_COUNT - 1 && col < GRID_COUNT - 1 &&
-					    m_grid[col + 1][row + 1] == CellType::CELL_TYPE_EMPTY) {
+					    m_grid[col + 1][row + 1] == CellType::CELL_TYPE_EMPTY &&
+					    m_grid[col + 1][row] == CELL_TYPE_EMPTY) {
 						target = &m_grid[col + 1][row + 1];
 						break;
 					}
