@@ -45,7 +45,6 @@ void CameraController::checkForRotation(double dt) {
 		m_shouldRotate ? newMousePos - m_lastMousePos
 					   : glm::vec2(0.0f, 0.0f); // if this is the first frame we can rotate,
 	                                            // zero displacement. Prevents initial "jump"
-	displacement *= m_rotationSpeed * dt;
 	m_lastMousePos = newMousePos;
 
 	// don't rotate if mouse out of window or not pressed
@@ -59,10 +58,18 @@ void CameraController::checkForRotation(double dt) {
 		return;
 	}
 
-	// Translate screen coordinates to world coords, focus camera
-	glm::vec3 mousePos = m_cam->getMousePos(newMousePos, {screenSize.width, screenSize.height});
+	if (displacement.x != 0 || displacement.y != 0) {
+		displacement *= m_rotationSpeed;
+		displacement.x += screenSize.width / 2.0f;
+		displacement.y += screenSize.height / 2.0f;
+
+		// Translate screen coordinates to world coords, focus camera
+		glm::vec3 mousePos =
+			m_cam->getMousePos(displacement, {screenSize.width, screenSize.height});
+		m_target = glm::quatLookAt(mousePos - m_cam->getPos(), m_cam->getUp());
+	}
+
 	glm::quat curr = m_cam->getOrientation();
-	glm::quat res = glm::slerp(curr, glm::quatLookAt(mousePos - m_cam->getPos(), m_cam->getUp()),
-	                           (float) dt * m_rotationSpeed);
+	glm::quat res = glm::slerp(curr, m_target, (float) dt * m_rotationFollow);
 	m_cam->setRotation(res);
 }
