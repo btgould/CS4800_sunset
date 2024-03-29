@@ -87,8 +87,8 @@ void Application::run() {
 		if (ImGui::RadioButton("Empty", penType == CellType::CELL_TYPE_EMPTY)) {
 			penType = CellType::CELL_TYPE_EMPTY;
 		}
-		if (ImGui::RadioButton("Fluid", penType == CellType::CELL_TYPE_FLUID)) {
-			penType = CellType::CELL_TYPE_FLUID;
+		if (ImGui::RadioButton("Fluid", penType == CellType::CELL_TYPE_FLUID_LEFT)) {
+			penType = CellType::CELL_TYPE_FLUID_LEFT;
 		}
 		if (ImGui::RadioButton("Solid", penType == CellType::CELL_TYPE_SOLID)) {
 			penType = CellType::CELL_TYPE_SOLID;

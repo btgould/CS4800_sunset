@@ -8,7 +8,12 @@
 	#define GRID_COUNT 50
 #endif // !GRID_COUNT
 
-enum CellType { CELL_TYPE_EMPTY = 0, CELL_TYPE_FLUID = 1, CELL_TYPE_SOLID = 2 };
+enum CellType {
+	CELL_TYPE_EMPTY = 0,
+	CELL_TYPE_SOLID = 1,
+	CELL_TYPE_FLUID_LEFT = 2,
+	CELL_TYPE_FLUID_RIGHT = 3
+};
 
 struct GridData {
 	u_int32_t gridCount;

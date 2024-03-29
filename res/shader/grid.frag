@@ -22,10 +22,10 @@ void main() {
 
 	// get color for type of grid cell
 	if (gridData.cells[icell.x][icell.y] == 0) {
-		outColor = vec4(0.3f, 0.3f, 0.3f, 1.0f);
+		outColor = vec4(0.3f, 0.3f, 0.3f, 1.0f); // empty
 	} else if (gridData.cells[icell.x][icell.y] == 1) {
-		outColor = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+		outColor = vec4(0.29f, 0.21f, 0.13f, 1.0f); // solid
 	} else {
-		outColor = vec4(0.29f, 0.21f, 0.13f, 1.0f);
+		outColor = vec4(0.0f, 0.0f, 1.0f, 1.0f); // fluid
 	}
 }
