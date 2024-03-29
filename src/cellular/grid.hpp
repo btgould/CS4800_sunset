@@ -20,7 +20,7 @@ class CellGrid {
 	CellGrid();
 	~CellGrid() = default;
 
-	void step();
+	void step(double dt);
 	void write(CellType type, uint32_t row, uint32_t col);
 	void clear();
 
@@ -36,4 +36,7 @@ class CellGrid {
 
   private:
 	CellType m_grid[GRID_COUNT][GRID_COUNT];
+
+	float m_updateTime = 6.0f; // default to updating 10x / sec
+	float m_accumulatedTime = 0.0f;
 };

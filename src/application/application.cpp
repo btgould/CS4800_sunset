@@ -46,7 +46,7 @@ void Application::run() {
 
 	while (!m_window->shouldClose()) {
 		double newTime = glfwGetTime();
-		double dt = (newTime - m_time) / 0.0166666;
+		double dt = (newTime - m_time) / 0.0166666; // convert dt to units of frames, at 60fps
 		m_time = newTime;
 
 		// Update window
@@ -70,7 +70,7 @@ void Application::run() {
 		}
 
 		// Update sim
-		grid.step();
+		grid.step(dt);
 		gridData = grid.getGridData();
 
 		// Render

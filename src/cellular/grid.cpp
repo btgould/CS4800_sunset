@@ -1,10 +1,18 @@
 #include "grid.hpp"
 
+#include "util/log.hpp"
+
 CellGrid::CellGrid() {
 	clear();
 }
 
-void CellGrid::step() {}
+void CellGrid::step(double dt) {
+	m_accumulatedTime += dt;
+	if (m_accumulatedTime > m_updateTime) {
+		m_accumulatedTime -= m_updateTime;
+		LOG_INFO("grid tick");
+	}
+}
 
 void CellGrid::write(CellType type, uint32_t row, uint32_t col) {
 	m_grid[col][row] = type;
