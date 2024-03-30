@@ -13,7 +13,8 @@
 #include "input.hpp"
 #include "util/log.hpp"
 
-CameraController::CameraController(Ref<Camera> cam) : m_cam(cam) {}
+CameraController::CameraController(Ref<Camera> cam)
+	: m_cam(cam), m_target(glm::quatLookAt({0.0f, 0.0f, -1.0f}, m_cam->getUp())) {}
 
 CameraController::~CameraController() {}
 
@@ -55,9 +56,11 @@ void CameraController::checkForRotation(double dt) {
 	m_shouldRotate = mouseOnScreen && mouseDown;
 
 	if (!m_shouldRotate) {
+		m_target = m_cam->getTransform().getRotation();
 		return;
 	}
 
+	// Update target on non-zero displacement
 	if (displacement.x != 0 || displacement.y != 0) {
 		displacement *= m_rotationSpeed;
 		displacement.x += screenSize.width / 2.0f;

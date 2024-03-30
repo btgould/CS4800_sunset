@@ -21,15 +21,13 @@ Application::Application()
 	  m_device(CreateRef<VulkanDevice>(m_instance)),
 	  m_renderer(CreateRef<VulkanRenderer>(m_instance, m_device, m_window)),
 	  m_camera(CreateRef<Camera>(glm::radians(45.0f), m_renderer->getAspectRatio(),
-                                 glm::vec3(/* 300.0f, 75.0f, -200.0f */), 1.0f, 10000.0f)),
+                                 glm::vec3(300.0f, 300.0f, 200.0f), 1.0f, 10000.0f)),
 	  m_camController(CreateRef<CameraController>(m_camera)) {
 	if (s_instance) {
 		throw std::runtime_error("Tried to create multiple application instances");
 	}
 
 	s_instance = this;
-
-	// m_camera->lookAt(glm::vec3());
 }
 
 void Application::run() {
@@ -62,6 +60,8 @@ void Application::run() {
 	light.color = glm::vec3(0.988f, 0.415f, 0.227f);
 	light.ambientStrength = 0.2f;
 	light.diffuseStrength = 50.0f;
+
+	m_camera->lookAt(glm::vec3());
 
 	while (!m_window->shouldClose()) {
 		double newTime = glfwGetTime();

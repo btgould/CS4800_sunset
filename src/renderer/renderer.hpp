@@ -9,8 +9,6 @@
 #include "bootstrap/swapchain.hpp"
 
 #include "renderer/model.hpp"
-#include "renderer/vertex_buffer.hpp"
-#include "renderer/index_buffer.hpp"
 
 class VulkanRenderer {
   public:
@@ -24,7 +22,6 @@ class VulkanRenderer {
 
   public:
 	void beginScene();
-	void draw(VertexBuffer& vertices, IndexBuffer& indices);
 	void draw(Model& model);
 	void endScene();
 

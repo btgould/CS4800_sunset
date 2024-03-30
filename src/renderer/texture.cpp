@@ -7,15 +7,15 @@
 
 Texture::Texture(std::string path, Ref<VulkanDevice> device) : m_device(device) {
 	createTextureImage(path);
-	m_textureImageView = m_device->createImageView(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB,
-	                                               VK_IMAGE_ASPECT_COLOR_BIT);
+	m_imageView =
+		m_device->createImageView(m_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 Texture::~Texture() {
-	vkDestroyImageView(m_device->getLogicalDevice(), m_textureImageView, nullptr);
+	vkDestroyImageView(m_device->getLogicalDevice(), m_imageView, nullptr);
 
-	vkDestroyImage(m_device->getLogicalDevice(), m_textureImage, nullptr);
-	vkFreeMemory(m_device->getLogicalDevice(), m_textureImageMemory, nullptr);
+	vkDestroyImage(m_device->getLogicalDevice(), m_image, nullptr);
+	vkFreeMemory(m_device->getLogicalDevice(), m_imageMemory, nullptr);
 }
 
 void Texture::createTextureImage(std::string path) {
@@ -46,17 +46,15 @@ void Texture::createTextureImage(std::string path) {
 	// Create image object from buffer (optimized for shading)
 	m_device->createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
 	                      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage,
-	                      m_textureImageMemory);
+	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_image, m_imageMemory);
 	// Copy buffer data into image object
-	transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+	transitionImageLayout(m_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
 	                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	copyBufferToImage(stagingBuffer, m_textureImage, static_cast<uint32_t>(texWidth),
+	copyBufferToImage(stagingBuffer, m_image, static_cast<uint32_t>(texWidth),
 	                  static_cast<uint32_t>(texHeight));
 
 	// Prepare image for shader access
-	transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB,
-	                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+	transitionImageLayout(m_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 	                      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	// Free staging buffer

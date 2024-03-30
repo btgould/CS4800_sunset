@@ -330,16 +330,7 @@ void VulkanSwapChain::createRenderPass() {
 	subpass.pColorAttachments = &colorAttachmentRef; // this array is index by frag shader outputs
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-	// Create render pass
-	std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
-	VkRenderPassCreateInfo renderPassInfo {};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	renderPassInfo.pAttachments = attachments.data();
-	renderPassInfo.subpassCount = 1;
-	renderPassInfo.pSubpasses = &subpass;
-
-	// Make render pass depend on image being available
+	// Make render subpass depend on image being available
 	VkSubpassDependency dependency {};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependency.dstSubpass = 0; // 0 here indexes our custom subpasses (of which there is only 1)
@@ -352,6 +343,14 @@ void VulkanSwapChain::createRenderPass() {
 	dependency.dstAccessMask =
 		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
+	// Create render pass
+	std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+	VkRenderPassCreateInfo renderPassInfo {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+	renderPassInfo.pAttachments = attachments.data();
+	renderPassInfo.subpassCount = 1;
+	renderPassInfo.pSubpasses = &subpass;
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 

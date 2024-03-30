@@ -188,35 +188,15 @@ void VulkanPipeline::writeUniform(const std::string& name, void* data, uint32_t 
 void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
                                             std::vector<VkVertexInputAttributeDescription> attrDesc,
                                             VkRenderPass renderPass) {
-	/* auto vertShaderCode = readFile("res/shaderc/triangle.vert.spv");
-	auto fragShaderCode = readFile("res/shaderc/triangle.frag.spv");
-
-	VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-	VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
-
-	// Bind each shader to appropriate pipeline stage
-	VkPipelineShaderStageCreateInfo vertShaderStageInfo {};
-	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = vertShaderModule;
-	vertShaderStageInfo.pName = "main";
-
-	VkPipelineShaderStageCreateInfo fragShaderStageInfo {};
-	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = fragShaderModule;
-	fragShaderStageInfo.pName = "main";
-
-	VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo}; */
-
 	// Specify this pipelines dynamic state (i.e. vars that can be changed w/o recreation)
-	/* std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
+	// To change, issue the corresponding vkCmd before render pass creation
+	std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
 	                                             VK_DYNAMIC_STATE_SCISSOR};
 
 	VkPipelineDynamicStateCreateInfo dynamicState {};
 	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-	dynamicState.pDynamicStates = dynamicStates.data(); */
+	dynamicState.pDynamicStates = dynamicStates.data();
 
 	// Specify bind point to incorporate vertex buffer into pipeline
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo {};

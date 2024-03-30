@@ -89,6 +89,8 @@ void VulkanRenderer::beginScene() {
 	m_commandBuffer = m_device->getFrameCommandBuffer(m_currentFrame);
 
 	// Start recording
+	// PERF: This seems like I could record most of the commands once, leave small parts separate
+	// (i.e. uploading push constants), and reduce the time spent recording every frame
 	VkCommandBufferBeginInfo beginInfo {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = 0;                  // Optional
@@ -120,17 +122,6 @@ void VulkanRenderer::beginScene() {
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
-}
-
-void VulkanRenderer::draw(VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer) {
-	vertexBuffer.bind(m_commandBuffer);
-	indexBuffer.bind(m_commandBuffer);
-
-	m_pipelines[0]->bindDescriptorSets(m_commandBuffer, m_currentFrame);
-
-	// Draw
-	// TODO: check here if pipeline's shader is compatible with vertex buffer. May not be
-	vkCmdDrawIndexed(m_commandBuffer, indexBuffer.size(), 1, 0, 0, 0);
 }
 
 void VulkanRenderer::draw(Model& model) {
