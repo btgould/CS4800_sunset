@@ -71,7 +71,11 @@ class VulkanPipeline {
 	void setVertexArray(const VertexArray& vertexArray);
 	void setShader(const Ref<Shader> shader);
 	uint32_t setPushConstant(const PipelineDescriptor& pushConstant);
-	uint32_t pushUniform(const PipelineDescriptor& uniform);
+	void setUniforms(const std::vector<PipelineDescriptor>& uniforms);
+	// HACK: Pipeline should not be in charge of textures. This function looks like it makes another
+	// texture descriptor slot in the pipeline, but really, all pipelines are hardcoded to have two
+	// descriptor slots. All this does is let the pipeline use that texture. This needs to be
+	// reworked
 	void pushTexture(const Ref<Texture> tex);
 
 	void createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
@@ -109,17 +113,18 @@ class VulkanPipeline {
 	std::vector<Frames<VkDescriptorSet>> m_textureDescriptorSets;
 
 	// Uniform resources
-	std::map<std::string, uint32_t> m_uniformIDs;
 	std::map<std::string, uint32_t>
 		m_pushConstantIDs; // HACK: I can really only have one push
 	                       // constant, having a map is redundant. See comment in writePushConstant
+	std::map<std::string, uint32_t> m_uniformIds;
 	std::vector<uint32_t> m_uniformSizes;
+	std::vector<uint32_t> m_uniformOffsets;
 	/* Buffer to store uniforms data in */
-	std::vector<Frames<VkBuffer>> m_uniformBuffers;
+	Frames<VkBuffer> m_uniformBuffers;
 	/* Memory on GPU to store uniform buffers */
-	std::vector<Frames<VkDeviceMemory>> m_uniformBuffersMemory;
+	Frames<VkDeviceMemory> m_uniformBuffersMemory;
 	/* CPU address linked to location of uniforms on GPU */
-	std::vector<Frames<void*>> m_uniformBuffersMapped;
+	Frames<void*> m_uniformBuffersMapped;
 	/* list of structs, each describing a uniform this pipeline makes available to shaders */
 	std::vector<VkDescriptorSetLayoutBinding> m_uniformBindings;
 	/* A list of buffers used by shaders. I use this to upload uniforms. */

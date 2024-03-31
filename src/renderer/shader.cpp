@@ -10,10 +10,6 @@
 // code. However, I really don't want to do that.
 std::unordered_map<std::string, PipelineDescriptor> Shader::s_pushConstantMap = {
 	{
-		"triangle",
-		{VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "modelTRS"},
-	},
-	{
 		"model",
 		{VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "modelTRS"},
 	},
@@ -28,13 +24,6 @@ std::unordered_map<std::string, PipelineDescriptor> Shader::s_pushConstantMap = 
 };
 
 std::unordered_map<std::string, std::vector<PipelineDescriptor>> Shader::s_uniformMap = {
-	{"triangle",
-     {
-		 {VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "camVP"},
-		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(CloudSettings), "cloud"},
-		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(CloudSettings), "cloud2"},
-		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(LightSource), "light"},
-	 }},
 	{"model",
      {
 		 {VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "camVP"},
@@ -56,7 +45,7 @@ Shader::Shader(Ref<VulkanDevice> device, const std::string& shaderName)
 	// Check if we have descriptor data for the given shader
 	auto pushConstant = s_pushConstantMap.find(shaderName);
 	auto uniforms = s_uniformMap.find(shaderName);
-	if (uniforms == s_uniformMap.end()) {
+	if (pushConstant == s_pushConstantMap.end() || uniforms == s_uniformMap.end()) {
 		throw std::runtime_error("No uniform data provided for shader: " + shaderName +
 		                         ". Please hardcode uniform data in bootstrap/shader.cpp");
 	}

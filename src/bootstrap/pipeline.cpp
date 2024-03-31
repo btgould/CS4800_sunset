@@ -20,12 +20,10 @@ VulkanPipeline::VulkanPipeline(Ref<VulkanDevice> device, const Ref<VulkanSwapCha
 VulkanPipeline::~VulkanPipeline() {
 	vkDestroySampler(m_device->getLogicalDevice(), m_textureSampler, nullptr);
 
-	for (uint32_t i = 0; i < m_uniformBuffers.size(); i++) {
-		for (uint32_t j = 0; j < MAX_FRAMES_IN_FLIGHT; j++) {
-			// Destroy uniform buffers
-			vkDestroyBuffer(m_device->getLogicalDevice(), m_uniformBuffers[i][j], nullptr);
-			vkFreeMemory(m_device->getLogicalDevice(), m_uniformBuffersMemory[i][j], nullptr);
-		}
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		// Destroy uniform buffers
+		vkDestroyBuffer(m_device->getLogicalDevice(), m_uniformBuffers[i], nullptr);
+		vkFreeMemory(m_device->getLogicalDevice(), m_uniformBuffersMemory[i], nullptr);
 	}
 
 	vkDestroyDescriptorPool(m_device->getLogicalDevice(), m_descriptorPool, nullptr);
@@ -42,9 +40,7 @@ void VulkanPipeline::create() {
 	}
 
 	setPushConstant(m_shader->getPushConstant());
-	for (const auto& uniform : m_shader->getUniforms()) {
-		pushUniform(uniform);
-	}
+	setUniforms(m_shader->getUniforms());
 
 	createDescriptorSetLayout();
 	createTextureSampler();
@@ -60,62 +56,6 @@ void VulkanPipeline::setVertexArray(const VertexArray& vertexArray) {
 
 void VulkanPipeline::setShader(Ref<Shader> shader) {
 	m_shader = shader;
-}
-
-// PERF: There are several things that could be optimized here.
-// 1. I should really be taking in a vector of uniforms, rather than doing them one at a time
-// 2. I'm not sure if I really need the uniformBindings or uniformSizes vectors anymore. I think
-// they go away if I do it all at once
-// 3. Instead of allocating a buffer for each uniform, all uniforms should be stored in one buffer,
-// which offset specifying which one
-uint32_t VulkanPipeline::pushUniform(const PipelineDescriptor& uniform) {
-	uint32_t uniformID = m_uniformBindings.size();
-	m_uniformIDs[uniform.name] = uniformID;
-
-	VkDescriptorSetLayoutBinding binding {};
-	binding.binding = uniformID; // index of binding, order specified in shader code
-	binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	binding.descriptorCount = 1;
-	binding.stageFlags = uniform.stage;
-	binding.pImmutableSamplers = nullptr; // don't need samplers for uniforms
-
-	m_uniformBindings.push_back(binding);
-	m_uniformSizes.push_back(uniform.size);
-
-	// Allocate memory on GPU to store uniform
-	// TODO: I should be able to do this with one giant buffer for all uniforms
-	Frames<VkBuffer> uniformBuffers;
-	Frames<VkDeviceMemory> uniformBufferDeviceMemory;
-	Frames<void*> uniformBuffersMapped;
-
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		m_device->createBuffer(uniform.size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-		                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		                       uniformBuffers[i], uniformBufferDeviceMemory[i]);
-
-		vkMapMemory(m_device->getLogicalDevice(), uniformBufferDeviceMemory[i], 0, uniform.size, 0,
-		            &uniformBuffersMapped[i]);
-	}
-
-	m_uniformBuffers.push_back(uniformBuffers);
-	m_uniformBuffersMemory.push_back(uniformBufferDeviceMemory);
-	m_uniformBuffersMapped.push_back(uniformBuffersMapped);
-
-	return uniformID;
-}
-
-void VulkanPipeline::pushTexture(const Ref<Texture> tex) {
-	VkDescriptorSetLayoutBinding samplerLayoutBinding {};
-	samplerLayoutBinding.binding = 0;
-	samplerLayoutBinding.descriptorCount = 1;
-	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.pImmutableSamplers = nullptr;
-	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	m_textureBindings.push_back(samplerLayoutBinding);
-	m_textureIdx[tex] = m_textures.size();
-	m_textures.push_back(tex);
 }
 
 uint32_t VulkanPipeline::setPushConstant(const PipelineDescriptor& pushConstant) {
@@ -138,6 +78,57 @@ uint32_t VulkanPipeline::setPushConstant(const PipelineDescriptor& pushConstant)
 	return pushConstantID;
 }
 
+void VulkanPipeline::setUniforms(const std::vector<PipelineDescriptor>& uniforms) {
+	uint32_t id = 0;
+	uint32_t currOffset = 0;
+
+	m_uniformSizes.clear();
+	m_uniformOffsets.clear();
+	m_uniformBindings.clear();
+
+	for (const auto& uniform : uniforms) {
+		m_uniformIds[uniform.name] = id;
+
+		VkDescriptorSetLayoutBinding binding {};
+		binding.binding = id; // index of binding, order specified in shader code
+		binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		binding.descriptorCount = 1;
+		binding.stageFlags = uniform.stage;
+		binding.pImmutableSamplers = nullptr; // don't need samplers for uniforms
+
+		m_uniformSizes.push_back(uniform.size);
+		m_uniformOffsets.push_back(currOffset);
+		m_uniformBindings.push_back(binding);
+
+		currOffset += uniform.size;
+		id++;
+	}
+
+	// Allocate memory on GPU to store uniforms
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		m_device->createBuffer(currOffset, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		                       m_uniformBuffers[i], m_uniformBuffersMemory[i]);
+
+		vkMapMemory(m_device->getLogicalDevice(), m_uniformBuffersMemory[i], 0, currOffset, 0,
+		            &m_uniformBuffersMapped[i]);
+	}
+}
+
+void VulkanPipeline::pushTexture(const Ref<Texture> tex) {
+	VkDescriptorSetLayoutBinding samplerLayoutBinding {};
+	samplerLayoutBinding.binding = 0;
+	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	samplerLayoutBinding.pImmutableSamplers = nullptr;
+	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	m_textureBindings.push_back(samplerLayoutBinding);
+	m_textureIdx[tex] = m_textures.size();
+	m_textures.push_back(tex);
+}
+
 void VulkanPipeline::writePushConstant(VkCommandBuffer commandBuffer, const std::string& name,
                                        const void* data, uint32_t currentFrame) {
 	const auto pushConstantID = m_pushConstantIDs.find(name);
@@ -151,6 +142,19 @@ void VulkanPipeline::writePushConstant(VkCommandBuffer commandBuffer, const std:
 
 	vkCmdPushConstants(commandBuffer, m_pipelineLayout, pushConstant.stageFlags,
 	                   pushConstant.offset, pushConstant.size, data);
+}
+
+void VulkanPipeline::writeUniform(const std::string& name, void* data, uint32_t currentFrame) {
+	const auto uniformId = m_uniformIds.find(name);
+
+	if (uniformId == m_uniformIds.end()) {
+		// uniform name was not found
+		LOG_TRACE("Trying to write unrecognized uniform: {0}", name);
+		return;
+	}
+
+	memcpy((char*) m_uniformBuffersMapped[currentFrame] + m_uniformOffsets[uniformId->second], data,
+	       m_uniformSizes[uniformId->second]);
 }
 
 void VulkanPipeline::bind(VkCommandBuffer commandBuffer) {
@@ -170,19 +174,6 @@ void VulkanPipeline::bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t 
 	// order / len
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 2,
 	                        m_activeDescriptorSets.data(), 0, nullptr);
-}
-
-void VulkanPipeline::writeUniform(const std::string& name, void* data, uint32_t currentFrame) {
-	const auto uniformID = m_uniformIDs.find(name);
-
-	if (uniformID == m_uniformIDs.end()) {
-		// uniform name was not found
-		LOG_TRACE("Trying to write unrecognized uniform: {0}", name);
-		return;
-	}
-
-	memcpy(m_uniformBuffersMapped[uniformID->second][currentFrame], data,
-	       m_uniformSizes[uniformID->second]);
 }
 
 void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
@@ -286,7 +277,7 @@ void VulkanPipeline::createDescriptorSetLayout() {
 	// Create layout for all uniform bindings in one descriptor set
 	VkDescriptorSetLayoutCreateInfo uniformLayoutInfo {};
 	uniformLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	uniformLayoutInfo.bindingCount = static_cast<uint32_t>(m_uniformBindings.size());
+	uniformLayoutInfo.bindingCount = static_cast<uint32_t>(m_uniformSizes.size());
 	uniformLayoutInfo.pBindings = m_uniformBindings.data();
 
 	if (vkCreateDescriptorSetLayout(m_device->getLogicalDevice(), &uniformLayoutInfo, nullptr,
@@ -325,13 +316,13 @@ void VulkanPipeline::createDescriptorPool() {
 	VkDescriptorPoolSize uniformBufferPoolSize {};
 	uniformBufferPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	uniformBufferPoolSize.descriptorCount =
-		m_uniformBuffers.size() * static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+		m_uniformSizes.size() * static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 	m_poolSizes.push_back(uniformBufferPoolSize);
 
 	// Create descriptor for image sampler for each frame in flight
 	VkDescriptorPoolSize imageSamplerPoolSize;
 	imageSamplerPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	// TODO: 2 here is one each for albedo and normal
+	// NOTE: 2 here is one each for albedo and normal
 	imageSamplerPoolSize.descriptorCount =
 		2 * m_textures.size() * static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 	m_poolSizes.push_back(imageSamplerPoolSize);
@@ -390,22 +381,37 @@ void VulkanPipeline::createDescriptorSets() {
 
 	// Populate descriptor sets (describe data that goes in each binding available to shader)
 	for (uint32_t frameIdx = 0; frameIdx < MAX_FRAMES_IN_FLIGHT; frameIdx++) {
-		// Add descriptor for each uniform buffer
-		std::vector<VkDescriptorBufferInfo> bufferInfos(m_uniformBuffers.size());
+		// Uniforms
+		std::vector<VkDescriptorBufferInfo> bufferInfos(m_uniformSizes.size());
+		std::vector<VkWriteDescriptorSet> uniformDescriptorWrites(m_uniformSizes.size());
+		u_int32_t offset = 0;
 
-		for (uint32_t uniformIdx = 0; uniformIdx < m_uniformBuffers.size(); uniformIdx++) {
+		for (uint32_t uniformIdx = 0; uniformIdx < m_uniformSizes.size(); uniformIdx++) {
+			// Buffer info: location / size of memory to read to get uniform data
 			VkDescriptorBufferInfo bufferInfo {};
-			bufferInfo.buffer = m_uniformBuffers[uniformIdx][frameIdx];
-			bufferInfo.offset = 0;
+			bufferInfo.buffer = m_uniformBuffers[frameIdx];
+			bufferInfo.offset = offset;
 			bufferInfo.range = m_uniformSizes[uniformIdx];
+			offset += m_uniformSizes[uniformIdx];
 
 			bufferInfos[uniformIdx] = bufferInfo;
+
+			// Descriptor writes: map buffer info to set / binding in shader
+			uniformDescriptorWrites[uniformIdx].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			uniformDescriptorWrites[uniformIdx].dstSet = m_uniformDescriptorSets[frameIdx];
+			uniformDescriptorWrites[uniformIdx].dstBinding = uniformIdx;
+			uniformDescriptorWrites[uniformIdx].dstArrayElement = 0;
+			uniformDescriptorWrites[uniformIdx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			uniformDescriptorWrites[uniformIdx].descriptorCount = 1;
+			uniformDescriptorWrites[uniformIdx].pBufferInfo = &bufferInfos[uniformIdx];
 		}
 
-		// Add descriptor for each texture
+		// Textures
 		std::vector<std::array<VkDescriptorImageInfo, 2>> imageInfos(m_textures.size());
+		std::vector<VkWriteDescriptorSet> textureDescriptorWrites(2 * m_textures.size());
 
 		for (uint32_t textureIdx = 0; textureIdx < m_textures.size(); textureIdx++) {
+			// Image info: image location / layout / sample method to get texture data
 			// albedo
 			imageInfos[textureIdx][0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			imageInfos[textureIdx][0].imageView = m_textures[textureIdx]->getImageView();
@@ -418,47 +424,30 @@ void VulkanPipeline::createDescriptorSets() {
 					->getTexture(m_device, "res/model/mountain.norm")
 					->getImageView(); // FIXME: actually get normal somehow
 			imageInfos[textureIdx][1].sampler = m_textureSampler;
-		}
 
-		// Describe the information to write to each descriptor set
-		// Uniforms:
-		std::vector<VkWriteDescriptorSet> uniformDescriptorWrites(m_uniformBuffers.size());
-
-		for (uint32_t uniformIdx = 0; uniformIdx < m_uniformBuffers.size(); uniformIdx++) {
-			uniformDescriptorWrites[uniformIdx].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			uniformDescriptorWrites[uniformIdx].dstSet = m_uniformDescriptorSets[frameIdx];
-			uniformDescriptorWrites[uniformIdx].dstBinding = uniformIdx;
-			uniformDescriptorWrites[uniformIdx].dstArrayElement = 0;
-			uniformDescriptorWrites[uniformIdx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			uniformDescriptorWrites[uniformIdx].descriptorCount = 1;
-			uniformDescriptorWrites[uniformIdx].pBufferInfo = &bufferInfos[uniformIdx];
-		}
-
-		// Textures:
-		std::vector<VkWriteDescriptorSet> textureDescriptorWrites(2 * m_textures.size());
-		for (uint32_t imageIdx = 0; imageIdx < m_textures.size(); imageIdx++) {
+			// Descriptor writes: map image info to set / binding in shader
 			// albedo
-			textureDescriptorWrites[2 * imageIdx].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			textureDescriptorWrites[2 * imageIdx].dstSet =
-				m_textureDescriptorSets[imageIdx][frameIdx];
-			textureDescriptorWrites[2 * imageIdx].dstBinding = 0;
-			textureDescriptorWrites[2 * imageIdx].dstArrayElement = 0;
-			textureDescriptorWrites[2 * imageIdx].descriptorType =
+			textureDescriptorWrites[2 * textureIdx].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			textureDescriptorWrites[2 * textureIdx].dstSet =
+				m_textureDescriptorSets[textureIdx][frameIdx];
+			textureDescriptorWrites[2 * textureIdx].dstBinding = 0;
+			textureDescriptorWrites[2 * textureIdx].dstArrayElement = 0;
+			textureDescriptorWrites[2 * textureIdx].descriptorType =
 				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			textureDescriptorWrites[2 * imageIdx].descriptorCount = 1;
-			textureDescriptorWrites[2 * imageIdx].pImageInfo = &imageInfos[imageIdx][0];
+			textureDescriptorWrites[2 * textureIdx].descriptorCount = 1;
+			textureDescriptorWrites[2 * textureIdx].pImageInfo = &imageInfos[textureIdx][0];
 
 			// normal
-			textureDescriptorWrites[2 * imageIdx + 1].sType =
+			textureDescriptorWrites[2 * textureIdx + 1].sType =
 				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			textureDescriptorWrites[2 * imageIdx + 1].dstSet =
-				m_textureDescriptorSets[imageIdx][frameIdx];
-			textureDescriptorWrites[2 * imageIdx + 1].dstBinding = 1;
-			textureDescriptorWrites[2 * imageIdx + 1].dstArrayElement = 0;
-			textureDescriptorWrites[2 * imageIdx + 1].descriptorType =
+			textureDescriptorWrites[2 * textureIdx + 1].dstSet =
+				m_textureDescriptorSets[textureIdx][frameIdx];
+			textureDescriptorWrites[2 * textureIdx + 1].dstBinding = 1;
+			textureDescriptorWrites[2 * textureIdx + 1].dstArrayElement = 0;
+			textureDescriptorWrites[2 * textureIdx + 1].descriptorType =
 				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			textureDescriptorWrites[2 * imageIdx + 1].descriptorCount = 1;
-			textureDescriptorWrites[2 * imageIdx + 1].pImageInfo = &imageInfos[imageIdx][1];
+			textureDescriptorWrites[2 * textureIdx + 1].descriptorCount = 1;
+			textureDescriptorWrites[2 * textureIdx + 1].pImageInfo = &imageInfos[textureIdx][1];
 		}
 
 		// Write to descriptor sets
