@@ -43,12 +43,12 @@ void Application::run() {
 	skybox.getTransform().rotateAbout(m_camera->getUp(), glm::radians(-90.0f));
 
 	Model cloud(m_device, "res/model/cloud.obj",
-	            TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
+	            TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"),
 	            ShaderLibrary::get()->getShader(m_device, "cloud"));
 	cloud.getTransform().setTranslation(glm::vec3(-100.0f, 120.0f, 250.0f));
 	cloud.getTransform().setScale(glm::vec3(100.0f, 50.0f, 150.0f));
 	Model cloud2(m_device, "res/model/cloud.obj",
-	             TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
+	             TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"),
 	             ShaderLibrary::get()->getShader(m_device, "cloud"));
 	cloud2.getTransform().setTranslation(glm::vec3(0.0f, 150.0f, 0.0f));
 	cloud2.getTransform().setScale(glm::vec3(100.0f, 50.0f, 150.0f));
