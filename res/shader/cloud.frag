@@ -89,7 +89,7 @@ float cnoise(vec3 P) {
 }
 
 void main() {
-	float normalizedHeight = (fragPos.z - cloudPos.z) / cloudScale.z;
+	float normalizedHeight = (fragPos.y - cloudPos.y) / cloudScale.y;
 	normalizedHeight = (normalizedHeight + 1) / 2;
 	float intensity = pow(normalizedHeight, 0.5); 
 	vec3 baseColor = intensity * cloud.baseIntensity * vec3(1.0f, 1.0f, 1.0f) + (1 - cloud.baseIntensity) * cnoise(fragPos / cloud.noiseFreq);
