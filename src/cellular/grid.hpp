@@ -41,6 +41,10 @@ class CellGrid {
 		return data;
 	}
 
+private: 
+	bool isEmpty(uint32_t row, uint32_t col);
+	bool isReplacable(uint32_t row, uint32_t col);
+
   private:
 	CellType m_grid[GRID_COUNT][GRID_COUNT];
 	bool m_updated[GRID_COUNT][GRID_COUNT];
