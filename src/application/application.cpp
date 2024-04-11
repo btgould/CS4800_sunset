@@ -42,7 +42,7 @@ void Application::run() {
 
 	CellGrid grid;
 	GridData gridData;
-	CellType penType;
+	CellType penType = CellType::CELL_TYPE_EMPTY;
 
 	while (!m_window->shouldClose()) {
 		double newTime = glfwGetTime();

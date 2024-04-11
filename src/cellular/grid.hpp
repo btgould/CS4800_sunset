@@ -43,6 +43,7 @@ class CellGrid {
 
   private:
 	CellType m_grid[GRID_COUNT][GRID_COUNT];
+	bool m_updated[GRID_COUNT][GRID_COUNT];
 
 	float m_updateTime = 6.0f; // default to updating 10x / sec
 	float m_accumulatedTime = 0.0f;
