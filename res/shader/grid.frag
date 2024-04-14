@@ -3,7 +3,7 @@
 
 layout(std430, set = 0, binding = 1) uniform GRID {
 	uint cellCount; 
-	uint cells[50][50]; // TODO: no clue how to get this value from cpp #define
+	uint cells[10][10]; // TODO: no clue how to get this value from cpp #define
 } gridData;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
@@ -15,28 +15,39 @@ layout(location = 2) in vec2 fragTexCoord;
 
 layout(location = 0) out vec4 outColor;
 
-bool inHex(vec2 point, vec2 pos, float size) {
-	float invSqrt3 = 0.57735026919;
-	float margin = (1 - invSqrt3) / 2;
-	point = point - pos; 
-	point = point / size;
+const float sqrt3 = sqrt(3);
+const float invSqrt3 = 1.0f / sqrt3;
+const mat2 cart2hex = mat2(2 * invSqrt3, 0.0f, invSqrt3, 1.0f);
+const mat2 hex2cart = mat2(sqrt3 / 2.0f, 0.0f, -0.5f, 1.0f);
 
-	float slope = 2 * margin * point.x;
+// Gets the index of the hexagon the given point belongs to. 
+// Hexagons are sqrt(3)/2 wide, and the grid is centered at the origin. 
+vec2 hexagon(vec2 point) {
+	// Convert from cartesian coords to hex axes 
+	vec2 q = point * cart2hex; 
 
-	return 0 <= point.x && point.x <= 1 && 
-		-slope + margin <= point.y &&
-		slope - margin <= point.y &&
-		point.y <= slope + 1 - margin && 
-		point.y <= -slope + 1 + margin;
+	vec2 qInt = floor(q); 
+	vec2 qFrac = fract(q);
+	float v = mod(qInt.x + qInt.y, 3.0f);
+
+	float ca = step(1.0f, v);
+	float cb = step(2.0f, v);
+	vec2  ma = step(qFrac.xy, qFrac.yx);
+
+	return (qInt + ca - cb * ma) * hex2cart;
 }
 
 void main() {
-	// map pixels to grid cells
-	vec2 cell = floor(gridData.cellCount * fragTexCoord);
-	ivec2 icell = ivec2(cell);
+	vec2 hexTexCoord = fragTexCoord * (gridData.cellCount + 1); // long rows need to be 1 bigger than numCells
+	hexTexCoord.x -= 0.5f;
+	hexTexCoord.y -= invSqrt3;
+	hexTexCoord *= sqrt3;
 
-	outColor = vec4(0.0f, 0.0f, 0.0f, 1.0f); // if unknown
-	outColor = float(inHex(fragTexCoord, vec2(0.5f, 0.0f), 0.5f)) * vec4(1.0f, 0.0f, 0.0f, 1.0f);
+	vec2 hexCoord = hexagon(hexTexCoord) * invSqrt3;
+	vec2 inside = step(0, hexCoord) - step(gridData.cellCount, hexCoord);
+	hexCoord *= inside.x * inside.y;
+
+	outColor = vec4(hexCoord / gridData.cellCount, 0.0f, 1.0f);
 
 	// get color for type of grid cell
 	/* uint cellType = gridData.cells[icell.x][icell.y];
