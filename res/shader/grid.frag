@@ -3,7 +3,7 @@
 
 layout(std430, set = 0, binding = 1) uniform GRID {
 	uint cellCount; 
-	uint cells[10][10]; // TODO: no clue how to get this value from cpp #define
+	uint cells[40][40]; // TODO: no clue how to get this value from cpp #define
 } gridData;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;

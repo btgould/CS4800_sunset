@@ -2,6 +2,7 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/common.hpp>
+#include <glm/exponential.hpp>
 #include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
@@ -33,6 +34,27 @@ Application::Application()
 	s_instance = this;
 }
 
+glm::vec2 getHexCoord(const glm::vec2& pos) {
+	const glm::mat2 cart2hex =
+		glm::mat2({{2.0f / glm::sqrt(3.0f), 0.0f}, {1.0f / glm::sqrt(3.0f), 1.0f}});
+	const glm::mat2 hex2cart = glm::mat2({{glm::sqrt(3.0f) / 2.0f, 0.0f}, {-0.5f, 1.0f}});
+	glm::vec2 q = pos * cart2hex;
+
+	glm::vec2 qInt = glm::floor(q);
+	glm::vec2 qFrac = glm::fract(q);
+	glm::vec2 qFracT = {qFrac.y, qFrac.x};
+	float v = glm::mod(qInt.x + qInt.y, 3.0f);
+
+	float ca = glm::step(1.0f, v);
+	float cb = glm::step(2.0f, v);
+	glm::vec2 ma = step(qFrac, qFracT);
+
+	glm::vec2 hexCoord = (qInt + ca - cb * ma) * hex2cart;
+	hexCoord.x = glm::floor(hexCoord.x / glm::sqrt(3.0f));
+	hexCoord.y /= 1.5f;
+	return hexCoord;
+}
+
 void Application::run() {
 	Model dispPlane(m_device, "res/model/plane.obj",
 	                TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"),
@@ -61,7 +83,12 @@ void Application::run() {
 		auto corner = dispPlane.getTransform().getTRS() * glm::vec4(-1.0f, 1.0f, 0.0f, 1.0f);
 		mousePos.x = (mousePos.x - corner.x) / (2 * dispPlane.getTransform().getScale().x);
 		mousePos.y = (corner.y - mousePos.y) / (2 * dispPlane.getTransform().getScale().y);
-		mousePos = glm::floor((float) GRID_COUNT * mousePos);
+
+		mousePos *= GRID_COUNT + 1;
+		mousePos.x -= 0.5f;
+		mousePos.y -= 1.0f / glm::sqrt(3.0f);
+		mousePos *= glm::sqrt(3.0f);
+		glm::vec2 gridCoord = getHexCoord(mousePos);
 
 		// Write data to grid
 		if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_1) && mousePos.x >= 0 &&

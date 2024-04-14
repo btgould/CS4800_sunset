@@ -5,7 +5,7 @@
 #include <sys/types.h>
 
 #ifndef GRID_COUNT
-	#define GRID_COUNT 50
+	#define GRID_COUNT 40
 #endif // !GRID_COUNT
 
 enum CellType {
@@ -41,7 +41,7 @@ class CellGrid {
 		return data;
 	}
 
-private: 
+  private:
 	bool isEmpty(uint32_t row, uint32_t col);
 	bool isReplacable(uint32_t row, uint32_t col);
 
