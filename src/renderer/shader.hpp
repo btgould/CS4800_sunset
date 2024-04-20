@@ -28,6 +28,11 @@ struct CloudSettings {
 	alignas(4) float opacity = 0.8f;
 };
 
+struct Atmosphere {
+	alignas(16) glm::vec3 defractionCoef;
+	alignas(4) float time;
+};
+
 /**
  * @class Shader
  * @brief Describes how pixels of a particular object are colored.

@@ -37,6 +37,9 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	m_pipelines.push_back(m_pipelineBuilder.buildPipeline(m_defaultVA, shader, m_textures));
 	m_activePipeline = m_pipelines[0];
 
+	auto atmosphericPipe = m_pipelineBuilder.buildPipeline(
+		VertexArray(), ShaderLibrary::get()->getShader(m_device, "atmosphere"), {});
+
 	// Setup ImGui
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();

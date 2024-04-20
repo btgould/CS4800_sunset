@@ -71,9 +71,11 @@ uint32_t VulkanPipeline::setPushConstant(const PipelineDescriptor& pushConstant)
 	// using offsets, but there is a relatively small max size. I don't remember if I was clever
 	// enough to account for all this when I wrote this initially. If I wasn't, these vectors need
 	// to go, as they are misleading
-	m_pushConstants.push_back(pushConstantRange);
-	m_pushConstantSizes.push_back(pushConstant.size);
-	m_pushConstantOffset += pushConstant.size;
+	if (!pushConstant.name.empty()) {
+		m_pushConstants.push_back(pushConstantRange);
+		m_pushConstantSizes.push_back(pushConstant.size);
+		m_pushConstantOffset += pushConstant.size;
+	}
 
 	return pushConstantID;
 }
@@ -208,7 +210,8 @@ void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bind
 	pipelineLayoutInfo.setLayoutCount = descriptorSetLayouts.size();
 	pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 	pipelineLayoutInfo.pushConstantRangeCount = m_pushConstants.size();
-	pipelineLayoutInfo.pPushConstantRanges = m_pushConstants.data();
+	pipelineLayoutInfo.pPushConstantRanges =
+		m_pushConstants.size() > 0 ? m_pushConstants.data() : NULL;
 
 	if (vkCreatePipelineLayout(m_device->getLogicalDevice(), &pipelineLayoutInfo, nullptr,
 	                           &m_pipelineLayout) != VK_SUCCESS) {
@@ -230,8 +233,9 @@ void VulkanPipeline::createGraphicsPipeline(VkVertexInputBindingDescription bind
 	pipelineInfo.pDynamicState = nullptr;
 	pipelineInfo.layout = m_pipelineLayout;
 	pipelineInfo.renderPass = renderPass;
-	pipelineInfo.subpass = 0; // index of the subpass in the render pass to use this pipeline
-	                          // FIXME: this is now arbitrary
+	pipelineInfo.subpass =
+		0; // index of the subpass in the render pass that is performed by this pipeline
+	       // FIXME: this is now arbitrary
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // We aren't inheriting from another pipeline
 	pipelineInfo.basePipelineIndex = -1;              // We aren't inheriting from another pipeline
 
@@ -326,6 +330,9 @@ void VulkanPipeline::createDescriptorPool() {
 	imageSamplerPoolSize.descriptorCount =
 		2 * m_textures.size() * static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 	m_poolSizes.push_back(imageSamplerPoolSize);
+	// FIXME: Instead of taking Texture objects in pipeline constructor, I need to be able to work
+	// with arbitrary FrameBuffers. That way, I can make a descriptor write with an offscreen
+	// framebuffer
 
 	// Create descriptor for ImGui
 	m_poolSizes.push_back({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1});

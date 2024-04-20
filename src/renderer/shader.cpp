@@ -21,6 +21,10 @@ std::unordered_map<std::string, PipelineDescriptor> Shader::s_pushConstantMap = 
 		"skybox",
 		{VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "modelTRS"},
 	},
+	{
+		"atmosphere",
+		{},
+	},
 };
 
 std::unordered_map<std::string, std::vector<PipelineDescriptor>> Shader::s_uniformMap = {
@@ -37,6 +41,10 @@ std::unordered_map<std::string, std::vector<PipelineDescriptor>> Shader::s_unifo
 	{"skybox",
      {
 		 {VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), "camVP"},
+	 }},
+	{"atmosphere",
+     {
+		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Atmosphere), "atmosphere"},
 	 }},
 };
 
