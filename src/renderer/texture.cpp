@@ -1,9 +1,17 @@
 #include "texture.hpp"
 
 #include "stb_image.h"
+#include <cstdlib>
 #include <cstring>
 #include <stdexcept>
 #include <vulkan/vulkan.h>
+
+Texture::Texture(const glm::uvec2& size, Ref<VulkanDevice> device)
+	: m_size(size), m_numChannels(4), m_device(device) {
+	createTextureImage("");
+	m_imageView =
+		m_device->createImageView(m_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+}
 
 Texture::Texture(std::string path, Ref<VulkanDevice> device) : m_device(device) {
 	createTextureImage(path);
@@ -19,10 +27,18 @@ Texture::~Texture() {
 }
 
 void Texture::createTextureImage(std::string path) {
-	// load image from file
-	int texWidth, texHeight, texChannels;
-	stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-	VkDeviceSize imageSize = texWidth * texHeight * 4;
+	stbi_uc* pixels;
+	if (path.empty()) {
+		// create all white texture
+		uint32_t size = m_size.x * m_size.y * 4;
+		pixels = (stbi_uc*) malloc(size);
+		memset(pixels, 255, size);
+	} else {
+		// load image from file
+		pixels = stbi_load(path.c_str(), (int*) &m_size.x, (int*) &m_size.y, (int*) &m_numChannels,
+		                   STBI_rgb_alpha);
+	}
+	VkDeviceSize imageSize = m_size.x * m_size.y * 4;
 
 	if (!pixels) {
 		throw std::runtime_error("failed to load texture image!");
@@ -44,14 +60,15 @@ void Texture::createTextureImage(std::string path) {
 	stbi_image_free(pixels);
 
 	// Create image object from buffer (optimized for shading)
-	m_device->createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+	m_device->createImage(m_size.x, m_size.y, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
 	                      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_image, m_imageMemory);
 	// Copy buffer data into image object
 	transitionImageLayout(m_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
 	                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	copyBufferToImage(stagingBuffer, m_image, static_cast<uint32_t>(texWidth),
-	                  static_cast<uint32_t>(texHeight));
+	copyBufferToImage(stagingBuffer, m_image, static_cast<uint32_t>(m_size.x),
+	                  static_cast<uint32_t>(m_size.y));
+	// NOTE: this interface could be cleaned up
 
 	// Prepare image for shader access
 	transitionImageLayout(m_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,

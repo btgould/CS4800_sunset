@@ -2,10 +2,12 @@
 
 #include "bootstrap/device.hpp"
 
+#include <glm/glm.hpp>
 #include <string>
 
 class Texture {
   public:
+	Texture(const glm::uvec2& size, Ref<VulkanDevice> device);
 	Texture(std::string path, Ref<VulkanDevice> device);
 	~Texture();
 
@@ -14,6 +16,11 @@ class Texture {
 	inline VkImageView getImageView() const { return m_imageView; }
 
   private: // core interface
+	/**
+	 * @brief Creates a read-only texture from an image on disk
+	 *
+	 * @param path Relative path to an image file to load
+	 */
 	void createTextureImage(std::string path);
 
   private: // helper functions
@@ -37,6 +44,10 @@ class Texture {
 	 * @param height The height of the image to copy
 	 */
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+  private:
+	glm::uvec2 m_size;
+	uint32_t m_numChannels;
 
   private:
 	Ref<VulkanDevice> m_device;

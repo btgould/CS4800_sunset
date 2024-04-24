@@ -1,6 +1,8 @@
 #include "renderer.hpp"
 
+#include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/glm.hpp>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -9,6 +11,7 @@
 #include "bootstrap/pipeline.hpp"
 #include "renderer/shader_lib.hpp"
 #include "renderer/texture_lib.hpp"
+#include "util/memory.hpp"
 #include "util/profiler.hpp"
 #include "util/constants.hpp"
 #include "util/log.hpp"
@@ -38,7 +41,8 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	m_activePipeline = m_pipelines[0];
 
 	auto atmosphericPipe = m_pipelineBuilder.buildPipeline(
-		VertexArray(), ShaderLibrary::get()->getShader(m_device, "atmosphere"), {});
+		VertexArray(), ShaderLibrary::get()->getShader(m_device, "atmosphere"),
+		{CreateRef<Texture>(glm::uvec2(100, 100), m_device)});
 
 	// Setup ImGui
 	IMGUI_CHECKVERSION();
