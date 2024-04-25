@@ -223,6 +223,8 @@ void VulkanSwapChain::cleanup() {
 
 	for (auto imageView : m_imageViews) {
 		vkDestroyImageView(m_device->getLogicalDevice(), imageView, nullptr);
+		// TODO: why do I not free the color attachment image memory here? Is it freed when the
+		// framebuffer is destroyed? If so, do I need to free the depth attachment memory?
 	}
 
 	vkDestroySwapchainKHR(m_device->getLogicalDevice(), m_swapChain, nullptr);
@@ -232,7 +234,7 @@ VkSurfaceFormatKHR
 VulkanSwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
 	// prefer 4-byte RGBA w/ SRGB color space
 	for (const auto& availableFormat : availableFormats) {
-		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
+		if (availableFormat.format == VK_FORMAT_R8G8B8A8_SRGB &&
 		    availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 			return availableFormat;
 		}
@@ -274,12 +276,6 @@ VkExtent2D VulkanSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& cap
 	}
 }
 
-VkFormat VulkanSwapChain::findDepthFormat() {
-	return m_device->findSupportedFormat(
-		{VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
-		VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-}
-
 void VulkanSwapChain::createImageViews() {
 	m_imageViews.resize(m_images.size());
 
@@ -289,6 +285,8 @@ void VulkanSwapChain::createImageViews() {
 	}
 }
 
+// NOTE: It's possible this should belong to Pipeline instead. However, I may end up carrying around
+// multiple copies of highly similar information
 void VulkanSwapChain::createRenderPass() {
 	VkAttachmentDescription colorAttachment {};
 	colorAttachment.format = m_imageFormat;
@@ -305,7 +303,7 @@ void VulkanSwapChain::createRenderPass() {
 	                                     // screen
 
 	VkAttachmentDescription depthAttachment {};
-	depthAttachment.format = findDepthFormat();
+	depthAttachment.format = m_device->findDepthFormat();
 	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -365,6 +363,7 @@ void VulkanSwapChain::createFramebuffers() {
 	m_framebuffers.resize(m_imageViews.size());
 
 	for (uint32_t i = 0; i < m_imageViews.size(); i++) {
+		// HACK: does this use the same depth buffer for all images in flight? If so, is that OK?
 		std::array<VkImageView, 2> attachments = {m_imageViews[i], m_depthImageView};
 
 		VkFramebufferCreateInfo framebufferInfo {};
@@ -410,7 +409,7 @@ void VulkanSwapChain::createSyncObjects() {
 }
 
 void VulkanSwapChain::createDepthResources() {
-	VkFormat depthFormat = findDepthFormat();
+	VkFormat depthFormat = m_device->findDepthFormat();
 	m_device->createImage(m_extent.width, m_extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
 	                      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depthImage, m_depthImageMemory);

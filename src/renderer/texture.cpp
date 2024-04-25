@@ -5,12 +5,25 @@
 #include <cstring>
 #include <stdexcept>
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
-Texture::Texture(const glm::uvec2& size, Ref<VulkanDevice> device)
-	: m_size(size), m_numChannels(4), m_device(device) {
-	createTextureImage("");
-	m_imageView =
-		m_device->createImageView(m_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+Texture::Texture(Ref<VulkanDevice> device, const glm::uvec2& size, VkFormat imageFormat,
+                 TextureAccessBitFlag accessType, bool depth)
+	: m_device(device), m_size(size), m_numChannels(4) {
+	VkDeviceSize imageSize = m_size.x * m_size.y * 4;
+	VkImageUsageFlags usageFlag = 0;
+	if ((accessType | TextureAccessBitFlag::READ_BIT) != 0)
+		usageFlag |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	if ((accessType | TextureAccessBitFlag::READ_BIT) != 0)
+		usageFlag |= VK_IMAGE_USAGE_SAMPLED_BIT;
+	VkImageAspectFlags type = depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+	if (depth)
+		usageFlag = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+	// Create image object from buffer (optimized for shading)
+	m_device->createImage(m_size.x, m_size.y, imageFormat, VK_IMAGE_TILING_OPTIMAL, usageFlag,
+	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_image, m_imageMemory);
+	m_imageView = m_device->createImageView(m_image, imageFormat, type);
 }
 
 Texture::Texture(std::string path, Ref<VulkanDevice> device) : m_device(device) {
@@ -21,23 +34,15 @@ Texture::Texture(std::string path, Ref<VulkanDevice> device) : m_device(device) 
 
 Texture::~Texture() {
 	vkDestroyImageView(m_device->getLogicalDevice(), m_imageView, nullptr);
-
 	vkDestroyImage(m_device->getLogicalDevice(), m_image, nullptr);
 	vkFreeMemory(m_device->getLogicalDevice(), m_imageMemory, nullptr);
 }
 
 void Texture::createTextureImage(std::string path) {
 	stbi_uc* pixels;
-	if (path.empty()) {
-		// create all white texture
-		uint32_t size = m_size.x * m_size.y * 4;
-		pixels = (stbi_uc*) malloc(size);
-		memset(pixels, 255, size);
-	} else {
-		// load image from file
-		pixels = stbi_load(path.c_str(), (int*) &m_size.x, (int*) &m_size.y, (int*) &m_numChannels,
-		                   STBI_rgb_alpha);
-	}
+	// load image from file
+	pixels = stbi_load(path.c_str(), (int*) &m_size.x, (int*) &m_size.y, (int*) &m_numChannels,
+	                   STBI_rgb_alpha);
 	VkDeviceSize imageSize = m_size.x * m_size.y * 4;
 
 	if (!pixels) {

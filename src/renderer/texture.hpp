@@ -5,10 +5,20 @@
 #include <glm/glm.hpp>
 #include <string>
 
+enum TextureAccessBitFlag { READ_BIT = 1, WRITE_BIT = 2 };
+inline TextureAccessBitFlag operator|(TextureAccessBitFlag a, TextureAccessBitFlag b) {
+	return static_cast<TextureAccessBitFlag>(static_cast<int>(a) | static_cast<int>(b));
+}
+inline TextureAccessBitFlag operator&(TextureAccessBitFlag a, TextureAccessBitFlag b) {
+	return static_cast<TextureAccessBitFlag>(static_cast<int>(a) & static_cast<int>(b));
+}
+
 class Texture {
   public:
-	Texture(const glm::uvec2& size, Ref<VulkanDevice> device);
-	Texture(std::string path, Ref<VulkanDevice> device);
+	Texture(Ref<VulkanDevice> device, const glm::uvec2& size, VkFormat imageFormat,
+	        TextureAccessBitFlag accessType, bool depth = false);
+	Texture(std::string path,
+	        Ref<VulkanDevice> device); // TODO: the order of this constructor is annoying
 	~Texture();
 
 	Texture(const Texture&) = delete;

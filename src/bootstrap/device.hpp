@@ -60,6 +60,8 @@ class VulkanDevice {
 
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
 	                             VkFormatFeatureFlags features);
+	VkFormat findDepthFormat();
+
 	/**
 	 * @brief Creates a buffer
 	 *

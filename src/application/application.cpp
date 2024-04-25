@@ -74,7 +74,7 @@ void Application::run() {
 
 		// Draw models
 		m_renderer->draw(mountain);
-		m_renderer->draw(skybox);
+		// m_renderer->draw(skybox);
 		m_renderer->draw(cloud);
 		m_renderer->draw(cloud2);
 

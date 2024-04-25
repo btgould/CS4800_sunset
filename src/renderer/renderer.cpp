@@ -1,5 +1,6 @@
 #include "renderer.hpp"
 
+#include <cstdint>
 #include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/glm.hpp>
@@ -7,9 +8,11 @@
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include "bootstrap/pipeline.hpp"
 #include "renderer/shader_lib.hpp"
+#include "renderer/texture.hpp"
 #include "renderer/texture_lib.hpp"
 #include "util/memory.hpp"
 #include "util/profiler.hpp"
@@ -40,9 +43,12 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	m_pipelines.push_back(m_pipelineBuilder.buildPipeline(m_defaultVA, shader, m_textures));
 	m_activePipeline = m_pipelines[0];
 
-	auto atmosphericPipe = m_pipelineBuilder.buildPipeline(
-		VertexArray(), ShaderLibrary::get()->getShader(m_device, "atmosphere"),
-		{CreateRef<Texture>(glm::uvec2(100, 100), m_device)});
+	m_postprocessPipeline = m_pipelineBuilder.buildPipeline(
+		VertexArray(), ShaderLibrary::get()->getShader(m_device, "atmosphere"), {});
+	// FIXME: somehow find a way to actually pass the texture from the Framebuffer to the Pipeline
+
+	// Setup postprocessing
+	createOffscreenFramebuffers();
 
 	// Setup ImGui
 	IMGUI_CHECKVERSION();
@@ -79,6 +85,8 @@ VulkanRenderer::~VulkanRenderer() {
 	ImGui_ImplVulkan_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
+
+	cleanupOffscreenFramebuffers();
 }
 
 void VulkanRenderer::beginScene() {
@@ -111,6 +119,7 @@ void VulkanRenderer::beginScene() {
 	VkRenderPassBeginInfo renderPassInfo {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.renderPass = m_swapChain->getRenderPass();
+	// renderPassInfo.framebuffer = m_offscreenTex->getImageView();
 	renderPassInfo.framebuffer = m_swapChain->getFramebuffer(m_imageIndex);
 	renderPassInfo.renderArea.offset = {0, 0};
 	renderPassInfo.renderArea.extent = m_swapChain->getExtent();
@@ -186,6 +195,42 @@ void VulkanRenderer::updateUniform(std::string name, void* data) {
 void VulkanRenderer::updatePushConstant(const std::string& name, const void* data) {
 	for (auto pipeline : m_pipelines) {
 		pipeline->writePushConstant(m_commandBuffer, name, data, m_currentFrame);
+	}
+}
+
+void VulkanRenderer::createOffscreenFramebuffers() {
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		auto buf = m_offscreenFramebuffers[i];
+		std::array<VkImageView, 2> imageViews;
+		glm::uvec2 postprocessingRes = {100, 100};
+
+		buf.color =
+			CreateRef<Texture>(m_device, postprocessingRes, VK_FORMAT_R8G8B8A8_SRGB,
+		                       TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT);
+		buf.depth = CreateRef<Texture>(
+			m_device, postprocessingRes, m_device->findDepthFormat(),
+			TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT, true);
+		imageViews = {buf.color->getImageView(), buf.depth->getImageView()};
+
+		VkFramebufferCreateInfo framebufferInfo {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = m_swapChain->getRenderPass();
+		framebufferInfo.attachmentCount = static_cast<uint32_t>(imageViews.size());
+		framebufferInfo.pAttachments = imageViews.data();
+		framebufferInfo.width = postprocessingRes.x;
+		framebufferInfo.height = postprocessingRes.y;
+		framebufferInfo.layers = 1;
+
+		if (vkCreateFramebuffer(m_device->getLogicalDevice(), &framebufferInfo, nullptr,
+		                        &m_offscreenFramebuffers[i].framebuffer) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
+	}
+}
+void VulkanRenderer::cleanupOffscreenFramebuffers() {
+	for (uint32_t i = 0.0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		vkDestroyFramebuffer(m_device->getLogicalDevice(), m_offscreenFramebuffers[i].framebuffer,
+		                     nullptr);
 	}
 }
 

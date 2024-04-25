@@ -6,7 +6,15 @@
 
 #include "device.hpp"
 #include "instance.hpp"
+#include "renderer/texture.hpp"
 #include "window.hpp"
+
+// TODO: could be nice to make this into its own class
+// Constructor for size, format, read / write bit, color or depth
+struct Framebuffer {
+	Ref<Texture> color, depth;
+	VkFramebuffer framebuffer;
+};
 
 class VulkanSwapChain {
   public:
@@ -45,6 +53,7 @@ class VulkanSwapChain {
 	chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR
 	chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+
 	/**
 	 * @brief Calculates the extent of the surfaces to render to (in pixels)
 	 *
@@ -55,7 +64,6 @@ class VulkanSwapChain {
 	 */
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
 	                            const Ref<GLFWWindow> window);
-	VkFormat findDepthFormat();
 	inline bool hasStencilComponent(VkFormat format) {
 		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
@@ -68,6 +76,8 @@ class VulkanSwapChain {
 	const VkSurfaceKHR m_surface;
 
 	VkSwapchainKHR m_swapChain;
+
+	// TODO: use Framebuffer struct to make these variables more compact
 	std::vector<VkImage> m_images;
 	std::vector<VkImageView> m_imageViews;
 	VkFormat m_imageFormat;
