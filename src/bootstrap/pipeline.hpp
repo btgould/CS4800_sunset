@@ -55,6 +55,7 @@ class VulkanPipeline {
 	void bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame);
 
 	bool canRender(const Model& model);
+	void inline isPostProcessing(bool isPostProcessing) { m_isPostProcessing = isPostProcessing; }
 
 	// HACK: this exists solely to satisfy ImGui
 	VkDescriptorPool getDescriptorPool() const { return m_descriptorPool; }
@@ -96,6 +97,7 @@ class VulkanPipeline {
 	VkVertexInputBindingDescription m_vertexAttrBindings;
 	std::vector<VkVertexInputAttributeDescription> m_vertexAttr;
 	VkSampler m_textureSampler;
+	bool m_isPostProcessing;
 
 	template <typename T> using Frames = std::array<T, MAX_FRAMES_IN_FLIGHT>;
 	std::array<VkDescriptorSet, 2> m_activeDescriptorSets;

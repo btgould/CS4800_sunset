@@ -12,7 +12,6 @@
 
 #include "bootstrap/pipeline.hpp"
 #include "renderer/shader_lib.hpp"
-#include "renderer/texture.hpp"
 #include "renderer/texture_lib.hpp"
 #include "util/memory.hpp"
 #include "util/profiler.hpp"
@@ -43,12 +42,11 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	m_pipelines.push_back(m_pipelineBuilder.buildPipeline(m_defaultVA, shader, m_textures));
 	m_activePipeline = m_pipelines[0];
 
-	m_postprocessPipeline = m_pipelineBuilder.buildPipeline(
-		VertexArray(), ShaderLibrary::get()->getShader(m_device, "atmosphere"), {});
-	// FIXME: somehow find a way to actually pass the texture from the Framebuffer to the Pipeline
-
 	// Setup postprocessing
-	createOffscreenFramebuffers();
+	m_postprocessPipeline = m_pipelineBuilder.buildPipeline(
+		VertexArray(), ShaderLibrary::get()->getShader(m_device, "atmosphere"),
+		{m_swapChain->getOffscreenFramebuffer().color}, true);
+	// FIXME: somehow find a way to actually pass the texture from the Framebuffer to the Pipeline
 
 	// Setup ImGui
 	IMGUI_CHECKVERSION();
@@ -78,15 +76,13 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	init_info.Allocator = nullptr; // Use default allocation mechanism
 	init_info.CheckVkResultFn = check_vk_result;
-	ImGui_ImplVulkan_Init(&init_info, m_swapChain->getRenderPass());
+	ImGui_ImplVulkan_Init(&init_info, m_swapChain->getOffscreenRenderPass());
 }
 
 VulkanRenderer::~VulkanRenderer() {
 	ImGui_ImplVulkan_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
-
-	cleanupOffscreenFramebuffers();
 }
 
 void VulkanRenderer::beginScene() {
@@ -118,9 +114,8 @@ void VulkanRenderer::beginScene() {
 	// Start render pass
 	VkRenderPassBeginInfo renderPassInfo {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = m_swapChain->getRenderPass();
-	// renderPassInfo.framebuffer = m_offscreenTex->getImageView();
-	renderPassInfo.framebuffer = m_swapChain->getFramebuffer(m_imageIndex);
+	renderPassInfo.renderPass = m_swapChain->getOffscreenRenderPass();
+	renderPassInfo.framebuffer = m_swapChain->getOffscreenFramebuffer().framebuffer;
 	renderPassInfo.renderArea.offset = {0, 0};
 	renderPassInfo.renderArea.extent = m_swapChain->getExtent();
 
@@ -168,13 +163,34 @@ void VulkanRenderer::endScene() {
 	// ImGui::UpdatePlatformWindows();
 	// ImGui::RenderPlatformWindowsDefault();
 
-	// End render pass, stop recording
+	// End main render pass
 	vkCmdEndRenderPass(m_commandBuffer);
+
+	// postprocessing
+	VkRenderPassBeginInfo renderPassInfo {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = m_swapChain->getPostProcessRenderPass();
+	renderPassInfo.framebuffer = m_swapChain->getFramebuffer(m_imageIndex);
+	renderPassInfo.renderArea.offset = {0, 0};
+	renderPassInfo.renderArea.extent = m_swapChain->getExtent();
+
+	std::array<VkClearValue, 2> clearValues {};
+	clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+	clearValues[1].depthStencil = {1.0f, 0};
+	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	renderPassInfo.pClearValues = clearValues.data();
+	vkCmdBeginRenderPass(m_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	m_postprocessPipeline->bind(m_commandBuffer);
+	m_postprocessPipeline->bindTexture(m_swapChain->getOffscreenFramebuffer().color);
+	m_postprocessPipeline->bindDescriptorSets(m_commandBuffer, m_currentFrame);
+	vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
+	vkCmdEndRenderPass(m_commandBuffer);
+
+	// Finish recording commands, submit drawing to GPU queue
 	if (vkEndCommandBuffer(m_commandBuffer) != VK_SUCCESS) {
 		throw std::runtime_error("failed to record command buffer!");
 	}
 
-	// submit drawing to GPU queue
 	VkPipelineStageFlags waitStages[] = {
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}; // don't color attachment until image is
 	                                                    // available
@@ -195,42 +211,6 @@ void VulkanRenderer::updateUniform(std::string name, void* data) {
 void VulkanRenderer::updatePushConstant(const std::string& name, const void* data) {
 	for (auto pipeline : m_pipelines) {
 		pipeline->writePushConstant(m_commandBuffer, name, data, m_currentFrame);
-	}
-}
-
-void VulkanRenderer::createOffscreenFramebuffers() {
-	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		auto buf = m_offscreenFramebuffers[i];
-		std::array<VkImageView, 2> imageViews;
-		glm::uvec2 postprocessingRes = {100, 100};
-
-		buf.color =
-			CreateRef<Texture>(m_device, postprocessingRes, VK_FORMAT_R8G8B8A8_SRGB,
-		                       TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT);
-		buf.depth = CreateRef<Texture>(
-			m_device, postprocessingRes, m_device->findDepthFormat(),
-			TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT, true);
-		imageViews = {buf.color->getImageView(), buf.depth->getImageView()};
-
-		VkFramebufferCreateInfo framebufferInfo {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = m_swapChain->getRenderPass();
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(imageViews.size());
-		framebufferInfo.pAttachments = imageViews.data();
-		framebufferInfo.width = postprocessingRes.x;
-		framebufferInfo.height = postprocessingRes.y;
-		framebufferInfo.layers = 1;
-
-		if (vkCreateFramebuffer(m_device->getLogicalDevice(), &framebufferInfo, nullptr,
-		                        &m_offscreenFramebuffers[i].framebuffer) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create framebuffer!");
-		}
-	}
-}
-void VulkanRenderer::cleanupOffscreenFramebuffers() {
-	for (uint32_t i = 0.0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroyFramebuffer(m_device->getLogicalDevice(), m_offscreenFramebuffers[i].framebuffer,
-		                     nullptr);
 	}
 }
 

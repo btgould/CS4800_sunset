@@ -1,6 +1,7 @@
 #include "swapchain.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <stdexcept>
 #include <GLFW/glfw3.h>
@@ -19,9 +20,11 @@ VulkanSwapChain::VulkanSwapChain(Ref<VulkanInstance> instance, Ref<VulkanDevice>
 	: m_device(device), m_window(window), m_surface(instance->getSurface()) {
 	createSwapChain(m_device, m_window, m_surface);
 	createImageViews();
-	createRenderPass();
+	createOffscreenRenderPass();
+	createPostProcessingRenderPass();
 	createDepthResources();
 	createFramebuffers();
+	createOffscreenFrameBufs();
 	createSyncObjects();
 }
 
@@ -35,7 +38,8 @@ VulkanSwapChain::~VulkanSwapChain() {
 		vkDestroyFence(m_device->getLogicalDevice(), m_inFlightFences[i], nullptr);
 	}
 
-	vkDestroyRenderPass(m_device->getLogicalDevice(), m_renderPass, nullptr);
+	vkDestroyRenderPass(m_device->getLogicalDevice(), m_offscreenRenderPass, nullptr);
+	vkDestroyRenderPass(m_device->getLogicalDevice(), m_postprocessRenderPass, nullptr);
 }
 
 void VulkanSwapChain::createSwapChain(const Ref<VulkanDevice> device, const Ref<GLFWWindow> window,
@@ -210,6 +214,7 @@ void VulkanSwapChain::recreate() {
 	createImageViews();
 	createDepthResources();
 	createFramebuffers();
+	createOffscreenFrameBufs();
 }
 
 void VulkanSwapChain::cleanup() {
@@ -220,6 +225,7 @@ void VulkanSwapChain::cleanup() {
 	for (auto framebuffer : m_framebuffers) {
 		vkDestroyFramebuffer(m_device->getLogicalDevice(), framebuffer, nullptr);
 	}
+	vkDestroyFramebuffer(m_device->getLogicalDevice(), m_offscreenFramebuffer.framebuffer, nullptr);
 
 	for (auto imageView : m_imageViews) {
 		vkDestroyImageView(m_device->getLogicalDevice(), imageView, nullptr);
@@ -285,9 +291,178 @@ void VulkanSwapChain::createImageViews() {
 	}
 }
 
-// NOTE: It's possible this should belong to Pipeline instead. However, I may end up carrying around
-// multiple copies of highly similar information
-void VulkanSwapChain::createRenderPass() {
+// NOTE: It's possible this should belong to Pipeline (or renderer) instead. However, I may end up
+// carrying around multiple copies of highly similar information
+void VulkanSwapChain::createOffscreenRenderPass() {
+	VkAttachmentDescription colorAttachment {};
+	colorAttachment.format = m_imageFormat;
+	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;   // clear image before rendering
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save rendered image to display
+	colorAttachment.stencilLoadOp =
+		VK_ATTACHMENT_LOAD_OP_DONT_CARE; // We don't use the stencil buffer
+	colorAttachment.stencilStoreOp =
+		VK_ATTACHMENT_STORE_OP_DONT_CARE; // We don't use the stencil buffer
+	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	// HACK: postprocessing: I set this to SHADER_READ_ONLY because I am hardcoding a postprocessing
+	// step currently. If I don't know about postprocessing, I really want this to be
+	// PRESENT_SRC_KHR instead
+
+	VkAttachmentDescription depthAttachment {};
+	depthAttachment.format = m_device->findDepthFormat();
+	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	// create reference to attached image
+	VkAttachmentReference colorAttachmentRef {};
+	colorAttachmentRef.attachment = 0;
+	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference depthAttachmentRef {};
+	depthAttachmentRef.attachment = 1;
+	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	// Define subpass to do rendering
+	VkSubpassDescription subpass {};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &colorAttachmentRef; // this array is index by frag shader outputs
+	subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+	// Make render subpass depend on image being available
+	std::array<VkSubpassDependency, 2> dependencies;
+
+	// Any previous render pass must have finished fragment shading before writing colors
+	dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependencies[0].dstSubpass = 0;
+	dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+	// We must have finished writing colors before any future render pass can begin fragment shading
+	dependencies[1].srcSubpass = 0;
+	dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+	dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+	// Create render pass
+	std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+	VkRenderPassCreateInfo renderPassInfo {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+	renderPassInfo.pAttachments = attachments.data();
+	renderPassInfo.subpassCount = 1;
+	renderPassInfo.pSubpasses = &subpass;
+	renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+	renderPassInfo.pDependencies = dependencies.data();
+
+	// Construct render pass
+	if (vkCreateRenderPass(m_device->getLogicalDevice(), &renderPassInfo, nullptr,
+	                       &m_offscreenRenderPass) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create render pass!");
+	}
+}
+
+void VulkanSwapChain::createFramebuffers() {
+	m_framebuffers.resize(m_imageViews.size());
+
+	for (uint32_t i = 0; i < m_imageViews.size(); i++) {
+		// HACK: does this use the same depth buffer for all images in flight? If so, is that OK?
+		std::array<VkImageView, 2> attachments = {m_imageViews[i], m_depthImageView};
+
+		VkFramebufferCreateInfo framebufferInfo {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass =
+			m_postprocessRenderPass; // postprocessing pass renders to screen
+		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		framebufferInfo.pAttachments = attachments.data();
+		framebufferInfo.width = m_extent.width;
+		framebufferInfo.height = m_extent.height;
+		framebufferInfo.layers = 1;
+
+		if (vkCreateFramebuffer(m_device->getLogicalDevice(), &framebufferInfo, nullptr,
+		                        &m_framebuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
+	}
+}
+
+void VulkanSwapChain::createSyncObjects() {
+	m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+	VkSemaphoreCreateInfo semaphoreInfo {};
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VkFenceCreateInfo fenceInfo {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start signaled so that rendering doesn't
+	                                                // block forever on first frame
+
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
+		if (vkCreateSemaphore(m_device->getLogicalDevice(), &semaphoreInfo, nullptr,
+		                      &m_imageAvailableSemaphores[i]) != VK_SUCCESS ||
+		    vkCreateSemaphore(m_device->getLogicalDevice(), &semaphoreInfo, nullptr,
+		                      &m_renderFinishedSemaphores[i]) != VK_SUCCESS ||
+		    vkCreateFence(m_device->getLogicalDevice(), &fenceInfo, nullptr,
+		                  &m_inFlightFences[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create synchronization objects!");
+		}
+	}
+}
+
+void VulkanSwapChain::createDepthResources() {
+	VkFormat depthFormat = m_device->findDepthFormat();
+	m_device->createImage(m_extent.width, m_extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+	                      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depthImage, m_depthImageMemory);
+	m_depthImageView =
+		m_device->createImageView(m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+}
+
+void VulkanSwapChain::createOffscreenFrameBufs() {
+	std::array<VkImageView, 2> imageViews;
+	glm::uvec2 postprocessingRes = {getExtent().width, getExtent().height};
+
+	m_offscreenFramebuffer.color =
+		CreateRef<Texture>(m_device, postprocessingRes, VK_FORMAT_R8G8B8A8_SRGB,
+	                       TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT);
+	m_offscreenFramebuffer.depth =
+		CreateRef<Texture>(m_device, postprocessingRes, m_device->findDepthFormat(),
+	                       TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT, true);
+	imageViews = {m_offscreenFramebuffer.color->getImageView(),
+	              m_offscreenFramebuffer.depth->getImageView()};
+
+	VkFramebufferCreateInfo framebufferInfo {};
+	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	framebufferInfo.renderPass =
+		m_offscreenRenderPass; // offscreen pass renders to offscreen framebuffer
+	framebufferInfo.attachmentCount = static_cast<uint32_t>(imageViews.size());
+	framebufferInfo.pAttachments = imageViews.data();
+	framebufferInfo.width = postprocessingRes.x;
+	framebufferInfo.height = postprocessingRes.y;
+	framebufferInfo.layers = 1;
+
+	if (vkCreateFramebuffer(m_device->getLogicalDevice(), &framebufferInfo, nullptr,
+	                        &m_offscreenFramebuffer.framebuffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create framebuffer!");
+	}
+}
+
+void VulkanSwapChain::createPostProcessingRenderPass() {
 	VkAttachmentDescription colorAttachment {};
 	colorAttachment.format = m_imageFormat;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -352,67 +527,8 @@ void VulkanSwapChain::createRenderPass() {
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-	// Construct render pass
-	if (vkCreateRenderPass(m_device->getLogicalDevice(), &renderPassInfo, nullptr, &m_renderPass) !=
-	    VK_SUCCESS) {
+	if (vkCreateRenderPass(m_device->getLogicalDevice(), &renderPassInfo, nullptr,
+	                       &m_postprocessRenderPass) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create render pass!");
 	}
-}
-
-void VulkanSwapChain::createFramebuffers() {
-	m_framebuffers.resize(m_imageViews.size());
-
-	for (uint32_t i = 0; i < m_imageViews.size(); i++) {
-		// HACK: does this use the same depth buffer for all images in flight? If so, is that OK?
-		std::array<VkImageView, 2> attachments = {m_imageViews[i], m_depthImageView};
-
-		VkFramebufferCreateInfo framebufferInfo {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = m_renderPass;
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		framebufferInfo.pAttachments = attachments.data();
-		framebufferInfo.width = m_extent.width;
-		framebufferInfo.height = m_extent.height;
-		framebufferInfo.layers = 1;
-
-		if (vkCreateFramebuffer(m_device->getLogicalDevice(), &framebufferInfo, nullptr,
-		                        &m_framebuffers[i]) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create framebuffer!");
-		}
-	}
-}
-
-void VulkanSwapChain::createSyncObjects() {
-	m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-
-	VkSemaphoreCreateInfo semaphoreInfo {};
-	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-	VkFenceCreateInfo fenceInfo {};
-	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start signaled so that rendering doesn't
-	                                                // block forever on first frame
-
-	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-
-		if (vkCreateSemaphore(m_device->getLogicalDevice(), &semaphoreInfo, nullptr,
-		                      &m_imageAvailableSemaphores[i]) != VK_SUCCESS ||
-		    vkCreateSemaphore(m_device->getLogicalDevice(), &semaphoreInfo, nullptr,
-		                      &m_renderFinishedSemaphores[i]) != VK_SUCCESS ||
-		    vkCreateFence(m_device->getLogicalDevice(), &fenceInfo, nullptr,
-		                  &m_inFlightFences[i]) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create synchronization objects!");
-		}
-	}
-}
-
-void VulkanSwapChain::createDepthResources() {
-	VkFormat depthFormat = m_device->findDepthFormat();
-	m_device->createImage(m_extent.width, m_extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-	                      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depthImage, m_depthImageMemory);
-	m_depthImageView =
-		m_device->createImageView(m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 }

@@ -29,8 +29,6 @@ class VulkanRenderer {
 	void updatePushConstant(const std::string& name, const void* data);
 
   private:
-	void createOffscreenFramebuffers();
-	void cleanupOffscreenFramebuffers();
 	void findOrBuildPipeline(const Model& model);
 
   private:
@@ -47,9 +45,7 @@ class VulkanRenderer {
 	const VertexArray m_defaultVA;
 	const std::vector<Ref<Texture>> m_textures;
 
-	template <typename T> using Frames = std::array<T, MAX_FRAMES_IN_FLIGHT>;
 	Ref<VulkanPipeline> m_postprocessPipeline;
-	Frames<Framebuffer> m_offscreenFramebuffers;
 
 	/* Buffer holding all the drawing commands for the current frame */
 	VkCommandBuffer m_commandBuffer;

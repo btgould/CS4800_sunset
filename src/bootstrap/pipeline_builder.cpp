@@ -7,7 +7,8 @@ PipelineBuilder::~PipelineBuilder() {}
 
 Ref<VulkanPipeline> PipelineBuilder::buildPipeline(VertexArray vertexArray,
                                                    const Ref<Shader> shader,
-                                                   const std::vector<Ref<Texture>>& textures) {
+                                                   const std::vector<Ref<Texture>>& textures,
+                                                   bool isPostProcessing) {
 
 	// TODO: I really want the pipeline constructor to be private, and this to be a friend class.
 	// However, the CreateRef wraps it in a way that friend doesn't work.
@@ -18,6 +19,7 @@ Ref<VulkanPipeline> PipelineBuilder::buildPipeline(VertexArray vertexArray,
 	for (const auto texture : textures) {
 		pipeline->pushTexture(texture);
 	}
+	pipeline->isPostProcessing(isPostProcessing);
 
 	pipeline->create();
 

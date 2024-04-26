@@ -33,7 +33,8 @@ class PipelineBuilder {
 	 * @return A VulkanPipeline to render objects with the given structure
 	 */
 	Ref<VulkanPipeline> buildPipeline(VertexArray vertexArray, const Ref<Shader> shader,
-	                                  const std::vector<Ref<Texture>>& textures);
+	                                  const std::vector<Ref<Texture>>& textures,
+	                                  bool isPostProcessing = false);
 
   private:
 	Ref<VulkanDevice> m_device;

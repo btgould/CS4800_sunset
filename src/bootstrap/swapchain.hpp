@@ -28,12 +28,14 @@ class VulkanSwapChain {
 	void present(uint32_t imageIndex, uint32_t currentFrame);
 
 	inline const VkSwapchainKHR& getSwapChain() const { return m_swapChain; }
-	inline const VkRenderPass getRenderPass() const { return m_renderPass; }
+	inline const VkRenderPass getOffscreenRenderPass() const { return m_offscreenRenderPass; }
+	inline const VkRenderPass getPostProcessRenderPass() const { return m_postprocessRenderPass; }
 	inline const std::vector<VkImageView> getImageViews() const { return m_imageViews; }
 	inline const VkFormat& getImageFormat() const { return m_imageFormat; }
 	inline const VkFramebuffer getFramebuffer(uint32_t imageIndex) const {
 		return m_framebuffers[imageIndex];
 	}
+	inline const Framebuffer getOffscreenFramebuffer() const { return m_offscreenFramebuffer; }
 	inline const VkExtent2D& getExtent() const { return m_extent; }
 	inline float getAspectRatio() const { return m_extent.width / (float) m_extent.height; }
 
@@ -41,10 +43,13 @@ class VulkanSwapChain {
 	void createSwapChain(const Ref<VulkanDevice> device, const Ref<GLFWWindow> window,
 	                     const VkSurfaceKHR surface);
 	void createImageViews();
-	void createRenderPass();
+	void createOffscreenRenderPass();
 	void createFramebuffers();
 	void createSyncObjects();
 	void createDepthResources();
+
+	void createOffscreenFrameBufs();
+	void createPostProcessingRenderPass();
 
 	void recreate();
 	void cleanup();
@@ -77,20 +82,24 @@ class VulkanSwapChain {
 
 	VkSwapchainKHR m_swapChain;
 
-	// TODO: use Framebuffer struct to make these variables more compact
-	std::vector<VkImage> m_images;
-	std::vector<VkImageView> m_imageViews;
 	VkFormat m_imageFormat;
 	VkExtent2D m_extent;
 
+	/* Each render pass instance defines a set of image resources, referred to as attachments, used
+	 * during rendering*/
+	VkRenderPass m_offscreenRenderPass;
+	// TODO: use Framebuffer struct to make these variables more compact
+	std::vector<VkImage> m_images;
+	std::vector<VkImageView> m_imageViews;
+	std::vector<VkFramebuffer> m_framebuffers;
 	VkImage m_depthImage;
 	VkDeviceMemory m_depthImageMemory;
 	VkImageView m_depthImageView;
 
-	/* Each render pass instance defines a set of image resources, referred to as attachments, used
-	 * during rendering*/
-	VkRenderPass m_renderPass;
-	std::vector<VkFramebuffer> m_framebuffers;
+	// NOTE: Could consider using subpasses here to make this more compact, not sure if good
+	// performance wise
+	VkRenderPass m_postprocessRenderPass;
+	Framebuffer m_offscreenFramebuffer;
 
 	std::vector<VkSemaphore> m_imageAvailableSemaphores;
 	std::vector<VkSemaphore> m_renderFinishedSemaphores;

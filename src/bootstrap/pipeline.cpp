@@ -46,7 +46,9 @@ void VulkanPipeline::create() {
 	createTextureSampler();
 	createDescriptorPool();
 	createDescriptorSets();
-	createGraphicsPipeline(m_vertexAttrBindings, m_vertexAttr, m_swapChain->getRenderPass());
+	VkRenderPass rp = m_isPostProcessing ? (m_swapChain->getPostProcessRenderPass())
+	                                     : m_swapChain->getOffscreenRenderPass();
+	createGraphicsPipeline(m_vertexAttrBindings, m_vertexAttr, rp);
 }
 
 void VulkanPipeline::setVertexArray(const VertexArray& vertexArray) {
