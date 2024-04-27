@@ -48,8 +48,7 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	// Setup postprocessing
 	m_postprocessPipeline = m_pipelineBuilder.buildPipeline(
 		VertexArray(), ShaderLibrary::get()->getShader(m_device, "atmosphere"),
-		{m_swapChain->getOffscreenFramebuffer(0).color}, true);
-	// FIXME: somehow find a way to actually pass the texture from the Framebuffer to the Pipeline
+		m_swapChain->getOffscreenFramebuffers(), true);
 
 	// Setup ImGui
 	IMGUI_CHECKVERSION();
@@ -99,7 +98,7 @@ void VulkanRenderer::beginScene() {
 	} else if (m_swapChain->beenRecreated()) {
 		m_postprocessPipeline = m_pipelineBuilder.buildPipeline(
 			{}, ShaderLibrary::get()->getShader(m_device, "atmosphere"),
-			{m_swapChain->getOffscreenFramebuffer(0).color}, true);
+			m_swapChain->getOffscreenFramebuffers(), true);
 	}
 	m_imageIndex = imageIndexOpt.value();
 

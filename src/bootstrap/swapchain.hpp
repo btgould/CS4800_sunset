@@ -32,6 +32,14 @@ class VulkanSwapChain {
 	inline const Framebuffer getOffscreenFramebuffer(uint32_t imageIndex) const {
 		return m_offscreenFramebuffers[imageIndex];
 	}
+	// PERF: getting all offscreen framebuffers is wasteful - pipeline duplicates per frame anyways
+	const std::vector<Ref<Texture>> getOffscreenFramebuffers() const {
+		std::vector<Ref<Texture>> tex;
+		for (const auto& fb : m_offscreenFramebuffers) {
+			tex.push_back(fb.color);
+		}
+		return tex;
+	}
 	inline const VkFramebuffer getFramebuffer(uint32_t imageIndex) const {
 		return m_framebuffers[imageIndex];
 	}

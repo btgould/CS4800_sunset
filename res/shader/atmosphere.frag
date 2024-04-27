@@ -17,5 +17,5 @@ void main() {
 	outColor = vec4(inUV, 0.0f, 1.0f);
 	// float dv = subpassLoad(depth).x;
 	// outColor = vec4(dv, dv, dv, 1.0f);
-	outColor = vec4(texture(scene, inUV).rgb, 1.0f);
+	// outColor = vec4(texture(scene, inUV).rgb, 1.0f);
 }
