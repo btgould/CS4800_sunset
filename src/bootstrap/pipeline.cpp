@@ -1,6 +1,8 @@
 #include "pipeline.hpp"
 
+#include <algorithm>
 #include <array>
+#include <cstdint>
 #include <cstring>
 #include <stdexcept>
 #include <glm/common.hpp>
@@ -120,19 +122,6 @@ void VulkanPipeline::setUniforms(const std::vector<PipelineDescriptor>& uniforms
 	}
 }
 
-void VulkanPipeline::pushTexture(const Ref<Texture> tex) {
-	VkDescriptorSetLayoutBinding samplerLayoutBinding {};
-	samplerLayoutBinding.binding = 0;
-	samplerLayoutBinding.descriptorCount = 1;
-	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.pImmutableSamplers = nullptr;
-	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	m_textureBindings.push_back(samplerLayoutBinding);
-	m_textureIdx[tex] = m_textures.size();
-	m_textures.push_back(tex);
-}
-
 void VulkanPipeline::writePushConstant(VkCommandBuffer commandBuffer, const std::string& name,
                                        const void* data, uint32_t currentFrame) {
 	const auto pushConstantID = m_pushConstantIDs.find(name);
@@ -167,6 +156,10 @@ void VulkanPipeline::bind(VkCommandBuffer commandBuffer) {
 
 void VulkanPipeline::bindTexture(Ref<Texture> tex) {
 	m_activeTex = tex;
+
+	if (std::find(m_textures.begin(), m_textures.end(), m_activeTex) == m_textures.end()) {
+		LOG_ERROR("Trying to bind a texture unavailable to pipeline");
+	}
 }
 
 void VulkanPipeline::bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame) {
@@ -332,9 +325,6 @@ void VulkanPipeline::createDescriptorPool() {
 	imageSamplerPoolSize.descriptorCount =
 		2 * m_textures.size() * static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 	m_poolSizes.push_back(imageSamplerPoolSize);
-	// FIXME: Instead of taking Texture objects in pipeline constructor, I need to be able to work
-	// with arbitrary FrameBuffers. That way, I can make a descriptor write with an offscreen
-	// framebuffer
 
 	// Create descriptor for ImGui
 	m_poolSizes.push_back({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1});
@@ -415,7 +405,40 @@ void VulkanPipeline::createDescriptorSets() {
 			uniformDescriptorWrites[uniformIdx].pBufferInfo = &bufferInfos[uniformIdx];
 		}
 
+		// Write to descriptor sets
+		vkUpdateDescriptorSets(m_device->getLogicalDevice(),
+		                       static_cast<uint32_t>(uniformDescriptorWrites.size()),
+		                       uniformDescriptorWrites.data(), 0, nullptr);
+
 		// Textures
+		setAvailableTextures(m_textures);
+	}
+}
+
+void VulkanPipeline::setAvailableTextures(const std::vector<Ref<Texture>>& textures) {
+	// Error checking on new list of available textures
+	uint32_t numTex = m_textures.size();
+	if (textures.size() < m_textures.size()) {
+		LOG_ERROR("Providing texture list to pipeline shorter than available descriptors. Padding "
+		          "with default texture.");
+		m_textures = textures;
+		m_textures.resize(numTex,
+		                  TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"));
+	} else if (textures.size() > m_textures.size()) {
+		LOG_ERROR(
+			"Providing texture list to pipeline longer than available descriptors. Truncating");
+		m_textures = textures;
+		m_textures.resize(numTex);
+	}
+
+	// PERF: at this point, I probably don't need to bother with the idx dict anymore
+	m_textureIdx.clear();
+	for (uint32_t i = 0; i < m_textures.size(); i++) {
+		m_textureIdx[m_textures[i]] = i;
+	}
+
+	// Associate texture data with descriptor slots in pipeline layout
+	for (uint32_t frameIdx = 0; frameIdx < MAX_FRAMES_IN_FLIGHT; frameIdx++) {
 		std::vector<std::array<VkDescriptorImageInfo, 2>> imageInfos(m_textures.size());
 		std::vector<VkWriteDescriptorSet> textureDescriptorWrites(2 * m_textures.size());
 
@@ -425,6 +448,8 @@ void VulkanPipeline::createDescriptorSets() {
 			imageInfos[textureIdx][0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			imageInfos[textureIdx][0].imageView = m_textures[textureIdx]->getImageView();
 			imageInfos[textureIdx][0].sampler = m_textureSampler;
+			// FIXME: this could be the place I need to use an offscreen sampler rather than main
+			// pass
 
 			// normal
 			imageInfos[textureIdx][1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -460,11 +485,6 @@ void VulkanPipeline::createDescriptorSets() {
 		}
 
 		// Write to descriptor sets
-		// Uniforms
-		vkUpdateDescriptorSets(m_device->getLogicalDevice(),
-		                       static_cast<uint32_t>(uniformDescriptorWrites.size()),
-		                       uniformDescriptorWrites.data(), 0, nullptr);
-		// Textures
 		vkUpdateDescriptorSets(m_device->getLogicalDevice(),
 		                       static_cast<uint32_t>(textureDescriptorWrites.size()),
 		                       textureDescriptorWrites.data(), 0, nullptr);
@@ -560,7 +580,7 @@ PipelineConfigInfo VulkanPipeline::defaultPipelineConfigInfo() {
 	configInfo.depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	configInfo.depthStencilInfo.depthTestEnable = VK_TRUE;
 	configInfo.depthStencilInfo.depthWriteEnable = VK_TRUE;
-	configInfo.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+	configInfo.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 	configInfo.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
 	configInfo.depthStencilInfo.minDepthBounds = 0.0f; // Optional
 	configInfo.depthStencilInfo.maxDepthBounds = 1.0f; // Optional

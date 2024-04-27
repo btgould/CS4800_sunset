@@ -9,6 +9,7 @@
 
 #include "device.hpp"
 #include "instance.hpp"
+#include "util/memory.hpp"
 #include "window.hpp"
 #include "util/profiler.hpp"
 
@@ -154,6 +155,8 @@ void VulkanSwapChain::submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitS
 	                  m_inFlightFences[currentFrame]) != VK_SUCCESS) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
+
+	m_beenRecreated = false;
 }
 
 void VulkanSwapChain::present(uint32_t imageIndex, uint32_t currentFrame) {
@@ -215,6 +218,8 @@ void VulkanSwapChain::recreate() {
 	createDepthResources();
 	createFramebuffers();
 	createOffscreenFrameBufs();
+
+	m_beenRecreated = true;
 }
 
 void VulkanSwapChain::cleanup() {
@@ -222,10 +227,11 @@ void VulkanSwapChain::cleanup() {
 	vkDestroyImage(m_device->getLogicalDevice(), m_depthImage, nullptr);
 	vkFreeMemory(m_device->getLogicalDevice(), m_depthImageMemory, nullptr);
 
-	for (auto framebuffer : m_framebuffers) {
-		vkDestroyFramebuffer(m_device->getLogicalDevice(), framebuffer, nullptr);
+	for (uint32_t i = 0; i < m_framebuffers.size(); i++) {
+		vkDestroyFramebuffer(m_device->getLogicalDevice(), m_framebuffers[i], nullptr);
+		vkDestroyFramebuffer(m_device->getLogicalDevice(), m_offscreenFramebuffers[i].framebuffer,
+		                     nullptr);
 	}
-	vkDestroyFramebuffer(m_device->getLogicalDevice(), m_offscreenFramebuffer.framebuffer, nullptr);
 
 	for (auto imageView : m_imageViews) {
 		vkDestroyImageView(m_device->getLogicalDevice(), imageView, nullptr);
@@ -375,7 +381,7 @@ void VulkanSwapChain::createOffscreenRenderPass() {
 }
 
 void VulkanSwapChain::createFramebuffers() {
-	m_framebuffers.resize(m_imageViews.size());
+	m_framebuffers.resize(m_images.size());
 
 	for (uint32_t i = 0; i < m_imageViews.size(); i++) {
 		// HACK: does this use the same depth buffer for all images in flight? If so, is that OK?
@@ -434,31 +440,36 @@ void VulkanSwapChain::createDepthResources() {
 }
 
 void VulkanSwapChain::createOffscreenFrameBufs() {
+	m_offscreenFramebuffers.resize(m_images.size());
 	std::array<VkImageView, 2> imageViews;
 	glm::uvec2 postprocessingRes = {getExtent().width, getExtent().height};
-
-	m_offscreenFramebuffer.color =
-		CreateRef<Texture>(m_device, postprocessingRes, VK_FORMAT_R8G8B8A8_SRGB,
-	                       TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT);
-	m_offscreenFramebuffer.depth =
+	auto depth =
 		CreateRef<Texture>(m_device, postprocessingRes, m_device->findDepthFormat(),
 	                       TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT, true);
-	imageViews = {m_offscreenFramebuffer.color->getImageView(),
-	              m_offscreenFramebuffer.depth->getImageView()};
 
-	VkFramebufferCreateInfo framebufferInfo {};
-	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebufferInfo.renderPass =
-		m_offscreenRenderPass; // offscreen pass renders to offscreen framebuffer
-	framebufferInfo.attachmentCount = static_cast<uint32_t>(imageViews.size());
-	framebufferInfo.pAttachments = imageViews.data();
-	framebufferInfo.width = postprocessingRes.x;
-	framebufferInfo.height = postprocessingRes.y;
-	framebufferInfo.layers = 1;
+	for (uint32_t i = 0; i < m_images.size(); i++) {
 
-	if (vkCreateFramebuffer(m_device->getLogicalDevice(), &framebufferInfo, nullptr,
-	                        &m_offscreenFramebuffer.framebuffer) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create framebuffer!");
+		m_offscreenFramebuffers[i].color =
+			CreateRef<Texture>(m_device, postprocessingRes, VK_FORMAT_R8G8B8A8_SRGB,
+		                       TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT);
+		m_offscreenFramebuffers[i].depth = depth;
+		imageViews = {m_offscreenFramebuffers[i].color->getImageView(),
+		              m_offscreenFramebuffers[i].depth->getImageView()};
+
+		VkFramebufferCreateInfo framebufferInfo {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass =
+			m_offscreenRenderPass; // offscreen pass renders to offscreen framebuffer
+		framebufferInfo.attachmentCount = static_cast<uint32_t>(imageViews.size());
+		framebufferInfo.pAttachments = imageViews.data();
+		framebufferInfo.width = postprocessingRes.x;
+		framebufferInfo.height = postprocessingRes.y;
+		framebufferInfo.layers = 1;
+
+		if (vkCreateFramebuffer(m_device->getLogicalDevice(), &framebufferInfo, nullptr,
+		                        &m_offscreenFramebuffers[i].framebuffer) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
 	}
 }
 
@@ -466,7 +477,7 @@ void VulkanSwapChain::createPostProcessingRenderPass() {
 	VkAttachmentDescription colorAttachment {};
 	colorAttachment.format = m_imageFormat;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;   // clear image before rendering
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save rendered image to display
 	colorAttachment.stencilLoadOp =
 		VK_ATTACHMENT_LOAD_OP_DONT_CARE; // We don't use the stencil buffer
@@ -481,8 +492,8 @@ void VulkanSwapChain::createPostProcessingRenderPass() {
 	depthAttachment.format = m_device->findDepthFormat();
 	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -504,17 +515,27 @@ void VulkanSwapChain::createPostProcessingRenderPass() {
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 	// Make render subpass depend on image being available
-	VkSubpassDependency dependency {};
-	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	dependency.dstSubpass = 0; // 0 here indexes our custom subpasses (of which there is only 1)
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-	                          VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // operations to wait on
-	dependency.srcAccessMask = 0;
-	dependency.dstStageMask =
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // operation to prevent until done waiting
-	dependency.dstAccessMask =
-		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	std::array<VkSubpassDependency, 2> dependencies;
+
+	dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependencies[0].dstSubpass = 0;
+	dependencies[0].srcStageMask =
+		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	dependencies[0].dstStageMask =
+		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	dependencies[0].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	dependencies[0].dstAccessMask =
+		VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+	dependencies[0].dependencyFlags = 0;
+
+	dependencies[1].srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependencies[1].dstSubpass = 0;
+	dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependencies[1].srcAccessMask = 0;
+	dependencies[1].dstAccessMask =
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+	dependencies[1].dependencyFlags = 0;
 
 	// Create render pass
 	std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
@@ -524,8 +545,8 @@ void VulkanSwapChain::createPostProcessingRenderPass() {
 	renderPassInfo.pAttachments = attachments.data();
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
-	renderPassInfo.dependencyCount = 1;
-	renderPassInfo.pDependencies = &dependency;
+	renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+	renderPassInfo.pDependencies = dependencies.data();
 
 	if (vkCreateRenderPass(m_device->getLogicalDevice(), &renderPassInfo, nullptr,
 	                       &m_postprocessRenderPass) != VK_SUCCESS) {

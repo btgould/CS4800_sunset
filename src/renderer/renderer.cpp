@@ -35,9 +35,12 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
                    {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 3}, // color
                    {VertexAtrributeType::VERTEX_ATTRIB_TYPE_F32, 2}} // uv
                   ),
-	  m_textures({TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
-                  TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"),
-                  TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png")}) {
+	  m_textures({
+		  TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
+		  TextureLibrary::get()->getTexture(m_device, "res/texture/viking_room.png"),
+		  TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"),
+		  TextureLibrary::get()->getTexture(m_device, "res/skybox/skybox.png"),
+	  }) {
 	auto shader = ShaderLibrary::get()->getShader(m_device, "model");
 	m_pipelines.push_back(m_pipelineBuilder.buildPipeline(m_defaultVA, shader, m_textures));
 	m_activePipeline = m_pipelines[0];
@@ -45,7 +48,7 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	// Setup postprocessing
 	m_postprocessPipeline = m_pipelineBuilder.buildPipeline(
 		VertexArray(), ShaderLibrary::get()->getShader(m_device, "atmosphere"),
-		{m_swapChain->getOffscreenFramebuffer().color}, true);
+		{m_swapChain->getOffscreenFramebuffer(0).color}, true);
 	// FIXME: somehow find a way to actually pass the texture from the Framebuffer to the Pipeline
 
 	// Setup ImGui
@@ -93,6 +96,10 @@ void VulkanRenderer::beginScene() {
 	if (!imageIndexOpt.has_value()) {
 		// Swap chain is recreating, wait until next frame
 		return;
+	} else if (m_swapChain->beenRecreated()) {
+		m_postprocessPipeline = m_pipelineBuilder.buildPipeline(
+			{}, ShaderLibrary::get()->getShader(m_device, "atmosphere"),
+			{m_swapChain->getOffscreenFramebuffer(0).color}, true);
 	}
 	m_imageIndex = imageIndexOpt.value();
 
@@ -115,7 +122,7 @@ void VulkanRenderer::beginScene() {
 	VkRenderPassBeginInfo renderPassInfo {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.renderPass = m_swapChain->getOffscreenRenderPass();
-	renderPassInfo.framebuffer = m_swapChain->getOffscreenFramebuffer().framebuffer;
+	renderPassInfo.framebuffer = m_swapChain->getOffscreenFramebuffer(m_currentFrame).framebuffer;
 	renderPassInfo.renderArea.offset = {0, 0};
 	renderPassInfo.renderArea.extent = m_swapChain->getExtent();
 
@@ -136,6 +143,7 @@ void VulkanRenderer::beginScene() {
 }
 
 void VulkanRenderer::draw(Model& model) {
+	PROFILE_FUNC();
 	if (!m_activePipeline->canRender(model)) {
 		findOrBuildPipeline(model);
 	}
@@ -152,6 +160,7 @@ void VulkanRenderer::draw(Model& model) {
 }
 
 void VulkanRenderer::endScene() {
+	PROFILE_FUNC();
 	// Record ImGui Frame
 	m_activePipeline = m_pipelines[0];
 	m_activePipeline->bind(m_commandBuffer);
@@ -167,24 +176,27 @@ void VulkanRenderer::endScene() {
 	vkCmdEndRenderPass(m_commandBuffer);
 
 	// postprocessing
-	VkRenderPassBeginInfo renderPassInfo {};
-	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = m_swapChain->getPostProcessRenderPass();
-	renderPassInfo.framebuffer = m_swapChain->getFramebuffer(m_imageIndex);
-	renderPassInfo.renderArea.offset = {0, 0};
-	renderPassInfo.renderArea.extent = m_swapChain->getExtent();
+	{
+		PROFILE_SCOPE("postprocessing");
+		VkRenderPassBeginInfo renderPassInfo {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = m_swapChain->getPostProcessRenderPass();
+		renderPassInfo.framebuffer = m_swapChain->getFramebuffer(m_imageIndex);
+		renderPassInfo.renderArea.offset = {0, 0};
+		renderPassInfo.renderArea.extent = m_swapChain->getExtent();
 
-	std::array<VkClearValue, 2> clearValues {};
-	clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-	clearValues[1].depthStencil = {1.0f, 0};
-	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-	renderPassInfo.pClearValues = clearValues.data();
-	vkCmdBeginRenderPass(m_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-	m_postprocessPipeline->bind(m_commandBuffer);
-	m_postprocessPipeline->bindTexture(m_swapChain->getOffscreenFramebuffer().color);
-	m_postprocessPipeline->bindDescriptorSets(m_commandBuffer, m_currentFrame);
-	vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
-	vkCmdEndRenderPass(m_commandBuffer);
+		std::array<VkClearValue, 2> clearValues {};
+		clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+		clearValues[1].depthStencil = {1.0f, 0};
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
+		vkCmdBeginRenderPass(m_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		m_postprocessPipeline->bind(m_commandBuffer);
+		m_postprocessPipeline->bindTexture(m_swapChain->getOffscreenFramebuffer(0).color);
+		m_postprocessPipeline->bindDescriptorSets(m_commandBuffer, m_currentFrame);
+		vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
+		vkCmdEndRenderPass(m_commandBuffer);
+	}
 
 	// Finish recording commands, submit drawing to GPU queue
 	if (vkEndCommandBuffer(m_commandBuffer) != VK_SUCCESS) {
@@ -200,6 +212,7 @@ void VulkanRenderer::endScene() {
 	m_swapChain->present(m_imageIndex, m_currentFrame);
 
 	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+	// FIXME: MAX_FRAMES_IN_FLIGHT is NOT the number of frames in the swap chain
 }
 
 void VulkanRenderer::updateUniform(std::string name, void* data) {

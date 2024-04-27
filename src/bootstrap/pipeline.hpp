@@ -29,6 +29,8 @@ struct PipelineConfigInfo {
 	VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
 };
 
+template <typename T> using Frames = std::array<T, MAX_FRAMES_IN_FLIGHT>;
+
 /**
  * @class VulkanPipeline
  * @brief Class describing a rendering pipeline to be used for a specific set of resources
@@ -52,6 +54,7 @@ class VulkanPipeline {
 
 	void bind(VkCommandBuffer commandBuffer);
 	void bindTexture(Ref<Texture> tex);
+	void setAvailableTextures(const std::vector<Ref<Texture>>& textures);
 	void bindDescriptorSets(VkCommandBuffer commandBuffer, uint32_t currentFrame);
 
 	bool canRender(const Model& model);
@@ -70,14 +73,17 @@ class VulkanPipeline {
 	void create();
 
 	void setVertexArray(const VertexArray& vertexArray);
+	/**
+	 * @brief Defines the shader, uniforms, and push constant used by this pipeline.
+	 *
+	 * @param shader The shader object for this pipeline to use
+	 */
 	void setShader(const Ref<Shader> shader);
 	uint32_t setPushConstant(const PipelineDescriptor& pushConstant);
 	void setUniforms(const std::vector<PipelineDescriptor>& uniforms);
-	// HACK: Pipeline should not be in charge of textures. This function looks like it makes another
-	// texture descriptor slot in the pipeline, but really, all pipelines are hardcoded to have two
-	// descriptor slots. All this does is let the pipeline use that texture. This needs to be
-	// reworked
-	void pushTexture(const Ref<Texture> tex);
+	inline void initializeTextures(const std::vector<Ref<Texture>>& textures) {
+		m_textures = textures;
+	}
 
 	void createGraphicsPipeline(VkVertexInputBindingDescription bindingDesc,
 	                            std::vector<VkVertexInputAttributeDescription> attrDesc,
@@ -99,7 +105,6 @@ class VulkanPipeline {
 	VkSampler m_textureSampler;
 	bool m_isPostProcessing;
 
-	template <typename T> using Frames = std::array<T, MAX_FRAMES_IN_FLIGHT>;
 	std::array<VkDescriptorSet, 2> m_activeDescriptorSets;
 
 	Ref<Shader> m_shader;
@@ -109,9 +114,10 @@ class VulkanPipeline {
 	std::vector<Ref<Texture>> m_textures;
 	std::unordered_map<Ref<Texture>, uint32_t>
 		m_textureIdx; // TODO: using two DS like this is clunky
-	/* list of structs, each describing a texture this pipeline makes available to shaders */
-	std::vector<VkDescriptorSetLayoutBinding> m_textureBindings;
+	// Descriptor set layout for textures: hardcoded to expect one albedo, one normal
 	VkDescriptorSetLayout m_textureLayout;
+	// List of descriptor sets (each with m_textureLayout layout). One descriptor set for each frame
+	// in flight and albedo / normal pair we render
 	std::vector<Frames<VkDescriptorSet>> m_textureDescriptorSets;
 
 	// Uniform resources

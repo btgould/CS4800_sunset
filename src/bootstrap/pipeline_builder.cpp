@@ -16,9 +16,7 @@ Ref<VulkanPipeline> PipelineBuilder::buildPipeline(VertexArray vertexArray,
 
 	pipeline->setVertexArray(vertexArray);
 	pipeline->setShader(shader);
-	for (const auto texture : textures) {
-		pipeline->pushTexture(texture);
-	}
+	pipeline->initializeTextures(textures);
 	pipeline->isPostProcessing(isPostProcessing);
 
 	pipeline->create();

@@ -27,17 +27,17 @@ class VulkanSwapChain {
 	void submit(VkCommandBuffer cmdBuf, VkPipelineStageFlags* waitStages, uint32_t currentFrame);
 	void present(uint32_t imageIndex, uint32_t currentFrame);
 
-	inline const VkSwapchainKHR& getSwapChain() const { return m_swapChain; }
 	inline const VkRenderPass getOffscreenRenderPass() const { return m_offscreenRenderPass; }
 	inline const VkRenderPass getPostProcessRenderPass() const { return m_postprocessRenderPass; }
-	inline const std::vector<VkImageView> getImageViews() const { return m_imageViews; }
-	inline const VkFormat& getImageFormat() const { return m_imageFormat; }
+	inline const Framebuffer getOffscreenFramebuffer(uint32_t imageIndex) const {
+		return m_offscreenFramebuffers[imageIndex];
+	}
 	inline const VkFramebuffer getFramebuffer(uint32_t imageIndex) const {
 		return m_framebuffers[imageIndex];
 	}
-	inline const Framebuffer getOffscreenFramebuffer() const { return m_offscreenFramebuffer; }
 	inline const VkExtent2D& getExtent() const { return m_extent; }
 	inline float getAspectRatio() const { return m_extent.width / (float) m_extent.height; }
+	inline bool beenRecreated() const { return m_beenRecreated; }
 
   private:
 	void createSwapChain(const Ref<VulkanDevice> device, const Ref<GLFWWindow> window,
@@ -79,6 +79,7 @@ class VulkanSwapChain {
 	// TODO: this is kinda hacky, but I have to save these handles to recreate
 	Ref<GLFWWindow> m_window;
 	const VkSurfaceKHR m_surface;
+	bool m_beenRecreated = false;
 
 	VkSwapchainKHR m_swapChain;
 
@@ -99,7 +100,7 @@ class VulkanSwapChain {
 	// NOTE: Could consider using subpasses here to make this more compact, not sure if good
 	// performance wise
 	VkRenderPass m_postprocessRenderPass;
-	Framebuffer m_offscreenFramebuffer;
+	std::vector<Framebuffer> m_offscreenFramebuffers;
 
 	std::vector<VkSemaphore> m_imageAvailableSemaphores;
 	std::vector<VkSemaphore> m_renderFinishedSemaphores;
