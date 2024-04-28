@@ -8,6 +8,7 @@
 #include "imgui.h"
 
 #include "renderer/renderer.hpp"
+#include "renderer/shader.hpp"
 #include "renderer/shader_lib.hpp"
 #include "renderer/texture_lib.hpp"
 
@@ -47,6 +48,12 @@ void Application::run() {
 	cloud2.getTransform().setTranslation(glm::vec3(-300.0f, 75.0f, 200.0f));
 	cloud2.getTransform().setScale(glm::vec3(100.0f, 50.0f, 150.0f));
 
+	Atmosphere atmos;
+	atmos.defractionCoef = {1.0f, 1.0f, 1.0f};
+	atmos.time = 0;
+	atmos.radius = 500.0f;
+	atmos.offsetFactor = 0.95f;
+
 	CloudSettings cloudSettings;
 
 	LightSource light;
@@ -78,6 +85,15 @@ void Application::run() {
 		// Draw GUI
 		ImGui::ShowDemoWindow();
 		ImGui::Begin("Demo");
+
+		ImGui::SeparatorText("Atmosphere Settings: ");
+		ImGui::PushID("Atmosphere");
+		ImGui::DragFloat3("Defraction Coefficients", glm::value_ptr(atmos.defractionCoef), 1.0f,
+		                  0.0f, 10.0f);
+		ImGui::DragFloat("Time of day", &atmos.time, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Radius", &atmos.radius, 10.0f, 100.0f, 1000.0f);
+		ImGui::DragFloat("Offset", &atmos.offsetFactor, 0.01f, 0.0f, 1.0f);
+		ImGui::PopID();
 
 		ImGui::SeparatorText("Light Settings: ");
 		ImGui::PushID("Light");
@@ -112,6 +128,7 @@ void Application::run() {
 		m_camController->OnUpdate(dt);
 		glm::mat4 camVP = m_camera->getVP();
 		m_renderer->updateUniform("camVP", &camVP);
+		m_renderer->updateUniform("atmos", &atmos);
 		m_renderer->updateUniform("light", &light); // do this in loop b/c >1 framebuffers
 		m_renderer->updateUniform("cloudSettings", &cloudSettings);
 	}

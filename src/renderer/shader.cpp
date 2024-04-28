@@ -44,7 +44,8 @@ std::unordered_map<std::string, std::vector<PipelineDescriptor>> Shader::s_unifo
 	 }},
 	{"atmosphere",
      {
-		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Atmosphere), "atmosphere"},
+		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), "camVP"},
+		 {VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Atmosphere), "atmos"},
 	 }},
 };
 

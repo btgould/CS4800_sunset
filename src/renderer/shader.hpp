@@ -31,6 +31,8 @@ struct CloudSettings {
 struct Atmosphere {
 	alignas(16) glm::vec3 defractionCoef;
 	alignas(4) float time;
+	alignas(4) float radius;
+	alignas(4) float offsetFactor;
 };
 
 /**

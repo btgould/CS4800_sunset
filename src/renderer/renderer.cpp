@@ -8,6 +8,7 @@
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
+#include <iterator>
 #include <vulkan/vulkan_core.h>
 
 #include "bootstrap/pipeline.hpp"
@@ -219,6 +220,8 @@ void VulkanRenderer::updateUniform(std::string name, void* data) {
 	for (auto pipeline : m_pipelines) {
 		pipeline->writeUniform(name, data, m_currentFrame);
 	}
+
+	m_postprocessPipeline->writeUniform(name, data, m_currentFrame);
 }
 
 void VulkanRenderer::updatePushConstant(const std::string& name, const void* data) {
