@@ -304,11 +304,9 @@ void VulkanSwapChain::createOffscreenRenderPass() {
 	colorAttachment.format = m_imageFormat;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;   // clear image before rendering
-	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save rendered image to display
-	colorAttachment.stencilLoadOp =
-		VK_ATTACHMENT_LOAD_OP_DONT_CARE; // We don't use the stencil buffer
-	colorAttachment.stencilStoreOp =
-		VK_ATTACHMENT_STORE_OP_DONT_CARE; // We don't use the stencil buffer
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save rendered image to offscreen tex
+	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	// HACK: postprocessing: I set this to SHADER_READ_ONLY because I am hardcoding a postprocessing
@@ -319,7 +317,7 @@ void VulkanSwapChain::createOffscreenRenderPass() {
 	depthAttachment.format = m_device->findDepthFormat();
 	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -443,18 +441,13 @@ void VulkanSwapChain::createOffscreenFrameBufs() {
 	m_offscreenFramebuffers.resize(m_images.size());
 	std::array<VkImageView, 2> imageViews;
 	glm::uvec2 postprocessingRes = {getExtent().width, getExtent().height};
-	auto depth =
-		CreateRef<Texture>(m_device, postprocessingRes, m_device->findDepthFormat(),
-	                       TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT, true);
 
 	for (uint32_t i = 0; i < m_images.size(); i++) {
 
 		m_offscreenFramebuffers[i].color =
 			CreateRef<Texture>(m_device, postprocessingRes, VK_FORMAT_R8G8B8A8_SRGB,
 		                       TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT);
-		m_offscreenFramebuffers[i].depth = depth;
-		imageViews = {m_offscreenFramebuffers[i].color->getImageView(),
-		              m_offscreenFramebuffers[i].depth->getImageView()};
+		imageViews = {m_offscreenFramebuffers[i].color->getImageView(), m_depthImageView};
 
 		VkFramebufferCreateInfo framebufferInfo {};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -491,11 +484,11 @@ void VulkanSwapChain::createPostProcessingRenderPass() {
 	VkAttachmentDescription depthAttachment {};
 	depthAttachment.format = m_device->findDepthFormat();
 	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	// create reference to attached image
@@ -511,7 +504,7 @@ void VulkanSwapChain::createPostProcessingRenderPass() {
 	VkSubpassDescription subpass {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &colorAttachmentRef; // this array is index by frag shader outputs
+	subpass.pColorAttachments = &colorAttachmentRef; // thi s array is index by frag shader outputs
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 	// Make render subpass depend on image being available
