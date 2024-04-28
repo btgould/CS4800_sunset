@@ -55,7 +55,7 @@ void VulkanSwapChain::createSwapChain(const Ref<VulkanDevice> device, const Ref<
 	VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
 
 	// Make chain 1 longer than min supported
-	uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+	uint32_t imageCount = swapChainSupport.capabilities.minImageCount;
 	if (swapChainSupport.capabilities.maxImageCount > 0 &&
 	    imageCount > swapChainSupport.capabilities.maxImageCount) {
 		imageCount = swapChainSupport.capabilities.maxImageCount;
@@ -229,8 +229,7 @@ void VulkanSwapChain::cleanup() {
 
 	for (uint32_t i = 0; i < m_framebuffers.size(); i++) {
 		vkDestroyFramebuffer(m_device->getLogicalDevice(), m_framebuffers[i], nullptr);
-		vkDestroyFramebuffer(m_device->getLogicalDevice(), m_offscreenFramebuffers[i].framebuffer,
-		                     nullptr);
+		vkDestroyFramebuffer(m_device->getLogicalDevice(), m_offscreenFramebuffers[i], nullptr);
 	}
 
 	for (auto imageView : m_imageViews) {
@@ -242,58 +241,46 @@ void VulkanSwapChain::cleanup() {
 	vkDestroySwapchainKHR(m_device->getLogicalDevice(), m_swapChain, nullptr);
 }
 
-VkSurfaceFormatKHR
-VulkanSwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
-	// prefer 4-byte RGBA w/ SRGB color space
-	for (const auto& availableFormat : availableFormats) {
-		if (availableFormat.format == VK_FORMAT_R8G8B8A8_SRGB &&
-		    availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-			return availableFormat;
-		}
-	}
-
-	// otherwise, return first format available
-	return availableFormats[0];
-}
-
-VkPresentModeKHR
-VulkanSwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
-	// prefer "triple buffering" (fill queue with newest possible images) when available
-	for (const auto& availablePresentMode : availablePresentModes) {
-		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-			return availablePresentMode;
-		}
-	}
-
-	// otherwise, use basic VSync
-	// return VK_PRESENT_MODE_FIFO_KHR;
-	// otherwise, present as fast as possible
-	// Vulkan, NVIDIA, GLFW, and VSync do not interact well together
-	return VK_PRESENT_MODE_IMMEDIATE_KHR;
-}
-
-VkExtent2D VulkanSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
-                                             const Ref<GLFWWindow> window) {
-	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-		return capabilities.currentExtent;
-	} else {
-		VkExtent2D actualExtent = window->getFramebufferSize();
-
-		actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width,
-		                                capabilities.maxImageExtent.width);
-		actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height,
-		                                 capabilities.maxImageExtent.height);
-
-		return actualExtent;
-	}
-}
-
 void VulkanSwapChain::createImageViews() {
 	m_imageViews.resize(m_images.size());
 
 	for (size_t i = 0; i < m_images.size(); i++) {
 		m_imageViews[i] =
 			m_device->createImageView(m_images[i], m_imageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+	}
+}
+
+void VulkanSwapChain::createDepthResources() {
+	VkFormat depthFormat = m_device->findDepthFormat();
+	m_device->createImage(m_extent.width, m_extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
+	                      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depthImage, m_depthImageMemory);
+	m_depthImageView =
+		m_device->createImageView(m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+}
+
+void VulkanSwapChain::createOffscreenFrameBufs() {
+	m_offscreenFramebuffers.resize(m_images.size());
+	std::array<VkImageView, 2> imageViews;
+
+	for (uint32_t i = 0; i < m_imageViews.size(); i++) {
+
+		imageViews = {m_imageViews[i], m_depthImageView};
+
+		VkFramebufferCreateInfo framebufferInfo {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass =
+			m_offscreenRenderPass; // offscreen pass renders to offscreen framebuffer
+		framebufferInfo.attachmentCount = static_cast<uint32_t>(imageViews.size());
+		framebufferInfo.pAttachments = imageViews.data();
+		framebufferInfo.width = m_extent.width;
+		framebufferInfo.height = m_extent.height;
+		framebufferInfo.layers = 1;
+
+		if (vkCreateFramebuffer(m_device->getLogicalDevice(), &framebufferInfo, nullptr,
+		                        &m_offscreenFramebuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
 	}
 }
 
@@ -308,8 +295,8 @@ void VulkanSwapChain::createOffscreenRenderPass() {
 	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	// HACK: postprocessing: I set this to SHADER_READ_ONLY because I am hardcoding a postprocessing
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	// HACK: postprocessing: I set this to COLOR_ATTACHMENT because I am hardcoding a postprocessing
 	// step currently. If I don't know about postprocessing, I really want this to be
 	// PRESENT_SRC_KHR instead
 
@@ -402,81 +389,17 @@ void VulkanSwapChain::createFramebuffers() {
 	}
 }
 
-void VulkanSwapChain::createSyncObjects() {
-	m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-	m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-
-	VkSemaphoreCreateInfo semaphoreInfo {};
-	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-	VkFenceCreateInfo fenceInfo {};
-	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start signaled so that rendering doesn't
-	                                                // block forever on first frame
-
-	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-
-		if (vkCreateSemaphore(m_device->getLogicalDevice(), &semaphoreInfo, nullptr,
-		                      &m_imageAvailableSemaphores[i]) != VK_SUCCESS ||
-		    vkCreateSemaphore(m_device->getLogicalDevice(), &semaphoreInfo, nullptr,
-		                      &m_renderFinishedSemaphores[i]) != VK_SUCCESS ||
-		    vkCreateFence(m_device->getLogicalDevice(), &fenceInfo, nullptr,
-		                  &m_inFlightFences[i]) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create synchronization objects!");
-		}
-	}
-}
-
-void VulkanSwapChain::createDepthResources() {
-	VkFormat depthFormat = m_device->findDepthFormat();
-	m_device->createImage(m_extent.width, m_extent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-	                      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-	                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depthImage, m_depthImageMemory);
-	m_depthImageView =
-		m_device->createImageView(m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-}
-
-void VulkanSwapChain::createOffscreenFrameBufs() {
-	m_offscreenFramebuffers.resize(m_images.size());
-	std::array<VkImageView, 2> imageViews;
-	glm::uvec2 postprocessingRes = {getExtent().width, getExtent().height};
-
-	for (uint32_t i = 0; i < m_images.size(); i++) {
-
-		m_offscreenFramebuffers[i].color =
-			CreateRef<Texture>(m_device, postprocessingRes, VK_FORMAT_R8G8B8A8_SRGB,
-		                       TextureAccessBitFlag::READ_BIT | TextureAccessBitFlag::WRITE_BIT);
-		imageViews = {m_offscreenFramebuffers[i].color->getImageView(), m_depthImageView};
-
-		VkFramebufferCreateInfo framebufferInfo {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass =
-			m_offscreenRenderPass; // offscreen pass renders to offscreen framebuffer
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(imageViews.size());
-		framebufferInfo.pAttachments = imageViews.data();
-		framebufferInfo.width = postprocessingRes.x;
-		framebufferInfo.height = postprocessingRes.y;
-		framebufferInfo.layers = 1;
-
-		if (vkCreateFramebuffer(m_device->getLogicalDevice(), &framebufferInfo, nullptr,
-		                        &m_offscreenFramebuffers[i].framebuffer) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create framebuffer!");
-		}
-	}
-}
-
 void VulkanSwapChain::createPostProcessingRenderPass() {
 	VkAttachmentDescription colorAttachment {};
 	colorAttachment.format = m_imageFormat;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save rendered image to display
 	colorAttachment.stencilLoadOp =
 		VK_ATTACHMENT_LOAD_OP_DONT_CARE; // We don't use the stencil buffer
 	colorAttachment.stencilStoreOp =
 		VK_ATTACHMENT_STORE_OP_DONT_CARE; // We don't use the stencil buffer
-	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	colorAttachment.finalLayout =
 		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // Ultimately, we want the color buffer to display to the
 	                                     // screen
@@ -544,5 +467,77 @@ void VulkanSwapChain::createPostProcessingRenderPass() {
 	if (vkCreateRenderPass(m_device->getLogicalDevice(), &renderPassInfo, nullptr,
 	                       &m_postprocessRenderPass) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create render pass!");
+	}
+}
+
+void VulkanSwapChain::createSyncObjects() {
+	m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+	VkSemaphoreCreateInfo semaphoreInfo {};
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VkFenceCreateInfo fenceInfo {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start signaled so that rendering doesn't
+	                                                // block forever on first frame
+
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
+		if (vkCreateSemaphore(m_device->getLogicalDevice(), &semaphoreInfo, nullptr,
+		                      &m_imageAvailableSemaphores[i]) != VK_SUCCESS ||
+		    vkCreateSemaphore(m_device->getLogicalDevice(), &semaphoreInfo, nullptr,
+		                      &m_renderFinishedSemaphores[i]) != VK_SUCCESS ||
+		    vkCreateFence(m_device->getLogicalDevice(), &fenceInfo, nullptr,
+		                  &m_inFlightFences[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create synchronization objects!");
+		}
+	}
+}
+
+VkSurfaceFormatKHR
+VulkanSwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+	// prefer 4-byte RGBA w/ SRGB color space
+	for (const auto& availableFormat : availableFormats) {
+		if (availableFormat.format == VK_FORMAT_R8G8B8A8_SRGB &&
+		    availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+			return availableFormat;
+		}
+	}
+
+	// otherwise, return first format available
+	return availableFormats[0];
+}
+
+VkPresentModeKHR
+VulkanSwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+	// prefer "triple buffering" (fill queue with newest possible images) when available
+	for (const auto& availablePresentMode : availablePresentModes) {
+		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+			return availablePresentMode;
+		}
+	}
+
+	// otherwise, use basic VSync
+	// return VK_PRESENT_MODE_FIFO_KHR;
+	// otherwise, present as fast as possible
+	// Vulkan, NVIDIA, GLFW, and VSync do not interact well together
+	return VK_PRESENT_MODE_IMMEDIATE_KHR;
+}
+
+VkExtent2D VulkanSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
+                                             const Ref<GLFWWindow> window) {
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+		return capabilities.currentExtent;
+	} else {
+		VkExtent2D actualExtent = window->getFramebufferSize();
+
+		actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width,
+		                                capabilities.maxImageExtent.width);
+		actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height,
+		                                 capabilities.maxImageExtent.height);
+
+		return actualExtent;
 	}
 }

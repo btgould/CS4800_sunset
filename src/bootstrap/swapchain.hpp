@@ -6,15 +6,7 @@
 
 #include "device.hpp"
 #include "instance.hpp"
-#include "renderer/texture.hpp"
 #include "window.hpp"
-
-// TODO: could be nice to make this into its own class
-// Constructor for size, format, read / write bit, color or depth
-struct Framebuffer {
-	Ref<Texture> color, depth;
-	VkFramebuffer framebuffer;
-};
 
 class VulkanSwapChain {
   public:
@@ -29,19 +21,18 @@ class VulkanSwapChain {
 
 	inline const VkRenderPass getOffscreenRenderPass() const { return m_offscreenRenderPass; }
 	inline const VkRenderPass getPostProcessRenderPass() const { return m_postprocessRenderPass; }
-	inline const Framebuffer getOffscreenFramebuffer(uint32_t imageIndex) const {
-		return m_offscreenFramebuffers[imageIndex];
-	}
-	// PERF: getting all offscreen framebuffers is wasteful - pipeline duplicates per frame anyways
-	const std::vector<Ref<Texture>> getOffscreenFramebuffers() const {
-		std::vector<Ref<Texture>> tex;
-		for (const auto& fb : m_offscreenFramebuffers) {
-			tex.push_back(fb.color);
-		}
-		return tex;
-	}
+	/* const std::vector<Ref<Texture>> getOffscreenFramebuffers() const {
+	    std::vector<Ref<Texture>> tex;
+	    for (const auto& fb : m_offscreenFramebuffers) {
+	        tex.push_back(fb.color);
+	    }
+	    return tex;
+	} */
 	inline const VkFramebuffer getFramebuffer(uint32_t imageIndex) const {
 		return m_framebuffers[imageIndex];
+	}
+	inline const VkFramebuffer getOffscreenFramebuffer(uint32_t imageIndex) const {
+		return m_offscreenFramebuffers[imageIndex];
 	}
 	inline const VkExtent2D& getExtent() const { return m_extent; }
 	inline float getAspectRatio() const { return m_extent.width / (float) m_extent.height; }
@@ -97,18 +88,19 @@ class VulkanSwapChain {
 	/* Each render pass instance defines a set of image resources, referred to as attachments, used
 	 * during rendering*/
 	VkRenderPass m_offscreenRenderPass;
-	// TODO: use Framebuffer struct to make these variables more compact
+	// NOTE: Could consider using subpasses here to make this more compact, not sure if good
+	// performance wise
+	VkRenderPass m_postprocessRenderPass;
 	std::vector<VkImage> m_images;
 	std::vector<VkImageView> m_imageViews;
-	std::vector<VkFramebuffer> m_framebuffers;
 	VkImage m_depthImage;
 	VkDeviceMemory m_depthImageMemory;
 	VkImageView m_depthImageView;
 
-	// NOTE: Could consider using subpasses here to make this more compact, not sure if good
-	// performance wise
-	VkRenderPass m_postprocessRenderPass;
-	std::vector<Framebuffer> m_offscreenFramebuffers;
+	std::vector<VkFramebuffer> m_framebuffers;
+	std::vector<VkFramebuffer> m_offscreenFramebuffers;
+
+	/* std::vector<Framebuffer> m_offscreenFramebuffers; */
 
 	std::vector<VkSemaphore> m_imageAvailableSemaphores;
 	std::vector<VkSemaphore> m_renderFinishedSemaphores;

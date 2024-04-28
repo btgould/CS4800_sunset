@@ -48,7 +48,9 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	// Setup postprocessing
 	m_postprocessPipeline = m_pipelineBuilder.buildPipeline(
 		VertexArray(), ShaderLibrary::get()->getShader(m_device, "atmosphere"),
-		m_swapChain->getOffscreenFramebuffers(), true);
+		{TextureLibrary::get()->getTexture(m_device, "res/texture/default.png")}, true);
+	m_postprocessPipeline->bindTexture(
+		TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"));
 
 	// Setup ImGui
 	IMGUI_CHECKVERSION();
@@ -95,10 +97,6 @@ void VulkanRenderer::beginScene() {
 	if (!imageIndexOpt.has_value()) {
 		// Swap chain is recreating, wait until next frame
 		return;
-	} else if (m_swapChain->beenRecreated()) {
-		m_postprocessPipeline = m_pipelineBuilder.buildPipeline(
-			{}, ShaderLibrary::get()->getShader(m_device, "atmosphere"),
-			m_swapChain->getOffscreenFramebuffers(), true);
 	}
 	m_imageIndex = imageIndexOpt.value();
 
@@ -121,7 +119,7 @@ void VulkanRenderer::beginScene() {
 	VkRenderPassBeginInfo renderPassInfo {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.renderPass = m_swapChain->getOffscreenRenderPass();
-	renderPassInfo.framebuffer = m_swapChain->getOffscreenFramebuffer(m_currentFrame).framebuffer;
+	renderPassInfo.framebuffer = m_swapChain->getOffscreenFramebuffer(m_currentFrame);
 	renderPassInfo.renderArea.offset = {0, 0};
 	renderPassInfo.renderArea.extent = m_swapChain->getExtent();
 
@@ -190,7 +188,7 @@ void VulkanRenderer::endScene() {
 		renderPassInfo.pClearValues = clearValues.data();
 		vkCmdBeginRenderPass(m_commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 		m_postprocessPipeline->bind(m_commandBuffer);
-		m_postprocessPipeline->bindTexture(m_swapChain->getOffscreenFramebuffer(0).color);
+		/* m_postprocessPipeline->bindTexture(m_swapChain->getOffscreenFramebuffer(0).color); */
 		m_postprocessPipeline->bindDescriptorSets(m_commandBuffer, m_currentFrame);
 		vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
 		vkCmdEndRenderPass(m_commandBuffer);
@@ -210,7 +208,8 @@ void VulkanRenderer::endScene() {
 	m_swapChain->present(m_imageIndex, m_currentFrame);
 
 	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-	// FIXME: MAX_FRAMES_IN_FLIGHT is NOT the number of frames in the swap chain
+	// HACK: MAX_FRAMES_IN_FLIGHT is NOT necessarily the number of frames in the swap chain
+	// I get a super weird stutter if I make it anything else though, so I'm just pretending for now
 }
 
 void VulkanRenderer::updateUniform(std::string name, void* data) {
