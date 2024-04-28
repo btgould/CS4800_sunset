@@ -327,6 +327,7 @@ void VulkanPipeline::createDescriptorPool() {
 	m_poolSizes.push_back(imageSamplerPoolSize);
 
 	// Create descriptor for ImGui
+	// PERF: this is wasteful, only the postprocessing pipeline needs space for imgui
 	m_poolSizes.push_back({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1});
 
 	VkDescriptorPoolCreateInfo poolInfo {};

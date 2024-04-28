@@ -73,14 +73,14 @@ VulkanRenderer::VulkanRenderer(Ref<VulkanInstance> instance, Ref<VulkanDevice> d
 	init_info.QueueFamily = m_device->getQueueFamilyIndices().graphicsFamily.value();
 	init_info.Queue = m_device->getGraphicsQueue();
 	init_info.PipelineCache = VK_NULL_HANDLE;
-	init_info.DescriptorPool = m_pipelines[0]->getDescriptorPool();
+	init_info.DescriptorPool = m_postprocessPipeline->getDescriptorPool();
 	init_info.Subpass = 0;
 	init_info.MinImageCount = 2; // Just choosing the minimum here for simplicity
 	init_info.ImageCount = 2;
 	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	init_info.Allocator = nullptr; // Use default allocation mechanism
 	init_info.CheckVkResultFn = check_vk_result;
-	ImGui_ImplVulkan_Init(&init_info, m_swapChain->getOffscreenRenderPass());
+	ImGui_ImplVulkan_Init(&init_info, m_swapChain->getPostProcessRenderPass());
 }
 
 VulkanRenderer::~VulkanRenderer() {
@@ -132,11 +132,6 @@ void VulkanRenderer::beginScene() {
 
 	// Bind pipeline
 	m_pipelines[0]->bind(m_commandBuffer);
-
-	// New ImGui Frame
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
 }
 
 void VulkanRenderer::draw(Model& model) {
@@ -156,19 +151,7 @@ void VulkanRenderer::draw(Model& model) {
 	vkCmdDrawIndexed(m_commandBuffer, model.numIndices(), 1, 0, 0, 0);
 }
 
-void VulkanRenderer::endScene() {
-	PROFILE_FUNC();
-	// Record ImGui Frame
-	m_activePipeline = m_pipelines[0];
-	m_activePipeline->bind(m_commandBuffer);
-
-	ImGui::Render();
-	ImDrawData* draw_data = ImGui::GetDrawData();
-	ImGui_ImplVulkan_RenderDrawData(draw_data, m_commandBuffer);
-
-	// ImGui::UpdatePlatformWindows();
-	// ImGui::RenderPlatformWindowsDefault();
-
+void VulkanRenderer::endModelRendering() {
 	// End main render pass
 	vkCmdEndRenderPass(m_commandBuffer);
 
@@ -191,8 +174,30 @@ void VulkanRenderer::endScene() {
 		/* m_postprocessPipeline->bindTexture(m_swapChain->getOffscreenFramebuffer(0).color); */
 		m_postprocessPipeline->bindDescriptorSets(m_commandBuffer, m_currentFrame);
 		vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
-		vkCmdEndRenderPass(m_commandBuffer);
 	}
+}
+
+void VulkanRenderer::beginUIRendering() {
+	// New ImGui Frame
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+}
+
+void VulkanRenderer::endScene() {
+	PROFILE_FUNC();
+	// Record ImGui Frame
+	m_activePipeline = m_postprocessPipeline;
+	m_activePipeline->bind(m_commandBuffer);
+
+	ImGui::Render();
+	ImDrawData* draw_data = ImGui::GetDrawData();
+	ImGui_ImplVulkan_RenderDrawData(draw_data, m_commandBuffer);
+
+	// ImGui::RenderPlatformWindowsDefault();
+	// ImGui::UpdatePlatformWindows();
+
+	vkCmdEndRenderPass(m_commandBuffer);
 
 	// Finish recording commands, submit drawing to GPU queue
 	if (vkEndCommandBuffer(m_commandBuffer) != VK_SUCCESS) {

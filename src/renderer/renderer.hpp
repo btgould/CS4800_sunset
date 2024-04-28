@@ -23,6 +23,8 @@ class VulkanRenderer {
   public:
 	void beginScene();
 	void draw(Model& model);
+	void endModelRendering();
+	void beginUIRendering();
 	void endScene();
 
 	void updateUniform(std::string name, void* data);

@@ -78,6 +78,9 @@ void Application::run() {
 		m_renderer->draw(cloud);
 		m_renderer->draw(cloud2);
 
+		m_renderer->endModelRendering();
+		m_renderer->beginUIRendering();
+
 		// Draw GUI
 		ImGui::ShowDemoWindow();
 		ImGui::Begin("Demo");
