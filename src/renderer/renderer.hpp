@@ -40,12 +40,11 @@ class VulkanRenderer {
 
 	PipelineBuilder m_pipelineBuilder;
 	std::vector<Ref<VulkanPipeline>> m_pipelines;
+	Ref<VulkanPipeline> m_postprocessPipeline;
 	Ref<VulkanPipeline> m_activePipeline;
 
 	const VertexArray m_defaultVA;
 	const std::vector<Ref<Texture>> m_textures;
-
-	Ref<VulkanPipeline> m_postprocessPipeline;
 
 	/* Buffer holding all the drawing commands for the current frame */
 	VkCommandBuffer m_commandBuffer;

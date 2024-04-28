@@ -55,7 +55,7 @@ void VulkanSwapChain::createSwapChain(const Ref<VulkanDevice> device, const Ref<
 	VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
 
 	// Make chain 1 longer than min supported
-	uint32_t imageCount = swapChainSupport.capabilities.minImageCount;
+	uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 	if (swapChainSupport.capabilities.maxImageCount > 0 &&
 	    imageCount > swapChainSupport.capabilities.maxImageCount) {
 		imageCount = swapChainSupport.capabilities.maxImageCount;

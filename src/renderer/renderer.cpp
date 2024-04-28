@@ -119,7 +119,7 @@ void VulkanRenderer::beginScene() {
 	VkRenderPassBeginInfo renderPassInfo {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.renderPass = m_swapChain->getOffscreenRenderPass();
-	renderPassInfo.framebuffer = m_swapChain->getOffscreenFramebuffer(m_currentFrame);
+	renderPassInfo.framebuffer = m_swapChain->getOffscreenFramebuffer(m_imageIndex);
 	renderPassInfo.renderArea.offset = {0, 0};
 	renderPassInfo.renderArea.extent = m_swapChain->getExtent();
 
@@ -208,8 +208,6 @@ void VulkanRenderer::endScene() {
 	m_swapChain->present(m_imageIndex, m_currentFrame);
 
 	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-	// HACK: MAX_FRAMES_IN_FLIGHT is NOT necessarily the number of frames in the swap chain
-	// I get a super weird stutter if I make it anything else though, so I'm just pretending for now
 }
 
 void VulkanRenderer::updateUniform(std::string name, void* data) {
