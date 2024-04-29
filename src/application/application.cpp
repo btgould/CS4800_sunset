@@ -53,6 +53,9 @@ void Application::run() {
 	atmos.time = 0;
 	atmos.radius = 500.0f;
 	atmos.offsetFactor = 0.95f;
+	atmos.densityFalloff = 0.1;
+	atmos.numInScatteringPoints = 6;
+	atmos.numOpticalDepthPoints = 4;
 
 	CloudSettings cloudSettings;
 
@@ -93,7 +96,11 @@ void Application::run() {
 		ImGui::DragFloat("Time of day", &atmos.time, 0.01f, 0.0f, 1.0f);
 		ImGui::DragFloat("Radius", &atmos.radius, 10.0f, 100.0f, 1000.0f);
 		ImGui::DragFloat("Offset", &atmos.offsetFactor, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Density Falloff", &atmos.densityFalloff, 0.1f, 0.0f, 10.0f);
+		ImGui::DragInt("In Scatter Points", &atmos.numInScatteringPoints, 1.0f, 1, 10);
+		ImGui::DragInt("Depth Points", &atmos.numOpticalDepthPoints, 1.0f, 1, 10);
 		ImGui::PopID();
+		atmos.center = -glm::vec3(0.0f, atmos.radius, 0.0f) * atmos.offsetFactor;
 
 		ImGui::SeparatorText("Light Settings: ");
 		ImGui::PushID("Light");
