@@ -1,9 +1,11 @@
 #include "application.hpp"
 
 #include <GLFW/glfw3.h>
+#include <glm/ext/scalar_constants.hpp>
 #include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
+#include <glm/glm.hpp>
 
 #include "imgui.h"
 
@@ -49,18 +51,18 @@ void Application::run() {
 	cloud2.getTransform().setScale(glm::vec3(100.0f, 50.0f, 150.0f));
 
 	Atmosphere atmos;
-	atmos.defractionCoef = {1.0f, 1.0f, 1.0f};
+	atmos.wavelengths = {700.0f, 530.0f, 440.0f};
 	atmos.time = 0;
 	atmos.radius = 500.0f;
 	atmos.offsetFactor = 0.95f;
-	atmos.densityFalloff = 0.1;
-	atmos.numInScatteringPoints = 6;
-	atmos.numOpticalDepthPoints = 4;
+	atmos.densityFalloff = 4.0;
+	atmos.scatteringStrength = 1;
+	atmos.numInScatteringPoints = 10;
+	atmos.numOpticalDepthPoints = 10;
 
 	CloudSettings cloudSettings;
 
 	LightSource light;
-	light.pos = glm::vec3(-1300.0f, 325.0f, 600.0f);
 	light.color = glm::vec3(0.988f, 0.415f, 0.227f);
 	light.ambientStrength = 0.1f;
 	light.diffuseStrength = 25.0f;
@@ -91,16 +93,21 @@ void Application::run() {
 
 		ImGui::SeparatorText("Atmosphere Settings: ");
 		ImGui::PushID("Atmosphere");
-		ImGui::DragFloat3("Defraction Coefficients", glm::value_ptr(atmos.defractionCoef), 1.0f,
-		                  0.0f, 10.0f);
+		ImGui::DragFloat3("Wavelenths", glm::value_ptr(atmos.wavelengths), 1.0f, 100, 1000);
 		ImGui::DragFloat("Time of day", &atmos.time, 0.01f, 0.0f, 1.0f);
 		ImGui::DragFloat("Radius", &atmos.radius, 10.0f, 100.0f, 1000.0f);
 		ImGui::DragFloat("Offset", &atmos.offsetFactor, 0.01f, 0.0f, 1.0f);
 		ImGui::DragFloat("Density Falloff", &atmos.densityFalloff, 0.1f, 0.0f, 10.0f);
-		ImGui::DragInt("In Scatter Points", &atmos.numInScatteringPoints, 1.0f, 1, 10);
-		ImGui::DragInt("Depth Points", &atmos.numOpticalDepthPoints, 1.0f, 1, 10);
+		ImGui::DragFloat("Scattering Strength", &atmos.scatteringStrength, 0.1f, 0.0f, 10.0f);
+		ImGui::DragInt("In Scatter Points", &atmos.numInScatteringPoints, 1.0f, 5, 20);
+		ImGui::DragInt("Depth Points", &atmos.numOpticalDepthPoints, 1.0f, 5, 20);
 		ImGui::PopID();
+		atmos.defractionCoef =
+			atmos.scatteringStrength * glm::pow(400.0f / atmos.wavelengths, {4.0f, 4.0f, 4.0f});
 		atmos.center = -glm::vec3(0.0f, atmos.radius, 0.0f) * atmos.offsetFactor;
+		float theta = atmos.time * glm::pi<float>() / 2.0f;
+		light.pos = 1000.0f * glm::vec3(0.0f, glm::cos(theta), -glm::sin(theta)) +
+		            mountain.getTransform().getTranslation();
 
 		ImGui::SeparatorText("Light Settings: ");
 		ImGui::PushID("Light");

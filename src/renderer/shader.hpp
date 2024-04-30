@@ -28,13 +28,15 @@ struct CloudSettings {
 	alignas(4) float opacity = 0.8f;
 };
 
-struct Atmosphere {
+struct alignas(128) Atmosphere {
 	alignas(16) glm::vec3 center;
+	alignas(16) glm::vec3 wavelengths;
 	alignas(16) glm::vec3 defractionCoef;
 	alignas(4) float time;
 	alignas(4) float radius;
 	alignas(4) float offsetFactor;
 	alignas(4) float densityFalloff;
+	alignas(4) float scatteringStrength;
 	alignas(4) int numInScatteringPoints;
 	alignas(4) int numOpticalDepthPoints;
 };
