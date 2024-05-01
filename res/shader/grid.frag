@@ -47,23 +47,26 @@ void main() {
 	hexTexCoord *= sqrt3;
 
 	vec2 hexCoord = hexagon(hexTexCoord);
-	vec2 inside = step(0, hexCoord) - step(gridData.cellCount, hexCoord);
-	hexCoord *= inside.x * inside.y;
-
+	uvec2 iHexCoord = uvec2(round(hexCoord));
+	vec2 evenRow = vec2(mod(iHexCoord.x, 2) == 0, 0);
+	vec2 inside = step(gridData.cellCount, hexCoord + evenRow);
 
 	// get color for type of grid cell
-	uvec2 iHexCoord = uvec2(round(hexCoord));
 	uint cellType = gridData.cells[iHexCoord.x][iHexCoord.y];
 
-	if (cellType == 1) {
-		outColor = vec4(0.3f, 0.3f, 0.3f, 1.0f); // empty
-	} else if (cellType == 2) {
-		outColor = vec4(0.29f, 0.21f, 0.13f, 1.0f); // solid
-	} else if (cellType == 4 || cellType == 8) {
-		outColor = vec4(0.0f, 0.0f, 1.0f, 1.0f); // water
-	} else if (cellType == 16) {
-		outColor = vec4(1.0f, 1.0f, 0.0f, 1.0f); // sand
-	} else if (cellType == 32) {
-		outColor = vec4(1.0f, 0.0f, 1.0f, 1.0f); // fungi
+	if (inside.x < 1 && inside.y < 1) {
+		if (cellType == 1) {
+			outColor = vec4(0.3f, 0.3f, 0.3f, 1.0f); // empty
+		} else if (cellType == 2) {
+			outColor = vec4(0.29f, 0.21f, 0.13f, 1.0f); // solid
+		} else if (cellType == 4 || cellType == 8) {
+			outColor = vec4(0.0f, 0.0f, 1.0f, 1.0f); // water
+		} else if (cellType == 16) {
+			outColor = vec4(1.0f, 1.0f, 0.0f, 1.0f); // sand
+		} else if (cellType == 32) {
+			outColor = vec4(1.0f, 0.0f, 1.0f, 1.0f); // fungi
+		}
+	} else { 
+		outColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 }
