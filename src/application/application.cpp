@@ -37,26 +37,26 @@ void Application::run() {
 	Model mountain(m_device, "res/model/mountain.obj",
 	               TextureLibrary::get()->getTexture(m_device, "res/texture/mountain.png"),
 	               ShaderLibrary::get()->getShader(m_device, "model"));
-	mountain.getTransform().setTranslation({-300.0f, -75.0f, 200.0f});
+	mountain.getTransform().setTranslation({-300.0f, 10.0f, 250.0f});
 
 	Model cloud(m_device, "res/model/cloud.obj",
 	            TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"),
 	            ShaderLibrary::get()->getShader(m_device, "cloud"));
-	cloud.getTransform().setTranslation(glm::vec3(-400.0f, 45.0f, 450.0f));
+	cloud.getTransform().setTranslation(glm::vec3(-400.0f, 110.0f, 500.0f));
 	cloud.getTransform().setScale(glm::vec3(100.0f, 50.0f, 150.0f));
 	Model cloud2(m_device, "res/model/cloud.obj",
 	             TextureLibrary::get()->getTexture(m_device, "res/texture/default.png"),
 	             ShaderLibrary::get()->getShader(m_device, "cloud"));
-	cloud2.getTransform().setTranslation(glm::vec3(-300.0f, 75.0f, 200.0f));
+	cloud2.getTransform().setTranslation(glm::vec3(-300.0f, 150.0f, 250.0f));
 	cloud2.getTransform().setScale(glm::vec3(100.0f, 50.0f, 150.0f));
 
 	Atmosphere atmos;
 	atmos.wavelengths = {700.0f, 530.0f, 440.0f};
 	atmos.time = 0;
 	atmos.radius = 500.0f;
-	atmos.offsetFactor = 0.95f;
+	atmos.offsetFactor = 0.997f;
 	atmos.densityFalloff = 4.0;
-	atmos.scatteringStrength = 1;
+	atmos.scatteringStrength = 2.0f;
 	atmos.numInScatteringPoints = 10;
 	atmos.numOpticalDepthPoints = 10;
 
@@ -67,7 +67,7 @@ void Application::run() {
 	light.ambientStrength = 0.1f;
 	light.diffuseStrength = 25.0f;
 
-	m_camera->lookAt({-300.0f, -15.0f, 300.0f});
+	m_camera->lookAt({-300.0f, 65.0f, 250.0f});
 
 	while (!m_window->shouldClose()) {
 		double newTime = glfwGetTime();
