@@ -30,7 +30,9 @@ layout(set = 1, binding = 1) uniform sampler2D normSampler; // TODO: don't need 
 layout(location = 0) in vec2 inUV;
 layout(location = 0) out vec4 outColor;
 
-float distInsideSphere(vec3 origin, vec3 dir, vec3 center, float radius) {
+const float maxFloat = 3.402823466e+38;
+
+vec2 raySphere(vec3 origin, vec3 dir, vec3 center, float radius) {
 	vec3 offset = origin - center;
 
 	float a = dot(dir, dir);
@@ -46,12 +48,12 @@ float distInsideSphere(vec3 origin, vec3 dir, vec3 center, float radius) {
 
 			// Ignore intersections that occur behind the ray
 			if (dstToSphereFar >= 0) {
-				return dstToSphereFar - dstToSphereNear;
+				return vec2(dstToSphereNear, dstToSphereFar - dstToSphereNear);
 			}
 		}
 
 		// Ray did not intersect sphere
-		return 0;
+		return vec2(maxFloat, 0);
 }
 
 float densityAtPoint(vec3 samplePoint) {
@@ -82,7 +84,7 @@ vec3 calculateLight(vec3 eyePos, vec3 dir, float atmosLen) {
 	
 	for (int i = 0; i < atmos.numInScatteringPoints; i++) {
 		vec3 dirToSun = normalize(light.pos - inScatterPoint);
-		float sunRayLen = distInsideSphere(inScatterPoint, dirToSun, atmos.center, atmos.radius);
+		float sunRayLen = raySphere(inScatterPoint, dirToSun, atmos.center, atmos.radius).y;
 		float sunRayOpticalDepth = opticalDepth(inScatterPoint, dirToSun, sunRayLen); // Rayleigh in scattering 
 		float viewRayOpticalDepth = opticalDepth(inScatterPoint, -dir, stepSize * i); // Rayleigh out scattering
 		vec3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth) * atmos.defractionCoef);
@@ -98,12 +100,23 @@ vec3 calculateLight(vec3 eyePos, vec3 dir, float atmosLen) {
 void main() {
 	vec4 clipPos = vec4(inUV * 2.0 - 1.0, 1.0, 1.0);
 	vec4 viewPos = inverse(camVP.vp) * clipPos;
+	vec3 pos = vec3(0.0f, 0.0f, 0.0f);
 	vec3 dir = (viewPos / viewPos.w).xyz; // HACK: assuming camera is at origin
 	dir = normalize(dir);
 
-	float atmosDist = distInsideSphere(vec3(0.0f, 0.0f, 0.0f), dir, atmos.center, atmos.radius);
-	float intensity = atmosDist / (2.0f * atmos.radius);
-	vec3 light = calculateLight(vec3(0.0f, 0.0f, 0.0f), dir, atmosDist);
+	float planetRadius = atmos.radius * atmos.offsetFactor - 0.1f;
 
-	outColor = vec4(light, 1.0f);
+	vec2 planetDist = raySphere(pos, dir, atmos.center, planetRadius);
+	vec2 atmosDist = raySphere(pos, dir, atmos.center, atmos.radius);
+	float distInAtmos = min(atmosDist.y, planetDist.x - atmosDist.x);
+
+	if (atmosDist.y < planetDist.x) {
+		float intensity = distInAtmos; // / (2.0f * atmos.radius);
+		intensity = planetDist.x - atmosDist.x;
+		vec3 light = calculateLight(vec3(pos), dir, distInAtmos);
+
+		outColor = vec4(light, 1.0f);
+	} else {
+		outColor = vec4(0.80f, 0.43f, 0.18f, 1.0f);
+	}
 }

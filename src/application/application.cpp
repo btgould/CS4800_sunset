@@ -96,7 +96,7 @@ void Application::run() {
 		ImGui::DragFloat3("Wavelenths", glm::value_ptr(atmos.wavelengths), 1.0f, 100, 1000);
 		ImGui::DragFloat("Time of day", &atmos.time, 0.01f, 0.0f, 1.0f);
 		ImGui::DragFloat("Radius", &atmos.radius, 10.0f, 100.0f, 1000.0f);
-		ImGui::DragFloat("Offset", &atmos.offsetFactor, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat("Offset", &atmos.offsetFactor, 0.001f, 0.95f, 1.0f);
 		ImGui::DragFloat("Density Falloff", &atmos.densityFalloff, 0.1f, 0.0f, 10.0f);
 		ImGui::DragFloat("Scattering Strength", &atmos.scatteringStrength, 0.1f, 0.0f, 10.0f);
 		ImGui::DragInt("In Scatter Points", &atmos.numInScatteringPoints, 1.0f, 5, 20);
