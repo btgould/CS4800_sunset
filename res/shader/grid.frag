@@ -3,7 +3,7 @@
 
 layout(std430, set = 0, binding = 1) uniform GRID {
 	uint cellCount; 
-	uint cells[40][40]; // TODO: no clue how to get this value from cpp #define
+	uint cells[50][50]; // TODO: no clue how to get this value from cpp #define
 } gridData;
 
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
@@ -34,7 +34,10 @@ vec2 hexagon(vec2 point) {
 	float cb = step(2.0f, v);
 	vec2  ma = step(qFrac.xy, qFrac.yx);
 
-	return (qInt + ca - cb * ma) * hex2cart;
+	vec2 hexCoord = (qInt + ca - cb * ma) * hex2cart;
+	hexCoord.x *= invSqrt3;
+	hexCoord.y *= 0.666666666666f; 
+	return hexCoord;
 }
 
 void main() {
@@ -43,14 +46,15 @@ void main() {
 	hexTexCoord.y -= invSqrt3;
 	hexTexCoord *= sqrt3;
 
-	vec2 hexCoord = hexagon(hexTexCoord) * invSqrt3;
+	vec2 hexCoord = hexagon(hexTexCoord);
 	vec2 inside = step(0, hexCoord) - step(gridData.cellCount, hexCoord);
 	hexCoord *= inside.x * inside.y;
 
-	outColor = vec4(hexCoord / gridData.cellCount, 0.0f, 1.0f);
 
 	// get color for type of grid cell
-	/* uint cellType = gridData.cells[icell.x][icell.y];
+	uvec2 iHexCoord = uvec2(round(hexCoord));
+	uint cellType = gridData.cells[iHexCoord.x][iHexCoord.y];
+
 	if (cellType == 1) {
 		outColor = vec4(0.3f, 0.3f, 0.3f, 1.0f); // empty
 	} else if (cellType == 2) {
@@ -61,5 +65,5 @@ void main() {
 		outColor = vec4(1.0f, 1.0f, 0.0f, 1.0f); // sand
 	} else if (cellType == 32) {
 		outColor = vec4(1.0f, 0.0f, 1.0f, 1.0f); // fungi
-	} */
+	}
 }

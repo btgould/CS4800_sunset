@@ -5,7 +5,7 @@
 #include <sys/types.h>
 
 #ifndef GRID_COUNT
-	#define GRID_COUNT 40
+	#define GRID_COUNT 50
 #endif // !GRID_COUNT
 
 enum CellType {

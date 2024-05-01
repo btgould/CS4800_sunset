@@ -88,12 +88,12 @@ void Application::run() {
 		mousePos.x -= 0.5f;
 		mousePos.y -= 1.0f / glm::sqrt(3.0f);
 		mousePos *= glm::sqrt(3.0f);
-		glm::vec2 gridCoord = getHexCoord(mousePos);
+		glm::uvec2 gridCoord = glm::round(getHexCoord(mousePos));
 
 		// Write data to grid
-		if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_1) && mousePos.x >= 0 &&
-		    mousePos.x < GRID_COUNT && mousePos.y >= 0 && mousePos.y < GRID_COUNT) {
-			grid.write(penType, mousePos.y, mousePos.x);
+		if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_1) && gridCoord.x >= 0 &&
+		    gridCoord.x < GRID_COUNT && gridCoord.y >= 0 && gridCoord.y < GRID_COUNT) {
+			grid.write(penType, gridCoord.y, gridCoord.x);
 		}
 
 		// Update sim
